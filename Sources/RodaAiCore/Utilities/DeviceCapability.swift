@@ -33,14 +33,15 @@ public enum DeviceCapability {
     /// Orcamento de memoria disponivel para modelos de IA.
     /// Leva em conta os limites da plataforma (jetsam no iOS, overhead no macOS).
     ///
-    /// iOS/iPadOS: apps recebem ~50-60% do total antes do jetsam matar o processo.
-    /// Usamos 55% como estimativa conservadora e estatica (nao flutua como availableRAM).
+    /// iOS/iPadOS: com entitlement `increased-memory-limit`, apps recebem ~63-75%
+    /// do total antes do jetsam matar o processo. Usamos 65% como estimativa
+    /// estatica (nao flutua como availableRAM). Sem o entitlement seria ~50%.
     ///
     /// macOS: apps podem usar a maior parte da RAM unificada.
     /// Usamos 75% para deixar espaco para o sistema.
     public static var modelMemoryBudget: Int64 {
         #if os(iOS) || os(tvOS) || os(watchOS) || os(visionOS)
-        return Int64(Double(totalRAM) * 0.55)
+        return Int64(Double(totalRAM) * 0.65)
         #else
         return Int64(Double(totalRAM) * 0.75)
         #endif
