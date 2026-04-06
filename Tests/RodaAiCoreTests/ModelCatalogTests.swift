@@ -10,17 +10,16 @@ final class ModelCatalogTests: XCTestCase {
             provider: "Google",
             familyName: "Gemma",
             parameterCount: "E2B",
-            quantization: "Q4_K_M",
-            downloadSizeBytes: 2_100_000_000,
-            estimatedRAMBytes: 2_800_000_000,
+            quantization: "4-bit",
+            downloadSizeBytes: 1_800_000_000,
+            estimatedRAMBytes: 2_500_000_000,
             portugueseRating: .excelente,
             cpuUsageLevel: .medio,
             minimumRAM: 4,
             isVisionCapable: true,
             isReasoningCapable: true,
-            huggingFaceRepoId: "bartowski/google_gemma-4-E2B-it-GGUF",
-            modelBackend: .gguf,
-            downloadFileName: "google_gemma-4-E2B-it-Q4_K_M.gguf"
+            huggingFaceRepoId: "mlx-community/gemma-4-e2b-it-4bit",
+            modelBackend: .mlx
         )
         Task { @MainActor in
             _ = entry.identifier // Sendable check via compilation
@@ -36,13 +35,42 @@ final class ModelCatalogTests: XCTestCase {
             "provider": "Google",
             "familyName": "Gemma",
             "parameterCount": "E2B",
+            "quantization": "4-bit",
+            "downloadSizeBytes": 1800000000,
+            "estimatedRAMBytes": 2500000000,
+            "portugueseRating": "excelente",
+            "cpuUsageLevel": "medio",
+            "minimumRAM": 4,
+            "isVisionCapable": true,
+            "isReasoningCapable": true,
+            "huggingFaceRepoId": "mlx-community/gemma-4-e2b-it-4bit",
+            "modelBackend": "mlx"
+        }
+        """.data(using: .utf8)!
+
+        let entry = try JSONDecoder().decode(CatalogEntry.self, from: json)
+        XCTAssertEqual(entry.identifier, "gemma-4-e2b")
+        XCTAssertEqual(entry.portugueseRating, .excelente)
+        XCTAssertTrue(entry.isVisionCapable)
+        XCTAssertEqual(entry.backend, .mlx)
+        XCTAssertNil(entry.specificDownloadFile)
+    }
+
+    func testCatalogEntryDecodesGGUFBackend() throws {
+        let json = """
+        {
+            "identifier": "gemma-4-e2b-gguf",
+            "displayName": "Gemma 4 E2B (GGUF)",
+            "provider": "Google",
+            "familyName": "Gemma",
+            "parameterCount": "E2B",
             "quantization": "Q4_K_M",
             "downloadSizeBytes": 2100000000,
             "estimatedRAMBytes": 2800000000,
             "portugueseRating": "excelente",
             "cpuUsageLevel": "medio",
             "minimumRAM": 4,
-            "isVisionCapable": true,
+            "isVisionCapable": false,
             "isReasoningCapable": true,
             "huggingFaceRepoId": "bartowski/google_gemma-4-E2B-it-GGUF",
             "modelBackend": "gguf",
@@ -51,9 +79,6 @@ final class ModelCatalogTests: XCTestCase {
         """.data(using: .utf8)!
 
         let entry = try JSONDecoder().decode(CatalogEntry.self, from: json)
-        XCTAssertEqual(entry.identifier, "gemma-4-e2b")
-        XCTAssertEqual(entry.portugueseRating, .excelente)
-        XCTAssertTrue(entry.isVisionCapable)
         XCTAssertEqual(entry.backend, .gguf)
         XCTAssertEqual(entry.specificDownloadFile, "google_gemma-4-E2B-it-Q4_K_M.gguf")
     }
@@ -113,7 +138,7 @@ final class ModelCatalogTests: XCTestCase {
         )!
         let data = try Data(contentsOf: fixtureURL)
         let entries = try JSONDecoder().decode([CatalogEntry].self, from: data)
-        XCTAssertGreaterThanOrEqual(entries.count, 8)
+        XCTAssertGreaterThanOrEqual(entries.count, 9)
         XCTAssertTrue(entries.contains(where: { $0.identifier == "gemma-4-e2b" }))
     }
 

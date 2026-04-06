@@ -67,14 +67,14 @@ final class ModelBackendTests: XCTestCase {
         )
 
         // loadCatalog popula a partir do ModelCatalog.json de producao
-        // que agora inclui gemma-4-e2b com backend "gguf"
+        // que inclui gemma-4-e2b-gguf com backend "gguf"
         manager.loadCatalog()
-        let gemmaEntry = manager.catalog.first { $0.identifier == "gemma-4-e2b" }
-        XCTAssertNotNil(gemmaEntry, "Production catalog must have gemma-4-e2b")
-        XCTAssertEqual(gemmaEntry?.backend, .gguf)
+        let ggufEntry = manager.catalog.first { $0.identifier == "gemma-4-e2b-gguf" }
+        XCTAssertNotNil(ggufEntry, "Production catalog must have gemma-4-e2b-gguf")
+        XCTAssertEqual(ggufEntry?.backend, .gguf)
 
         // Download (usa mock)
-        try await manager.downloadModel(gemmaEntry!)
+        try await manager.downloadModel(ggufEntry!)
         try await manager.loadModel(manager.downloadedModels[0])
 
         // GGUF provider should have been used, not MLX
@@ -82,5 +82,35 @@ final class ModelBackendTests: XCTestCase {
         let mlxLoadCount = await mlxProvider.loadModelCallCount
         XCTAssertEqual(ggufLoadCount, 1, "GGUF provider should be used for GGUF models")
         XCTAssertEqual(mlxLoadCount, 0, "MLX provider should NOT be used for GGUF models")
+    }
+
+    @MainActor
+    func testManagerRoutesToMLXForGemma4() async throws {
+        let mockDownloader = MockModelDownloader()
+        let mlxProvider = MockInferenceProvider()
+        let ggufProvider = MockInferenceProvider()
+
+        let tmpDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+        let manager = ModelManager(
+            downloader: mockDownloader,
+            inferenceProvider: mlxProvider,
+            ggufInferenceProvider: ggufProvider,
+            modelsDirectoryOverride: tmpDir
+        )
+
+        manager.loadCatalog()
+        let mlxEntry = manager.catalog.first { $0.identifier == "gemma-4-e2b" }
+        XCTAssertNotNil(mlxEntry, "Production catalog must have gemma-4-e2b (MLX)")
+        XCTAssertEqual(mlxEntry?.backend, .mlx)
+
+        try await manager.downloadModel(mlxEntry!)
+        try await manager.loadModel(manager.downloadedModels[0])
+
+        // MLX provider should have been used
+        let mlxLoadCount = await mlxProvider.loadModelCallCount
+        let ggufLoadCount = await ggufProvider.loadModelCallCount
+        XCTAssertEqual(mlxLoadCount, 1, "MLX provider should be used for MLX models")
+        XCTAssertEqual(ggufLoadCount, 0, "GGUF provider should NOT be used for MLX models")
     }
 }

@@ -25,7 +25,10 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/ml-explore/mlx-swift", from: "0.31.3"),
-        .package(url: "https://github.com/ml-explore/mlx-swift-lm", from: "2.31.3"),
+        // Adrien Grondin's fork with Gemma 4 support (text, vision, MoE)
+        // PR #180: https://github.com/ml-explore/mlx-swift-lm/pull/180
+        // Switch back to upstream when Gemma 4 is merged into ml-explore/mlx-swift-lm
+        .package(url: "https://github.com/adrgrondin/mlx-swift-lm", branch: "port/gemma-4-model"),
         .package(url: "https://github.com/huggingface/swift-transformers", "1.2.0"..<"1.3.0"),
         .package(url: "https://github.com/gonzalezreal/textual", from: "0.3.1"),
         .package(url: "https://github.com/mattt/llama.swift", from: "2.8682.0"),
