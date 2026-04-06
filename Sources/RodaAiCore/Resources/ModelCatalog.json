@@ -226,6 +226,7 @@
         "minimumRAM": 0,
         "isVisionCapable": false,
         "isReasoningCapable": false,
-        "huggingFaceRepoId": ""
+        "huggingFaceRepoId": "",
+        "modelBackend": "foundationModel"
     }
 ]

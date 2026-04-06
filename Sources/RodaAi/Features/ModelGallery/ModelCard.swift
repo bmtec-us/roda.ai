@@ -170,8 +170,18 @@ struct ModelCard: View {
     @ViewBuilder
     private var actionButtons: some View {
         HStack(spacing: 8) {
-            if entry.isZeroDownload {
-                // Zero-download (Apple FM): nao mostra Baixar — built-in
+            if entry.isZeroDownload && !isActive {
+                // Zero-download (Apple FM): ativar diretamente, sem download
+                Button {
+                    performActivateBuiltIn()
+                } label: {
+                    Label("model.action.activate", systemImage: "play.circle")
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(isPerformingAction)
+                .accessibilityIdentifier("activate-builtin-\(entry.identifier)")
+            } else if entry.isZeroDownload && isActive {
+                // Ja ativo — nada a fazer (deactivate button abaixo cuida)
                 Label("model.status.builtin", systemImage: "checkmark.seal")
                     .font(.caption)
                     .foregroundStyle(ColorPalette.accent)
@@ -224,6 +234,19 @@ struct ModelCard: View {
     }
 
     // MARK: - Async actions
+    private func performActivateBuiltIn() {
+        isPerformingAction = true
+        actionError = nil
+        Task {
+            do {
+                try await modelManager.activateBuiltInModel(entry)
+            } catch {
+                actionError = error.localizedDescription
+            }
+            isPerformingAction = false
+        }
+    }
+
     private func performDownload() {
         isPerformingAction = true
         actionError = nil

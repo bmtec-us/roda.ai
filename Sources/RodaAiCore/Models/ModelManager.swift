@@ -24,6 +24,7 @@ public final class ModelManager {
     private let visionInferenceProvider: (any InferenceProvider)?
     private let ggufInferenceProvider: (any InferenceProvider)?
     private let apiInferenceProvider: (any InferenceProvider)?
+    private let foundationModelProvider: (any InferenceProvider)?
     private let storageManager: StorageManager
     private let validator: ModelValidator
     private let modelsDirectoryOverride: URL?
@@ -48,6 +49,7 @@ public final class ModelManager {
         visionInferenceProvider: (any InferenceProvider)? = nil,
         ggufInferenceProvider: (any InferenceProvider)? = nil,
         apiInferenceProvider: (any InferenceProvider)? = nil,
+        foundationModelProvider: (any InferenceProvider)? = nil,
         storageManager: StorageManager = StorageManager(),
         validator: ModelValidator = ModelValidator(),
         modelsDirectoryOverride: URL? = nil
@@ -57,6 +59,7 @@ public final class ModelManager {
         self.visionInferenceProvider = visionInferenceProvider
         self.ggufInferenceProvider = ggufInferenceProvider
         self.apiInferenceProvider = apiInferenceProvider
+        self.foundationModelProvider = foundationModelProvider
         self.storageManager = storageManager
         self.validator = validator
         self.modelsDirectoryOverride = modelsDirectoryOverride
@@ -77,6 +80,7 @@ public final class ModelManager {
         case .mlx: return inferenceProvider
         case .gguf: return ggufInferenceProvider ?? inferenceProvider
         case .api: return apiInferenceProvider
+        case .foundationModel: return foundationModelProvider
         }
     }
 
@@ -228,11 +232,32 @@ public final class ModelManager {
             RodaLog.model.warning("loadModel called but no provider for \(model.identifier, privacy: .public)")
             return
         }
-        let modelPath = modelsDirectory.appendingPathComponent(model.identifier)
+
+        let entry = catalog.first { $0.identifier == model.identifier }
+        let isZeroDownload = entry?.isZeroDownload ?? false
+
+        // Zero-download models (Apple FM) don't have files on disk.
+        // Pass the identifier directly instead of a file path.
+        let loadIdentifier = isZeroDownload
+            ? model.identifier
+            : modelsDirectory.appendingPathComponent(model.identifier).path
+
         RodaLog.model.info("Activating model: \(model.identifier, privacy: .public)")
-        try await prov.loadModel(identifier: modelPath.path)
+        try await prov.loadModel(identifier: loadIdentifier)
         activeModel = model
         RodaLog.model.info("Model activated: \(model.identifier, privacy: .public)")
+    }
+
+    /// Ativa um modelo zero-download (ex: Apple FM) diretamente do catalogo,
+    /// sem precisar de download previo.
+    public func activateBuiltInModel(_ entry: CatalogEntry) async throws {
+        guard entry.isZeroDownload else { return }
+        let model = LocalModel(
+            identifier: entry.identifier,
+            displayName: entry.displayName,
+            sizeOnDisk: 0
+        )
+        try await loadModel(model)
     }
 
     public func unloadModel() async {

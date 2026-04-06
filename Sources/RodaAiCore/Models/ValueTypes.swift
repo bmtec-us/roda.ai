@@ -54,8 +54,9 @@ public enum DarkModePreference: String, Codable, Sendable, CaseIterable {
 /// - `mlx`: MLX framework (safetensors, on-device Apple Silicon)
 /// - `gguf`: llama.cpp via GGUF (on-device, mais amplo suporte de arquiteturas)
 /// - `api`: Inferencia remota via API compativel com OpenAI
+/// - `foundationModel`: Apple Foundation Models (iOS 26+, on-device, zero-download)
 public enum ModelBackend: String, Codable, Sendable, CaseIterable {
-    case mlx, gguf, api
+    case mlx, gguf, api, foundationModel
 }
 
 public struct Attachment: Sendable, Equatable {
