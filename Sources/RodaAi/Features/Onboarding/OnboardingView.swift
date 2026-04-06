@@ -1,10 +1,12 @@
 // Sources/RodaAi/Features/Onboarding/OnboardingView.swift
 import SwiftUI
+import SwiftData
 import RodaAiCore
 
 struct OnboardingView: View {
     @State private var state: OnboardingState = .welcome
     @Environment(\.modelContext) private var modelContext
+    @Query private var allPreferences: [UserPreferences]
 
     var body: some View {
         Group {
@@ -23,8 +25,8 @@ struct OnboardingView: View {
                 )
             case .ready:
                 OnboardingReadyStep(onComplete: {
-                    try? state.transition(.complete)
                     markOnboardingComplete()
+                    try? state.transition(.complete)
                 })
             case .completed:
                 EmptyView()
@@ -32,11 +34,31 @@ struct OnboardingView: View {
         }
     }
 
+    /// Atualiza a UserPreferences existente (ou cria se nenhuma existir)
+    /// e marca onboarding como completo. Antes: criava uma nova row a cada
+    /// complete(), acumulando duplicatas com valores inconsistentes.
     private func markOnboardingComplete() {
-        let prefs = UserPreferences()
-        prefs.hasCompletedOnboarding = true
-        modelContext.insert(prefs)
-        try? modelContext.save()
+        // Remove duplicatas existentes (pode haver de runs anteriores com bug)
+        if allPreferences.count > 1 {
+            for extra in allPreferences.dropFirst() {
+                modelContext.delete(extra)
+            }
+        }
+
+        // Atualiza a primeira existente OU cria nova
+        if let existing = allPreferences.first {
+            existing.hasCompletedOnboarding = true
+        } else {
+            let prefs = UserPreferences()
+            prefs.hasCompletedOnboarding = true
+            modelContext.insert(prefs)
+        }
+
+        do {
+            try modelContext.save()
+        } catch {
+            print("Failed to save onboarding completion: \(error)")
+        }
     }
 }
 

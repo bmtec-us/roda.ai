@@ -128,6 +128,15 @@ public final class ModelManager {
     /// 4. Registra LocalModel com tamanho real em disco
     /// 5. Limpa erro/progresso
     public func downloadModel(_ entry: CatalogEntry) async throws {
+        // Modelos com repoId vazio sao zero-download (ex: Apple Foundation Model)
+        // — nao precisam de download. Reportam erro amigavel ao inves de tentar
+        // baixar de uma URL invalida.
+        guard !entry.huggingFaceRepoId.isEmpty else {
+            RodaLog.model.warning("Cannot download \(entry.identifier, privacy: .public): zero-download model (empty repoId)")
+            downloadError[entry.identifier] = "Este modelo nao requer download (built-in)."
+            throw DownloadError.invalidRepository(repoId: "(zero-download)")
+        }
+
         RodaLog.model.info("Starting model download: \(entry.identifier, privacy: .public)")
         let destination = modelsDirectory.appendingPathComponent(entry.identifier)
         downloadError[entry.identifier] = nil

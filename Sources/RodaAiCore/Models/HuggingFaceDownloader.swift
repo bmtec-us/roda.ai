@@ -168,8 +168,19 @@ public final class HuggingFaceDownloader: ModelDownloader {
         }
     }
 
-    /// Downloads a single file with streaming + optional resume via Range header.
-    /// Endpoint: https://huggingface.co/{repoId}/resolve/main/{filename}
+    /// Downloads a single file using `URLSession.download(for:)` which streams
+    /// at full network speed directly to a temp file. Then moves to destination.
+    ///
+    /// Resume via Range header: if `fileURL` already has bytes on disk, requests
+    /// `Range: bytes={existing}-` and appends partial response (HTTP 206) to the
+    /// existing file. Falls back to full download (HTTP 200) if server doesn't
+    /// support Range.
+    ///
+    /// Endpoint: `https://huggingface.co/{repoId}/resolve/main/{filename}`
+    ///
+    /// IMPORTANT: previously this used `for try await byte in asyncBytes` which
+    /// is byte-at-a-time and ~500 KB/s on a fast connection. `download(for:)`
+    /// uses chunked transfer and saturates the network (~50 MB/s).
     private func downloadFile(
         repoId: String,
         filename: String,
@@ -190,6 +201,7 @@ public final class HuggingFaceDownloader: ModelDownloader {
 
         // Se ja baixado por completo, pula
         if let expected = expectedSize, existingBytes >= expected {
+            RodaLog.download.debug("Skipping already-complete file: \(filename, privacy: .public)")
             downloadedBytes += existingBytes
             updateProgress()
             return
@@ -200,68 +212,50 @@ public final class HuggingFaceDownloader: ModelDownloader {
         }
 
         var request = URLRequest(url: url)
+        request.timeoutInterval = 300  // 5 min para arquivos grandes
         if existingBytes > 0 {
             // Resume via Range header (ref: data-flows.md "Fluxo de Resume")
             request.setValue("bytes=\(existingBytes)-", forHTTPHeaderField: "Range")
+            RodaLog.download.debug("Resuming \(filename, privacy: .public) from byte \(existingBytes)")
         }
 
-        let (asyncBytes, response) = try await performBytesRequest(request)
+        // Usa download(for:) — chunked streaming nativo, salva em arquivo temp
+        let (tempURL, response) = try await performDownloadRequest(request)
+        defer { try? FileManager.default.removeItem(at: tempURL) }
 
         guard let http = response as? HTTPURLResponse else {
             throw DownloadError.serverError(statusCode: -1)
         }
-        // 200 = full download, 206 = partial content (resume ok)
-        guard http.statusCode == 200 || http.statusCode == 206 else {
-            throw DownloadError.serverError(statusCode: http.statusCode)
-        }
 
-        // Stream bytes para disco
-        let append = (http.statusCode == 206)
-        let handle: FileHandle
         do {
-            if append {
-                handle = try FileHandle(forWritingTo: fileURL)
-                try handle.seekToEnd()
-            } else {
+            switch http.statusCode {
+            case 200:
+                // Resposta completa — substitui arquivo existente
                 if FileManager.default.fileExists(atPath: fileURL.path) {
                     try FileManager.default.removeItem(at: fileURL)
                 }
-                FileManager.default.createFile(atPath: fileURL.path, contents: nil)
-                handle = try FileHandle(forWritingTo: fileURL)
-                existingBytes = 0
-            }
-        } catch {
-            throw DownloadError.fileWriteFailed(
-                path: fileURL.path,
-                reason: error.localizedDescription
-            )
-        }
-        defer { try? handle.close() }
-
-        // Acumula bytes ja baixados no progresso
-        downloadedBytes += existingBytes
-
-        var buffer = Data()
-        buffer.reserveCapacity(65_536)
-        do {
-            for try await byte in asyncBytes {
-                if Task.isCancelled {
-                    try? handle.close()
-                    throw DownloadError.downloadCancelled
-                }
-                buffer.append(byte)
-                if buffer.count >= 65_536 {
-                    try handle.write(contentsOf: buffer)
-                    downloadedBytes += Int64(buffer.count)
-                    buffer.removeAll(keepingCapacity: true)
-                    updateProgress()
-                }
-            }
-            // Flush final
-            if !buffer.isEmpty {
-                try handle.write(contentsOf: buffer)
-                downloadedBytes += Int64(buffer.count)
+                try FileManager.default.moveItem(at: tempURL, to: fileURL)
+                let written = (try FileManager.default.attributesOfItem(atPath: fileURL.path)[.size] as? Int64) ?? 0
+                downloadedBytes += written
                 updateProgress()
+
+            case 206:
+                // Resposta parcial — append ao arquivo existente
+                let partialData = try Data(contentsOf: tempURL)
+                let handle = try FileHandle(forWritingTo: fileURL)
+                defer { try? handle.close() }
+                try handle.seekToEnd()
+                try handle.write(contentsOf: partialData)
+                downloadedBytes += existingBytes + Int64(partialData.count)
+                updateProgress()
+
+            case 416:
+                // Range Not Satisfiable — arquivo ja completo no disco
+                downloadedBytes += existingBytes
+                updateProgress()
+
+            default:
+                throw DownloadError.serverError(statusCode: http.statusCode)
             }
         } catch let error as DownloadError {
             throw error
@@ -269,10 +263,27 @@ public final class HuggingFaceDownloader: ModelDownloader {
             if (error as? URLError)?.code == .notConnectedToInternet {
                 throw DownloadError.networkUnavailable
             }
-            throw DownloadError.downloadInterrupted(
-                bytesDownloaded: downloadedBytes,
-                totalBytes: totalBytes
+            throw DownloadError.fileWriteFailed(
+                path: fileURL.path,
+                reason: error.localizedDescription
             )
+        }
+    }
+
+    private nonisolated func performDownloadRequest(
+        _ request: URLRequest
+    ) async throws -> (URL, URLResponse) {
+        do {
+            return try await session.download(for: request)
+        } catch let error as URLError {
+            switch error.code {
+            case .notConnectedToInternet, .dataNotAllowed:
+                throw DownloadError.networkUnavailable
+            case .cancelled:
+                throw DownloadError.downloadCancelled
+            default:
+                throw DownloadError.serverError(statusCode: error.errorCode)
+            }
         }
     }
 

@@ -141,7 +141,12 @@ struct ModelCard: View {
     @ViewBuilder
     private var actionButtons: some View {
         HStack(spacing: 8) {
-            if !isDownloaded && progress == nil {
+            if entry.isZeroDownload {
+                // Zero-download (Apple FM): nao mostra Baixar — built-in
+                Label("Nao requer download", systemImage: "checkmark.seal")
+                    .font(.caption)
+                    .foregroundStyle(ColorPalette.accent)
+            } else if !isDownloaded && progress == nil {
                 Button {
                     performDownload()
                 } label: {
@@ -149,6 +154,7 @@ struct ModelCard: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(!isCompatible || isPerformingAction)
+                .accessibilityIdentifier("download-\(entry.identifier)")
             }
 
             if isDownloaded && !isActive {
@@ -159,6 +165,7 @@ struct ModelCard: View {
                 }
                 .buttonStyle(.bordered)
                 .disabled(isPerformingAction)
+                .accessibilityIdentifier("activate-\(entry.identifier)")
             }
 
             if isActive {
@@ -169,6 +176,7 @@ struct ModelCard: View {
                 }
                 .buttonStyle(.bordered)
                 .disabled(isPerformingAction)
+                .accessibilityIdentifier("deactivate-\(entry.identifier)")
             }
 
             if isDownloaded {
@@ -179,6 +187,7 @@ struct ModelCard: View {
                 }
                 .buttonStyle(.bordered)
                 .disabled(isPerformingAction)
+                .accessibilityIdentifier("delete-\(entry.identifier)")
             }
         }
         .font(.caption)

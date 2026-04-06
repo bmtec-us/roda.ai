@@ -7,11 +7,13 @@ struct ContentView: View {
     @Environment(AppDependencies.self) private var deps
     @Environment(\.modelContext) private var modelContext
 
-    // Query para detectar se onboarding ja foi completado
+    // Query para detectar se onboarding ja foi completado.
+    // Usa `contains` em vez de `first?` — defensivo contra multiplas rows
+    // que podem existir de versoes anteriores buggadas do OnboardingView.
     @Query private var preferences: [UserPreferences]
 
     private var hasCompletedOnboarding: Bool {
-        preferences.first?.hasCompletedOnboarding ?? false
+        preferences.contains { $0.hasCompletedOnboarding }
     }
 
     var body: some View {

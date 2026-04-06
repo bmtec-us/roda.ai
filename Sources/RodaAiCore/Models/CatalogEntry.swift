@@ -20,6 +20,12 @@ public struct CatalogEntry: Codable, Sendable, Equatable, Identifiable {
 
     public var id: String { identifier }
 
+    /// Modelo zero-download (built-in, ex: Apple Foundation Model)
+    /// nao requer fetch do HuggingFace.
+    public var isZeroDownload: Bool {
+        huggingFaceRepoId.isEmpty || downloadSizeBytes == 0
+    }
+
     public init(
         identifier: String,
         displayName: String,
