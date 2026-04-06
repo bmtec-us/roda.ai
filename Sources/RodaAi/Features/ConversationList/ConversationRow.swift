@@ -10,9 +10,15 @@ struct ConversationRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text(conversation.title.isEmpty ? "Nova conversa" : conversation.title)
-                    .font(.headline)
-                    .lineLimit(1)
+                if conversation.title.isEmpty {
+                    Text("chat.action.newConversation")
+                        .font(.headline)
+                        .lineLimit(1)
+                } else {
+                    Text(conversation.title)
+                        .font(.headline)
+                        .lineLimit(1)
+                }
 
                 Spacer()
 
@@ -28,12 +34,28 @@ struct ConversationRow: View {
                     .lineLimit(2)
             }
 
-            HStack {
-                Image(systemName: "cpu")
-                    .font(.caption2)
-                Text(conversation.modelIdentifier)
-                    .font(.caption2)
+            HStack(spacing: 6) {
+                // Modelo badge
+                HStack(spacing: 3) {
+                    Image(systemName: "cpu")
+                        .font(.caption2)
+                    Text(conversation.modelIdentifier)
+                        .font(.caption2)
+                }
+                .foregroundStyle(.tertiary)
+
+                Spacer()
+
+                // Contagem de mensagens
+                if conversation.messageCount > 0 {
+                    HStack(spacing: 3) {
+                        Image(systemName: "bubble.left.and.bubble.right")
+                            .font(.caption2)
+                        Text("\(conversation.messageCount)")
+                            .font(.caption2)
+                    }
                     .foregroundStyle(.tertiary)
+                }
             }
         }
         .padding(.vertical, 4)

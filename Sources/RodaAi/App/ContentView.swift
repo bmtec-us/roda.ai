@@ -187,6 +187,7 @@ struct ConversationsContainer: View {
         NavigationStack {
             ConversationListView(
                 repository: deps.conversationRepository,
+                activeConversationId: chatViewModel?.currentConversationId,
                 onNewConversation: {
                     startNew()
                     showingList = false
@@ -198,6 +199,13 @@ struct ConversationsContainer: View {
                     }
                 }
             )
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("conversation.action.done") {
+                        showingList = false
+                    }
+                }
+            }
         }
     }
 

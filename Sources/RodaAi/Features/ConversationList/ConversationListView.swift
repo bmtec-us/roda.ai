@@ -8,6 +8,9 @@ struct ConversationListView: View {
     @State private var selectedConversation: ConversationSummary?
 
     let repository: ConversationRepository
+    /// ID da conversa atualmente carregada no ChatViewModel — destacada com checkmark
+    /// e fundo accent. Permite ao usuario ver de relance qual e a "atual" no historico.
+    var activeConversationId: UUID? = nil
     let onNewConversation: () -> Void
     let onSelectConversation: (ConversationSummary) -> Void
 
@@ -21,11 +24,23 @@ struct ConversationListView: View {
                 )
             } else {
                 ForEach(conversations) { conversation in
-                    ConversationRow(conversation: conversation)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            onSelectConversation(conversation)
+                    HStack {
+                        ConversationRow(conversation: conversation)
+                        if conversation.id == activeConversationId {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(ColorPalette.accent)
+                                .accessibilityLabel("model.status.active")
                         }
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        onSelectConversation(conversation)
+                    }
+                    .listRowBackground(
+                        conversation.id == activeConversationId
+                            ? ColorPalette.accent.opacity(0.1)
+                            : Color.clear
+                    )
                 }
                 .onDelete(perform: deleteConversations)
             }

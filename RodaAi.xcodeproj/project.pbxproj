@@ -11,12 +11,15 @@
 		044DA7428B93FF9A79DD8156 /* ErrorRecoveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABD1C6AFD84C52C399CC1D04 /* ErrorRecoveryView.swift */; };
 		08AF9AB142515721A9000879 /* VoiceModeUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FEF1F584810DD2D6F49F8B7 /* VoiceModeUITests.swift */; };
 		0A6C954471EBBAAF3C1CFECC /* MessageComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87516FD22E8FCD5FAEB2BDE9 /* MessageComposer.swift */; };
+		0BF5D58C7013B09C9AD8DC10 /* ErrorBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71CDA783752BEFB7C117728F /* ErrorBanner.swift */; };
 		1050F7956E30596BCA1C6497 /* ColorTokensTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 306A51A3B510EA49581BF315 /* ColorTokensTests.swift */; };
 		137579CB117021CF3FFA4EE0 /* RodaAiControlWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A13111DD5A681E4734F3007A /* RodaAiControlWidget.swift */; };
+		137E64016EE0E41639940CB2 /* TypingIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D1573E25DD07CB05FD48AB1 /* TypingIndicator.swift */; };
 		18D158E7A235EABFD5CD3532 /* ProgressRing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96AB29CB75B54FE68F00D70F /* ProgressRing.swift */; };
 		1AFCA61BA914FCE3957710F0 /* ImageAttachmentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F347277DA01AC93659F7A4FF /* ImageAttachmentView.swift */; };
 		1D38484AB0CDD825940DBB2A /* AttachmentPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = E79E652AB400213CEB0B6BEE /* AttachmentPicker.swift */; };
 		1FB89984E3DB80EEAD58F442 /* RodaAiApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04246D0E43DC937F21665C90 /* RodaAiApp.swift */; };
+		206516EFE636884D3A667AAF /* TypingIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D1573E25DD07CB05FD48AB1 /* TypingIndicator.swift */; };
 		21520EBDB0255F1877DC98A2 /* MessageBubble.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85F9E5053C84328880BDB89D /* MessageBubble.swift */; };
 		21C34B4D3B4E014D99736310 /* AttachmentPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = E79E652AB400213CEB0B6BEE /* AttachmentPicker.swift */; };
 		2315DFBE3ECD0FA4BBF7ED7E /* InferenceServiceLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CEE7991393036EBE7EAF0DF /* InferenceServiceLocator.swift */; };
@@ -48,6 +51,7 @@
 		6AAAFEF325FE6900066C01ED /* VoiceWaveform.swift in Sources */ = {isa = PBXBuildFile; fileRef = 613D3241C382E5C7BCD846BA /* VoiceWaveform.swift */; };
 		6D74D1EE25E28CA74786EB41 /* DownloadProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36CCE30A4788EA64F2DD8960 /* DownloadProgressView.swift */; };
 		6DADEA6CE6E06D8C2B699204 /* SiriShortcutsProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55DB64FABA1210F8C020EAF8 /* SiriShortcutsProvider.swift */; };
+		6F73F7FA879B9C91658E7B2A /* ErrorBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71CDA783752BEFB7C117728F /* ErrorBanner.swift */; };
 		6F822E95E80C6914485AE05E /* ConversationRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CB6BDDA4DD294A6BE2E77FE /* ConversationRow.swift */; };
 		71CEC91D76E0B80C2B23CEBE /* CodeBlockView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3BC9AD868432AFF24A0E5EF /* CodeBlockView.swift */; };
 		746CD1902D14E4379280FE50 /* ComponentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48FA881A0036C5AD927F8DEC /* ComponentTests.swift */; };
@@ -138,6 +142,7 @@
 		4639EAC1E3A25CF415DB77D5 /* LocalizationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationTests.swift; sourceTree = "<group>"; };
 		48FA881A0036C5AD927F8DEC /* ComponentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComponentTests.swift; sourceTree = "<group>"; };
 		4AB36125EC23138F6E2CE986 /* ModelDownloadUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelDownloadUITests.swift; sourceTree = "<group>"; };
+		4D1573E25DD07CB05FD48AB1 /* TypingIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TypingIndicator.swift; sourceTree = "<group>"; };
 		519F807FDF8E3CCACEAEDBB2 /* AppIntentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIntentTests.swift; sourceTree = "<group>"; };
 		528A8D85051514148CFC0E2C /* SettingsViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewModelTests.swift; sourceTree = "<group>"; };
 		55DB64FABA1210F8C020EAF8 /* SiriShortcutsProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SiriShortcutsProvider.swift; sourceTree = "<group>"; };
@@ -147,6 +152,7 @@
 		5A699CD94FECC97B9451A0E2 /* ChatFlowUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatFlowUITests.swift; sourceTree = "<group>"; };
 		5E87BC659BA9CCF07F5C2161 /* AttachmentFlowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttachmentFlowTests.swift; sourceTree = "<group>"; };
 		613D3241C382E5C7BCD846BA /* VoiceWaveform.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceWaveform.swift; sourceTree = "<group>"; };
+		71CDA783752BEFB7C117728F /* ErrorBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorBanner.swift; sourceTree = "<group>"; };
 		72FCAEC9AED16AD17BE8BD2B /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
 		755C36E608AF704768346350 /* AccessibilityLabelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityLabelTests.swift; sourceTree = "<group>"; };
 		85F9E5053C84328880BDB89D /* MessageBubble.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageBubble.swift; sourceTree = "<group>"; };
@@ -369,6 +375,7 @@
 				F347277DA01AC93659F7A4FF /* ImageAttachmentView.swift */,
 				85F9E5053C84328880BDB89D /* MessageBubble.swift */,
 				87516FD22E8FCD5FAEB2BDE9 /* MessageComposer.swift */,
+				4D1573E25DD07CB05FD48AB1 /* TypingIndicator.swift */,
 			);
 			path = Chat;
 			sourceTree = "<group>";
@@ -420,6 +427,7 @@
 			children = (
 				9AE8CE1C3A1388E5631F8B03 /* AnimatedDots.swift */,
 				B3BC9AD868432AFF24A0E5EF /* CodeBlockView.swift */,
+				71CDA783752BEFB7C117728F /* ErrorBanner.swift */,
 				FDCEF2B4686B590BB1B2D9D3 /* GlassCard.swift */,
 				96AB29CB75B54FE68F00D70F /* ProgressRing.swift */,
 			);
@@ -702,6 +710,7 @@
 				B94133DE75204C8E98CFD680 /* ConversationListView.swift in Sources */,
 				6F822E95E80C6914485AE05E /* ConversationRow.swift in Sources */,
 				A48CB2F2F2E4FCAFB7973EEA /* DownloadProgressView.swift in Sources */,
+				0BF5D58C7013B09C9AD8DC10 /* ErrorBanner.swift in Sources */,
 				6565974E4DC658B364E9FE57 /* ErrorRecoveryView.swift in Sources */,
 				3E74765F262508394CE55DC5 /* GlassCard.swift in Sources */,
 				1AFCA61BA914FCE3957710F0 /* ImageAttachmentView.swift in Sources */,
@@ -721,6 +730,7 @@
 				5613B0D98E0F4F9FC1E78FB6 /* SettingsView.swift in Sources */,
 				67561D17562A9A9D62622514 /* SettingsViewModel.swift in Sources */,
 				6DADEA6CE6E06D8C2B699204 /* SiriShortcutsProvider.swift in Sources */,
+				206516EFE636884D3A667AAF /* TypingIndicator.swift in Sources */,
 				E1955D12975226496C1BD97A /* Typography.swift in Sources */,
 				B1CC195631CC5A64E7E7487F /* VoiceModeView.swift in Sources */,
 				D8255DDB420782F980A8446F /* VoiceWaveform.swift in Sources */,
@@ -744,6 +754,7 @@
 				379F170C56764BF2C3ABEB44 /* ConversationListView.swift in Sources */,
 				35368985DE944CD33EFB9728 /* ConversationRow.swift in Sources */,
 				6D74D1EE25E28CA74786EB41 /* DownloadProgressView.swift in Sources */,
+				6F73F7FA879B9C91658E7B2A /* ErrorBanner.swift in Sources */,
 				044DA7428B93FF9A79DD8156 /* ErrorRecoveryView.swift in Sources */,
 				C03CC7C3254A574690D6049F /* GlassCard.swift in Sources */,
 				82E2E0D5EF108B9DBCB3C5D7 /* ImageAttachmentView.swift in Sources */,
@@ -763,6 +774,7 @@
 				5EA81997748C5BE7F1324A25 /* SettingsView.swift in Sources */,
 				AD7D2BDB04946E04DCC36C6C /* SettingsViewModel.swift in Sources */,
 				E3DA3FB93BDADC38DF8CDE2E /* SiriShortcutsProvider.swift in Sources */,
+				137E64016EE0E41639940CB2 /* TypingIndicator.swift in Sources */,
 				E2342CF1B1D528F0241B211A /* Typography.swift in Sources */,
 				022D05D170135D9E5BDA8E16 /* VoiceModeView.swift in Sources */,
 				6AAAFEF325FE6900066C01ED /* VoiceWaveform.swift in Sources */,
