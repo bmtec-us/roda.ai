@@ -12,11 +12,17 @@ public final class ChatViewModel {
 
     // MARK: - Dependencies
     private let inferenceProvider: any InferenceProvider
+    private let repository: ConversationRepository?
+    private var currentConversationId: UUID?
     private var generationTask: Task<Void, Never>?
 
     // MARK: - Init
-    public init(inferenceProvider: any InferenceProvider) {
+    public init(
+        inferenceProvider: any InferenceProvider,
+        repository: ConversationRepository? = nil
+    ) {
         self.inferenceProvider = inferenceProvider
+        self.repository = repository
     }
 
     // MARK: - Actions
@@ -85,6 +91,66 @@ public final class ChatViewModel {
             )
             try? chatState.transition(.error(inferenceError))
             errorMessage = inferenceError.errorDescription
+        }
+
+        // Ref: data-flows.md secao 4 — "Fluxo de Persistencia"
+        if let repository {
+            do {
+                // 1. Cria conversa se nao existir
+                if currentConversationId == nil {
+                    let summary = try await repository.create(
+                        title: "",
+                        modelIdentifier: modelId
+                    )
+                    currentConversationId = summary.id
+
+                    // Auto-titulo apos primeira mensagem
+                    try await repository.addMessage(
+                        to: summary.id,
+                        role: .user,
+                        content: text,
+                        modelIdentifier: nil
+                    )
+                    let _ = try await repository.generateAutoTitle(
+                        for: summary.id
+                    )
+                } else {
+                    try await repository.addMessage(
+                        to: currentConversationId!,
+                        role: .user,
+                        content: text,
+                        modelIdentifier: nil
+                    )
+                }
+
+                // 2. Salva resposta do assistente
+                if let conversationId = currentConversationId {
+                    try await repository.addMessage(
+                        to: conversationId,
+                        role: .assistant,
+                        content: messages[assistantIndex].content,
+                        modelIdentifier: modelId
+                    )
+                }
+            } catch {
+                // PersistenceError — log mas nao interrompe UX
+                print("Erro ao persistir: \(error)")
+            }
+        }
+    }
+
+    /// Carrega historico de conversa existente
+    /// Ref: data-flows.md secao 4
+    public func loadConversation(id: UUID) async {
+        guard let repository else { return }
+        currentConversationId = id
+        do {
+            let messageSummaries = try await repository.fetchMessages(for: id)
+            messages = messageSummaries.map { summary in
+                ChatMessage(role: summary.role, content: summary.content)
+            }
+        } catch {
+            print("Erro ao carregar conversa: \(error)")
         }
     }
 
