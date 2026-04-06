@@ -13,10 +13,17 @@ struct ModelGalleryView: View {
     @State private var filter: ModelFilter = .all
 
     enum ModelFilter: String, CaseIterable, Identifiable {
-        case all = "Todos"
-        case downloaded = "Baixados"
-        case compatible = "Compativeis"
+        case all
+        case downloaded
+        case compatible
         var id: String { rawValue }
+        var localizationKey: LocalizedStringKey {
+            switch self {
+            case .all: return "model.filter.all"
+            case .downloaded: return "model.filter.downloaded"
+            case .compatible: return "model.filter.compatible"
+            }
+        }
     }
 
     private var filtered: [CatalogEntry] {
@@ -48,9 +55,9 @@ struct ModelGalleryView: View {
                 if modelManager.catalog.isEmpty {
                     catalogEmptyState
                 } else {
-                    Picker("Filtro", selection: $filter) {
+                    Picker("model.filter.label", selection: $filter) {
                         ForEach(ModelFilter.allCases) { f in
-                            Text(f.rawValue).tag(f)
+                            Text(f.localizationKey).tag(f)
                         }
                     }
                     .pickerStyle(.segmented)
@@ -73,8 +80,8 @@ struct ModelGalleryView: View {
                     }
                 }
             }
-            .navigationTitle("Modelos")
-            .searchable(text: $searchText, prompt: "Buscar modelos...")
+            .navigationTitle("tab.models")
+            .searchable(text: $searchText, prompt: Text("model.search.placeholder"))
             .task {
                 // Carrega o catalogo se ainda nao carregado
                 if modelManager.catalog.isEmpty {
@@ -88,11 +95,11 @@ struct ModelGalleryView: View {
 
     private var catalogEmptyState: some View {
         ContentUnavailableView {
-            Label("Catalogo nao disponivel", systemImage: "exclamationmark.triangle")
+            Label("model.catalog.empty.title", systemImage: "exclamationmark.triangle")
         } description: {
-            Text("O arquivo ModelCatalog.json nao foi encontrado no bundle do app.")
+            Text("model.catalog.empty.description")
         } actions: {
-            Button("Tentar novamente") {
+            Button("model.catalog.retry") {
                 modelManager.loadCatalog()
             }
         }
@@ -101,9 +108,9 @@ struct ModelGalleryView: View {
 
     private var filterEmptyState: some View {
         ContentUnavailableView(
-            "Nenhum modelo encontrado",
+            "model.filter.empty.title",
             systemImage: "magnifyingglass",
-            description: Text("Tente outro filtro ou termo de busca.")
+            description: Text("model.filter.empty.description")
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

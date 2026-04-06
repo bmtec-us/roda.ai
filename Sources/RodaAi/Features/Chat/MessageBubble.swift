@@ -13,7 +13,7 @@ struct MessageBubble: View {
 
             VStack(alignment: isUser ? .trailing : .leading, spacing: 4) {
                 if !isUser {
-                    Text("Assistente")
+                    Text("chat.assistant")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }

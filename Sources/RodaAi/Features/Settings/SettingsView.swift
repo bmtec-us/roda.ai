@@ -31,20 +31,20 @@ struct SettingsView: View {
             }
             .onDisappear { try? viewModel.savePreferences() }
             .alert(
-                "Excluir modelo?",
+                "settings.storage.deleteConfirm.title",
                 isPresented: Binding(
                     get: { modelToDelete != nil },
                     set: { if !$0 { modelToDelete = nil } }
                 ),
                 presenting: modelToDelete
             ) { model in
-                Button("Cancelar", role: .cancel) { modelToDelete = nil }
-                Button("Excluir", role: .destructive) {
+                Button("settings.storage.deleteConfirm.cancel", role: .cancel) { modelToDelete = nil }
+                Button("settings.storage.deleteConfirm.delete", role: .destructive) {
                     try? deps.modelManager.deleteModel(model)
                     modelToDelete = nil
                 }
             } message: { model in
-                Text("\(model.displayName) (\(formatBytes(model.sizeOnDisk))) sera removido do dispositivo.")
+                Text(deleteConfirmMessage(for: model))
             }
         }
     }
@@ -56,7 +56,7 @@ struct SettingsView: View {
             if let model = viewModel.defaultModelIdentifier {
                 Text(model)
             } else {
-                Text("Nenhum modelo selecionado")
+                Text("settings.defaultModel.empty")
                     .foregroundStyle(ColorPalette.textTertiary)
             }
         }
@@ -81,11 +81,15 @@ struct SettingsView: View {
             NavigationLink {
                 PersonalizationView(viewModel: viewModel)
             } label: {
-                Text(viewModel.systemPrompt.isEmpty ? "Personalizar..." : viewModel.systemPrompt)
-                    .lineLimit(2)
-                    .foregroundStyle(viewModel.systemPrompt.isEmpty
-                        ? ColorPalette.textTertiary
-                        : ColorPalette.textPrimary)
+                if viewModel.systemPrompt.isEmpty {
+                    Text("settings.systemPrompt.placeholder")
+                        .lineLimit(2)
+                        .foregroundStyle(ColorPalette.textTertiary)
+                } else {
+                    Text(viewModel.systemPrompt)
+                        .lineLimit(2)
+                        .foregroundStyle(ColorPalette.textPrimary)
+                }
             }
         }
     }
@@ -99,9 +103,9 @@ struct SettingsView: View {
     private var appearanceSection: some View {
         Section("settings.appearance") {
             Picker("settings.appearance", selection: $viewModel.appearanceMode) {
-                Text("Sistema").tag(AppearanceMode.system)
-                Text("Claro").tag(AppearanceMode.light)
-                Text("Escuro").tag(AppearanceMode.dark)
+                Text("settings.appearance.system").tag(AppearanceMode.system)
+                Text("settings.appearance.light").tag(AppearanceMode.light)
+                Text("settings.appearance.dark").tag(AppearanceMode.dark)
             }
             .pickerStyle(.segmented)
         }
@@ -117,9 +121,9 @@ struct SettingsView: View {
                 Image(systemName: "internaldrive")
                     .foregroundStyle(ColorPalette.accent)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Armazenamento")
+                    Text("settings.storage.label")
                         .font(.rodaBody)
-                    Text("\(deps.modelManager.downloadedModels.count) modelos · \(formatBytes(deps.modelManager.totalStorageUsed)) usados")
+                    Text(storageSummary)
                         .font(.rodaCaption)
                         .foregroundStyle(ColorPalette.textSecondary)
                 }
@@ -127,7 +131,7 @@ struct SettingsView: View {
 
             // Lista de modelos baixados
             if deps.modelManager.downloadedModels.isEmpty {
-                Text("Nenhum modelo baixado")
+                Text("settings.storage.empty")
                     .font(.rodaCaption)
                     .foregroundStyle(ColorPalette.textTertiary)
             } else {
@@ -142,7 +146,7 @@ struct SettingsView: View {
                         }
                         Spacer()
                         if deps.modelManager.activeModel?.identifier == model.identifier {
-                            Label("Ativo", systemImage: "checkmark.circle.fill")
+                            Label("model.status.active", systemImage: "checkmark.circle.fill")
                                 .labelStyle(.iconOnly)
                                 .foregroundStyle(ColorPalette.accent)
                         }
@@ -153,7 +157,7 @@ struct SettingsView: View {
                                 .foregroundStyle(ColorPalette.error)
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel("Excluir \(model.displayName)")
+                        .accessibilityLabel(Text("model.action.delete"))
                     }
                 }
             }
@@ -164,16 +168,16 @@ struct SettingsView: View {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundStyle(ColorPalette.warning)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("\(deps.modelManager.partialDownloads.count) download(s) incompleto(s)")
+                        Text(partialDownloadsTitle)
                             .font(.rodaCaption)
-                        Text("Va para Modelos para limpar.")
+                        Text("settings.storage.partial.subtitle")
                             .font(.rodaCaption)
                             .foregroundStyle(ColorPalette.textTertiary)
                     }
                 }
             }
         } header: {
-            Text("Modelos baixados")
+            Text("settings.storage.title")
         }
     }
 
@@ -195,5 +199,32 @@ struct SettingsView: View {
         formatter.allowedUnits = [.useMB, .useGB]
         formatter.countStyle = .file
         return formatter.string(fromByteCount: bytes)
+    }
+
+    /// Mensagem de confirmacao de delete usando String(localized:) com placeholders.
+    /// O xcstrings tem chave "settings.storage.deleteConfirm.message" com format
+    /// `%1$@ (%2$@) ...`. Usamos String(format:) para interpolar os args.
+    private func deleteConfirmMessage(for model: LocalModel) -> String {
+        let format = NSLocalizedString(
+            "settings.storage.deleteConfirm.message",
+            comment: ""
+        )
+        return String(format: format, model.displayName, formatBytes(model.sizeOnDisk))
+    }
+
+    /// Resumo do storage: "N modelos · X GB usados"
+    private var storageSummary: String {
+        let format = NSLocalizedString("settings.storage.summary", comment: "")
+        return String(
+            format: format,
+            deps.modelManager.downloadedModels.count,
+            formatBytes(deps.modelManager.totalStorageUsed)
+        )
+    }
+
+    /// Titulo de downloads parciais: "N download(s) incompleto(s)"
+    private var partialDownloadsTitle: String {
+        let format = NSLocalizedString("settings.storage.partial.title", comment: "")
+        return String(format: format, deps.modelManager.partialDownloads.count)
     }
 }

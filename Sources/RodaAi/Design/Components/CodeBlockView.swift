@@ -13,7 +13,7 @@ struct CodeBlockView: View {
                         .font(.rodaCaption)
                         .foregroundStyle(ColorPalette.textSecondary)
                     Spacer()
-                    Button("Copiar") {
+                    Button("common.copy") {
                         #if canImport(UIKit)
                         UIPasteboard.general.string = code
                         #elseif canImport(AppKit)

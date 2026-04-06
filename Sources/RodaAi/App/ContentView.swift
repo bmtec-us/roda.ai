@@ -60,19 +60,19 @@ struct ContentView: View {
 
     private var iOSTabs: some View {
         TabView(selection: $selectedTab) {
-            Tab("Conversas", systemImage: "message.fill", value: 0) {
+            Tab("tab.conversations", systemImage: "message.fill", value: 0) {
                 conversationsTab
             }
-            Tab("Modelos", systemImage: "cpu.fill", value: 1) {
+            Tab("tab.models", systemImage: "cpu.fill", value: 1) {
                 ModelGalleryView(modelManager: deps.modelManager)
             }
-            Tab("Voz", systemImage: "mic.fill", value: 2) {
+            Tab("tab.voice", systemImage: "mic.fill", value: 2) {
                 NavigationStack {
                     VoiceModeView(voiceService: deps.voiceService)
-                        .navigationTitle("Voz")
+                        .navigationTitle("tab.voice")
                 }
             }
-            Tab("Ajustes", systemImage: "gearshape.fill", value: 3) {
+            Tab("tab.settings", systemImage: "gearshape.fill", value: 3) {
                 SettingsView(modelContext: deps.modelContainer.mainContext)
             }
         }
@@ -92,16 +92,16 @@ struct ContentView: View {
     private var macOSSplitView: some View {
         NavigationSplitView {
             List(selection: $macNavTarget) {
-                Label("Conversas", systemImage: "message.fill")
+                Label("tab.conversations", systemImage: "message.fill")
                     .tag(MacNavTarget.conversations)
-                Label("Modelos", systemImage: "cpu.fill")
+                Label("tab.models", systemImage: "cpu.fill")
                     .tag(MacNavTarget.models)
-                Label("Voz", systemImage: "mic.fill")
+                Label("tab.voice", systemImage: "mic.fill")
                     .tag(MacNavTarget.voice)
-                Label("Ajustes", systemImage: "gearshape.fill")
+                Label("tab.settings", systemImage: "gearshape.fill")
                     .tag(MacNavTarget.settings)
             }
-            .navigationTitle("RodaAi")
+            .navigationTitle("app.name")
             .listStyle(.sidebar)
         } detail: {
             macOSDetail
@@ -118,7 +118,7 @@ struct ContentView: View {
             ModelGalleryView(modelManager: deps.modelManager)
         case .voice:
             VoiceModeView(voiceService: deps.voiceService)
-                .navigationTitle("Voz")
+                .navigationTitle("tab.voice")
         case .settings:
             SettingsView(modelContext: deps.modelContainer.mainContext)
         }
@@ -154,14 +154,14 @@ struct ConversationsContainer: View {
                             Button {
                                 startNew()
                             } label: {
-                                Label("Nova Conversa", systemImage: "square.and.pencil")
+                                Label("chat.action.newConversation", systemImage: "square.and.pencil")
                             }
                         }
                         ToolbarItem(placement: .navigation) {
                             Button {
                                 showingList = true
                             } label: {
-                                Label("Historico", systemImage: "list.bullet")
+                                Label("chat.action.history", systemImage: "list.bullet")
                             }
                         }
                     }
@@ -169,7 +169,7 @@ struct ConversationsContainer: View {
                         conversationListSheet
                     }
             } else {
-                ProgressView("Inicializando...")
+                ProgressView("app.initializing")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }

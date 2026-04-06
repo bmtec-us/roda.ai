@@ -35,23 +35,23 @@ struct VoiceModeView: View {
     private var stateIndicator: some View {
         switch voiceService.state {
         case .idle:
-            Text("Toque para falar")
+            Text("voice.state.idle")
                 .font(.rodaHeadline)
                 .foregroundStyle(ColorPalette.textSecondary)
         case .listening:
-            Text("Ouvindo...")
+            Text("voice.state.listening")
                 .font(.rodaHeadline)
                 .foregroundStyle(ColorPalette.accent)
         case .processing:
-            Text("Processando...")
+            Text("voice.state.processing")
                 .font(.rodaHeadline)
                 .foregroundStyle(ColorPalette.accent)
         case .speaking:
-            Text("Respondendo...")
+            Text("voice.state.speaking")
                 .font(.rodaHeadline)
                 .foregroundStyle(ColorPalette.accent)
         case .error(let error):
-            Text(error.errorDescription ?? "Erro")
+            Text(error.errorDescription ?? String(localized: "voice.state.error"))
                 .font(.rodaBody)
                 .foregroundStyle(ColorPalette.error)
         }

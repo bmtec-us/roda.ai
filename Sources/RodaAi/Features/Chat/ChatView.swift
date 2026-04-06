@@ -40,7 +40,7 @@ struct ChatView: View {
                         .foregroundStyle(.orange)
                     Text(errorMessage)
                         .font(.caption)
-                    Button("Tentar novamente") {
+                    Button("chat.action.retry") {
                         viewModel.resetError()
                     }
                     .buttonStyle(.bordered)
@@ -73,7 +73,7 @@ struct ChatView: View {
                 fileProcessor: fileProcessor
             )
         }
-        .navigationTitle("Chat")
+        .navigationTitle("chat.title")
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -84,10 +84,10 @@ struct ChatView: View {
             Image(systemName: "message")
                 .font(.system(size: 48))
                 .foregroundStyle(ColorPalette.textTertiary)
-            Text("Comece uma conversa")
+            Text("chat.empty.title")
                 .font(.rodaHeadline)
                 .foregroundStyle(ColorPalette.textSecondary)
-            Text("Baixe e ative um modelo em Modelos para comecar a conversar.")
+            Text("chat.empty.subtitle")
                 .font(.rodaCaption)
                 .foregroundStyle(ColorPalette.textTertiary)
                 .multilineTextAlignment(.center)

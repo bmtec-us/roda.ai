@@ -111,6 +111,12 @@ targets:
     dependencies:
       - target: RodaAi-iOS
 
+  # NOTA: Tentamos adicionar RodaAiTests-macOS aqui mas mlx-swift-lm tem
+  # um Hub linker issue ao linkar para macOS unit-test bundle (Hub.framework
+  # nao e exportado para o test bundle scope). RodaAiTests-iOS funciona ok.
+  # Para validar localizacao no macOS, use o script python em scripts/
+  # ou rode swift test (RodaAiCore tests) que ja cobrem o nucleo.
+
 schemes:
   RodaAi-iOS:
     build:

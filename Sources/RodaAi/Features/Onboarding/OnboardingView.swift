@@ -81,7 +81,7 @@ private struct OnboardingWelcomeStep: View {
                 .multilineTextAlignment(.center)
             Spacer()
             Button(action: onNext) {
-                Text("Continuar")
+                Text("onboarding.continue")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
@@ -104,12 +104,12 @@ private struct OnboardingModelStep: View {
                 .foregroundStyle(ColorPalette.textSecondary)
             Spacer()
             Button(action: onNext) {
-                Text("Continuar")
+                Text("onboarding.continue")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
             .tint(ColorPalette.accent)
-            Button("Pular", action: onSkip)
+            Button("onboarding.skip", action: onSkip)
                 .foregroundStyle(ColorPalette.textSecondary)
         }
         .padding()
@@ -129,12 +129,12 @@ private struct OnboardingChatStep: View {
                 .foregroundStyle(ColorPalette.textSecondary)
             Spacer()
             Button(action: onNext) {
-                Text("Continuar")
+                Text("onboarding.continue")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
             .tint(ColorPalette.accent)
-            Button("Pular", action: onSkip)
+            Button("onboarding.skip", action: onSkip)
                 .foregroundStyle(ColorPalette.textSecondary)
         }
         .padding()

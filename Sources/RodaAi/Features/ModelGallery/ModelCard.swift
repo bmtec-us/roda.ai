@@ -66,9 +66,9 @@ struct ModelCard: View {
 
     // MARK: - Rating badge
     private var ratingBadge: some View {
-        let text = ratingText(for: entry.portugueseRating)
+        let key = ratingText(for: entry.portugueseRating)
         let color = ratingColor(for: entry.portugueseRating)
-        return Text(text)
+        return Text(key)
             .font(.caption2.weight(.medium))
             .foregroundStyle(color)
             .padding(.horizontal, 8)
@@ -77,12 +77,12 @@ struct ModelCard: View {
             .clipShape(Capsule())
     }
 
-    private func ratingText(for rating: PortugueseRating) -> String {
+    private func ratingText(for rating: PortugueseRating) -> LocalizedStringKey {
         switch rating {
-        case .excelente: return "Excelente PT"
-        case .bom: return "Bom PT"
-        case .razoavel: return "Razoavel PT"
-        case .limitado: return "Limitado PT"
+        case .excelente: return "model.rating.excelente"
+        case .bom: return "model.rating.bom"
+        case .razoavel: return "model.rating.razoavel"
+        case .limitado: return "model.rating.limitado"
         }
     }
 
@@ -113,23 +113,23 @@ struct ModelCard: View {
     private var statusRow: some View {
         HStack(spacing: 6) {
             if isActive {
-                Label("Ativo", systemImage: "checkmark.circle.fill")
+                Label("model.status.active", systemImage: "checkmark.circle.fill")
                     .font(.caption)
                     .foregroundStyle(ColorPalette.accent)
             } else if isDownloaded {
-                Label("Baixado", systemImage: "checkmark")
+                Label("model.status.downloaded", systemImage: "checkmark")
                     .font(.caption)
                     .foregroundStyle(ColorPalette.textSecondary)
             } else if progress != nil {
-                Label("Baixando...", systemImage: "arrow.down.circle")
+                Label("model.status.downloading", systemImage: "arrow.down.circle")
                     .font(.caption)
                     .foregroundStyle(ColorPalette.accent)
             } else if !isCompatible {
-                Label("Incompativel (RAM insuficiente)", systemImage: "exclamationmark.triangle")
+                Label("model.status.incompatible", systemImage: "exclamationmark.triangle")
                     .font(.caption)
                     .foregroundStyle(ColorPalette.warning)
             } else {
-                Label("Disponivel para download", systemImage: "arrow.down.circle")
+                Label("model.status.available", systemImage: "arrow.down.circle")
                     .font(.caption)
                     .foregroundStyle(ColorPalette.textSecondary)
             }
@@ -143,14 +143,14 @@ struct ModelCard: View {
         HStack(spacing: 8) {
             if entry.isZeroDownload {
                 // Zero-download (Apple FM): nao mostra Baixar — built-in
-                Label("Nao requer download", systemImage: "checkmark.seal")
+                Label("model.status.builtin", systemImage: "checkmark.seal")
                     .font(.caption)
                     .foregroundStyle(ColorPalette.accent)
             } else if !isDownloaded && progress == nil {
                 Button {
                     performDownload()
                 } label: {
-                    Label("Baixar", systemImage: "arrow.down.circle")
+                    Label("model.action.download", systemImage: "arrow.down.circle")
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(!isCompatible || isPerformingAction)
@@ -161,7 +161,7 @@ struct ModelCard: View {
                 Button {
                     performLoad()
                 } label: {
-                    Label("Ativar", systemImage: "play.circle")
+                    Label("model.action.activate", systemImage: "play.circle")
                 }
                 .buttonStyle(.bordered)
                 .disabled(isPerformingAction)
@@ -172,7 +172,7 @@ struct ModelCard: View {
                 Button {
                     performUnload()
                 } label: {
-                    Label("Descarregar", systemImage: "stop.circle")
+                    Label("model.action.deactivate", systemImage: "stop.circle")
                 }
                 .buttonStyle(.bordered)
                 .disabled(isPerformingAction)
@@ -183,7 +183,7 @@ struct ModelCard: View {
                 Button(role: .destructive) {
                     performDelete()
                 } label: {
-                    Label("Excluir", systemImage: "trash")
+                    Label("model.action.delete", systemImage: "trash")
                 }
                 .buttonStyle(.bordered)
                 .disabled(isPerformingAction)

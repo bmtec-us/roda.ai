@@ -54,7 +54,7 @@ struct MessageComposer: View {
                     Image(systemName: "photo")
                 }
                 .disabled(isStreaming)
-                .accessibilityLabel("Anexar imagem")
+                .accessibilityLabel("chat.attachment.attachImage")
                 .onChange(of: photoPickerItem) { _, newItem in
                     Task {
                         if let data = try? await newItem?.loadTransferable(type: Data.self) {
@@ -63,7 +63,7 @@ struct MessageComposer: View {
                     }
                 }
 
-                TextField("Mensagem...", text: $text, axis: .vertical)
+                TextField("chat.message.placeholder", text: $text, axis: .vertical)
                     .textFieldStyle(.plain)
                     .lineLimit(1...5)
                     .focused($isFocused)
@@ -78,7 +78,7 @@ struct MessageComposer: View {
                             .font(.title2)
                             .foregroundStyle(.red)
                     }
-                    .accessibilityLabel("Parar")
+                    .accessibilityLabel("chat.action.stop")
                 } else {
                     Button(action: sendIfValid) {
                         Image(systemName: "arrow.up.circle.fill")
@@ -88,7 +88,7 @@ struct MessageComposer: View {
                                 ? .gray : .accentColor
                             )
                     }
-                    .accessibilityLabel("Enviar")
+                    .accessibilityLabel("chat.action.send")
                     .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
@@ -114,7 +114,7 @@ struct MessageComposer: View {
                     .foregroundStyle(ColorPalette.textTertiary)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Remover anexo")
+            .accessibilityLabel("chat.attachment.removeFile")
         }
         .padding(.horizontal)
         .padding(.vertical, 6)
@@ -125,7 +125,7 @@ struct MessageComposer: View {
         HStack(spacing: 8) {
             Image(systemName: "photo.fill")
                 .foregroundStyle(ColorPalette.accent)
-            Text("Imagem anexada")
+            Text("chat.attachment.image")
                 .font(.caption)
             Spacer()
             Button {
@@ -136,7 +136,7 @@ struct MessageComposer: View {
                     .foregroundStyle(ColorPalette.textTertiary)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Remover imagem")
+            .accessibilityLabel("chat.attachment.removeImage")
         }
         .padding(.horizontal)
         .padding(.vertical, 6)

@@ -15,9 +15,9 @@ struct ConversationListView: View {
         List {
             if conversations.isEmpty {
                 ContentUnavailableView(
-                    "Nenhuma conversa",
+                    "conversation.list.empty.title",
                     systemImage: "message",
-                    description: Text("Toque + para iniciar uma nova conversa")
+                    description: Text("conversation.list.empty.description")
                 )
             } else {
                 ForEach(conversations) { conversation in
@@ -30,14 +30,14 @@ struct ConversationListView: View {
                 .onDelete(perform: deleteConversations)
             }
         }
-        .navigationTitle("Conversas")
-        .searchable(text: $searchText, prompt: "Buscar conversas...")
+        .navigationTitle("conversation.list.title")
+        .searchable(text: $searchText, prompt: Text("conversation.search.placeholder"))
         .onChange(of: searchText) { _, query in
             Task { await loadConversations(matching: query) }
         }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button("Nova Conversa", systemImage: "plus") {
+                Button("chat.action.newConversation", systemImage: "plus") {
                     onNewConversation()
                 }
             }
