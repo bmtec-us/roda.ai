@@ -1,0 +1,234 @@
+{
+  "sourceLanguage": "pt-BR",
+  "strings": {
+    "tab.conversations": {
+      "localizations": {
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Conversas" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Conversations" } }
+      }
+    },
+    "tab.models": {
+      "localizations": {
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Modelos" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Models" } }
+      }
+    },
+    "tab.voice": {
+      "localizations": {
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Voz" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Voice" } }
+      }
+    },
+    "tab.settings": {
+      "localizations": {
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Ajustes" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Settings" } }
+      }
+    },
+    "chat.send": {
+      "localizations": {
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Enviar" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Send" } }
+      }
+    },
+    "chat.stop": {
+      "localizations": {
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Parar" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Stop" } }
+      }
+    },
+    "chat.newConversation": {
+      "localizations": {
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Nova Conversa" } },
+        "en": { "stringUnit": { "state": "translated", "value": "New Conversation" } }
+      }
+    },
+    "chat.typing": {
+      "localizations": {
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Digitando..." } },
+        "en": { "stringUnit": { "state": "translated", "value": "Typing..." } }
+      }
+    },
+    "chat.placeholder": {
+      "localizations": {
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Digite sua mensagem..." } },
+        "en": { "stringUnit": { "state": "translated", "value": "Type your message..." } }
+      }
+    },
+    "model.download": {
+      "localizations": {
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Baixar" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Download" } }
+      }
+    },
+    "model.downloading": {
+      "localizations": {
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Baixando..." } },
+        "en": { "stringUnit": { "state": "translated", "value": "Downloading..." } }
+      }
+    },
+    "model.downloaded": {
+      "localizations": {
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Baixado" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Downloaded" } }
+      }
+    },
+    "model.delete": {
+      "localizations": {
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Excluir Modelo" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Delete Model" } }
+      }
+    },
+    "model.loadingModel": {
+      "localizations": {
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Carregando modelo..." } },
+        "en": { "stringUnit": { "state": "translated", "value": "Loading model..." } }
+      }
+    },
+    "rating.excellent": {
+      "localizations": {
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Excelente" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Excellent" } }
+      }
+    },
+    "rating.good": {
+      "localizations": {
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Bom" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Good" } }
+      }
+    },
+    "rating.fair": {
+      "localizations": {
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Razoavel" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Fair" } }
+      }
+    },
+    "rating.toValidate": {
+      "localizations": {
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "A validar" } },
+        "en": { "stringUnit": { "state": "translated", "value": "To validate" } }
+      }
+    },
+    "error.insufficientMemory": {
+      "localizations": {
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Memoria insuficiente para carregar o modelo" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Insufficient memory to load model" } }
+      }
+    },
+    "error.modelNotFound": {
+      "localizations": {
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Modelo nao encontrado" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Model not found" } }
+      }
+    },
+    "error.networkUnavailable": {
+      "localizations": {
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Sem conexao com a internet" } },
+        "en": { "stringUnit": { "state": "translated", "value": "No internet connection" } }
+      }
+    },
+    "error.insufficientStorage": {
+      "localizations": {
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Espaco de armazenamento insuficiente" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Insufficient storage space" } }
+      }
+    },
+    "error.downloadFailed": {
+      "localizations": {
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Falha no download. Tente novamente." } },
+        "en": { "stringUnit": { "state": "translated", "value": "Download failed. Please try again." } }
+      }
+    },
+    "onboarding.welcome.title": {
+      "localizations": {
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Bem-vindo ao Roda AI" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Welcome to Roda AI" } }
+      }
+    },
+    "onboarding.welcome.subtitle": {
+      "localizations": {
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "IA local, privada e poderosa no seu dispositivo" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Local, private and powerful AI on your device" } }
+      }
+    },
+    "onboarding.model.title": {
+      "localizations": {
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Escolha um Modelo" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Choose a Model" } }
+      }
+    },
+    "onboarding.model.subtitle": {
+      "localizations": {
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Selecione e baixe um modelo para comecar" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Select and download a model to get started" } }
+      }
+    },
+    "onboarding.chat.title": {
+      "localizations": {
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Primeira Conversa" } },
+        "en": { "stringUnit": { "state": "translated", "value": "First Conversation" } }
+      }
+    },
+    "onboarding.chat.subtitle": {
+      "localizations": {
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Experimente conversar com a IA" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Try chatting with the AI" } }
+      }
+    },
+    "onboarding.ready.title": {
+      "localizations": {
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Tudo Pronto!" } },
+        "en": { "stringUnit": { "state": "translated", "value": "All Set!" } }
+      }
+    },
+    "onboarding.ready.button": {
+      "localizations": {
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Comecar" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Get Started" } }
+      }
+    },
+    "settings.defaultModel": {
+      "localizations": {
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Modelo Padrao" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Default Model" } }
+      }
+    },
+    "settings.systemPrompt": {
+      "localizations": {
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Prompt do Sistema" } },
+        "en": { "stringUnit": { "state": "translated", "value": "System Prompt" } }
+      }
+    },
+    "settings.temperature": {
+      "localizations": {
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Temperatura" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Temperature" } }
+      }
+    },
+    "settings.voiceEnabled": {
+      "localizations": {
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Voz Habilitada" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Voice Enabled" } }
+      }
+    },
+    "settings.appearance": {
+      "localizations": {
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Aparencia" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Appearance" } }
+      }
+    },
+    "settings.storage": {
+      "localizations": {
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Armazenamento" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Storage" } }
+      }
+    },
+    "settings.version": {
+      "localizations": {
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Versao" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Version" } }
+      }
+    }
+  },
+  "version": "1.0"
+}
