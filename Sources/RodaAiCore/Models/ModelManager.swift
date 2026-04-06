@@ -21,6 +21,7 @@ public final class ModelManager {
     // MARK: - Dependencies
     private let downloader: any ModelDownloader
     private let inferenceProvider: (any InferenceProvider)?
+    private let visionInferenceProvider: (any InferenceProvider)?
     private let ggufInferenceProvider: (any InferenceProvider)?
     private let apiInferenceProvider: (any InferenceProvider)?
     private let storageManager: StorageManager
@@ -44,6 +45,7 @@ public final class ModelManager {
     public init(
         downloader: any ModelDownloader,
         inferenceProvider: (any InferenceProvider)? = nil,
+        visionInferenceProvider: (any InferenceProvider)? = nil,
         ggufInferenceProvider: (any InferenceProvider)? = nil,
         apiInferenceProvider: (any InferenceProvider)? = nil,
         storageManager: StorageManager = StorageManager(),
@@ -52,6 +54,7 @@ public final class ModelManager {
     ) {
         self.downloader = downloader
         self.inferenceProvider = inferenceProvider
+        self.visionInferenceProvider = visionInferenceProvider
         self.ggufInferenceProvider = ggufInferenceProvider
         self.apiInferenceProvider = apiInferenceProvider
         self.storageManager = storageManager
@@ -59,18 +62,22 @@ public final class ModelManager {
         self.modelsDirectoryOverride = modelsDirectoryOverride
     }
 
-    /// Retorna o provider correto baseado no backend do modelo.
-    private func provider(for backend: ModelBackend) -> (any InferenceProvider)? {
-        switch backend {
+    /// Retorna o provider correto baseado no backend e capacidades do modelo.
+    /// Modelos vision-capable com backend MLX usam VisionInferenceProvider.
+    private func provider(for identifier: String) -> (any InferenceProvider)? {
+        let entry = catalog.first { $0.identifier == identifier }
+        let modelBackend = entry?.backend ?? .mlx
+
+        // Vision-capable MLX models use VLMModelFactory
+        if entry?.isVisionCapable == true && modelBackend == .mlx {
+            return visionInferenceProvider ?? inferenceProvider
+        }
+
+        switch modelBackend {
         case .mlx: return inferenceProvider
         case .gguf: return ggufInferenceProvider ?? inferenceProvider
         case .api: return apiInferenceProvider
         }
-    }
-
-    /// Encontra o backend de um modelo pelo identifier no catalogo.
-    private func backend(for identifier: String) -> ModelBackend {
-        catalog.first { $0.identifier == identifier }?.backend ?? .mlx
     }
 
     // MARK: - Catalog loading
@@ -217,13 +224,12 @@ public final class ModelManager {
     // MARK: - Load / Unload (ref: state-machines.md secao 4)
 
     public func loadModel(_ model: LocalModel) async throws {
-        let modelBackend = backend(for: model.identifier)
-        guard let prov = provider(for: modelBackend) else {
-            RodaLog.model.warning("loadModel called but no provider for backend \(modelBackend.rawValue, privacy: .public)")
+        guard let prov = provider(for: model.identifier) else {
+            RodaLog.model.warning("loadModel called but no provider for \(model.identifier, privacy: .public)")
             return
         }
         let modelPath = modelsDirectory.appendingPathComponent(model.identifier)
-        RodaLog.model.info("Activating model: \(model.identifier, privacy: .public) via \(modelBackend.rawValue, privacy: .public)")
+        RodaLog.model.info("Activating model: \(model.identifier, privacy: .public)")
         try await prov.loadModel(identifier: modelPath.path)
         activeModel = model
         RodaLog.model.info("Model activated: \(model.identifier, privacy: .public)")
@@ -232,8 +238,7 @@ public final class ModelManager {
     public func unloadModel() async {
         guard let active = activeModel else { return }
         RodaLog.model.info("Deactivating model: \(active.identifier, privacy: .public)")
-        let modelBackend = backend(for: active.identifier)
-        if let prov = provider(for: modelBackend) {
+        if let prov = provider(for: active.identifier) {
             await prov.unloadModel()
         }
         activeModel = nil

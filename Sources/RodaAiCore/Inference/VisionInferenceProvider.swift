@@ -33,6 +33,9 @@ public actor VisionInferenceProvider: InferenceProvider {
             await unloadModel()
         }
 
+        // Registra Gemma 4 no VLMTypeRegistry (idempotente)
+        await Gemma4Registration.register()
+
         // Reusa a logica de makeConfiguration do MLXInferenceProvider
         let configuration = MLXInferenceProvider.makeConfiguration(for: identifier)
         do {

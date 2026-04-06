@@ -85,9 +85,10 @@ final class ModelBackendTests: XCTestCase {
     }
 
     @MainActor
-    func testManagerRoutesToMLXForGemma4() async throws {
+    func testManagerRoutesVisionCapableToVisionProvider() async throws {
         let mockDownloader = MockModelDownloader()
         let mlxProvider = MockInferenceProvider()
+        let visionProvider = MockInferenceProvider()
         let ggufProvider = MockInferenceProvider()
 
         let tmpDir = FileManager.default.temporaryDirectory
@@ -95,22 +96,56 @@ final class ModelBackendTests: XCTestCase {
         let manager = ModelManager(
             downloader: mockDownloader,
             inferenceProvider: mlxProvider,
+            visionInferenceProvider: visionProvider,
             ggufInferenceProvider: ggufProvider,
             modelsDirectoryOverride: tmpDir
         )
 
         manager.loadCatalog()
-        let mlxEntry = manager.catalog.first { $0.identifier == "gemma-4-e2b" }
-        XCTAssertNotNil(mlxEntry, "Production catalog must have gemma-4-e2b (MLX)")
-        XCTAssertEqual(mlxEntry?.backend, .mlx)
+        let gemmaEntry = manager.catalog.first { $0.identifier == "gemma-4-e2b" }
+        XCTAssertNotNil(gemmaEntry, "Production catalog must have gemma-4-e2b")
+        XCTAssertTrue(gemmaEntry!.isVisionCapable, "Gemma 4 E2B must be vision capable")
+        XCTAssertEqual(gemmaEntry?.backend, .mlx)
 
-        try await manager.downloadModel(mlxEntry!)
+        try await manager.downloadModel(gemmaEntry!)
         try await manager.loadModel(manager.downloadedModels[0])
 
-        // MLX provider should have been used
+        // Vision provider should be used for vision-capable MLX models
+        let visionLoadCount = await visionProvider.loadModelCallCount
         let mlxLoadCount = await mlxProvider.loadModelCallCount
         let ggufLoadCount = await ggufProvider.loadModelCallCount
-        XCTAssertEqual(mlxLoadCount, 1, "MLX provider should be used for MLX models")
-        XCTAssertEqual(ggufLoadCount, 0, "GGUF provider should NOT be used for MLX models")
+        XCTAssertEqual(visionLoadCount, 1, "Vision provider should be used for vision-capable MLX models")
+        XCTAssertEqual(mlxLoadCount, 0, "MLX provider should NOT be used for vision models")
+        XCTAssertEqual(ggufLoadCount, 0, "GGUF provider should NOT be used for vision models")
+    }
+
+    @MainActor
+    func testManagerRoutesToMLXForTextOnly() async throws {
+        let mockDownloader = MockModelDownloader()
+        let mlxProvider = MockInferenceProvider()
+        let visionProvider = MockInferenceProvider()
+
+        let tmpDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+        let manager = ModelManager(
+            downloader: mockDownloader,
+            inferenceProvider: mlxProvider,
+            visionInferenceProvider: visionProvider,
+            modelsDirectoryOverride: tmpDir
+        )
+
+        manager.loadCatalog()
+        let llamaEntry = manager.catalog.first { $0.identifier == "llama-3.2-1b" }
+        XCTAssertNotNil(llamaEntry, "Production catalog must have llama-3.2-1b")
+        XCTAssertFalse(llamaEntry!.isVisionCapable)
+
+        try await manager.downloadModel(llamaEntry!)
+        try await manager.loadModel(manager.downloadedModels[0])
+
+        // MLX provider should be used for text-only models
+        let mlxLoadCount = await mlxProvider.loadModelCallCount
+        let visionLoadCount = await visionProvider.loadModelCallCount
+        XCTAssertEqual(mlxLoadCount, 1, "MLX provider should be used for text-only models")
+        XCTAssertEqual(visionLoadCount, 0, "Vision provider should NOT be used for text-only models")
     }
 }
