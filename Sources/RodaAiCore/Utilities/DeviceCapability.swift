@@ -13,6 +13,11 @@ public enum DeviceCapability {
         Int64(ProcessInfo.processInfo.physicalMemory)
     }
 
+    /// RAM total em GB (arredondado).
+    public static var totalRAMGB: Int {
+        Int(totalRAM / 1_073_741_824)
+    }
+
     /// RAM disponivel estimada em bytes.
     /// `os_proc_available_memory()` so esta disponivel em iOS/iPadOS/tvOS/watchOS/visionOS.
     /// No macOS, retorna uma estimativa baseada na memoria total.
@@ -22,6 +27,46 @@ public enum DeviceCapability {
         #else
         // macOS nao expoe esta API. Estima 60% da RAM total como disponivel.
         return Int64(Double(totalRAM) * 0.6)
+        #endif
+    }
+
+    /// Orcamento de memoria disponivel para modelos de IA.
+    /// Leva em conta os limites da plataforma (jetsam no iOS, overhead no macOS).
+    ///
+    /// iOS/iPadOS: apps recebem ~50-60% do total antes do jetsam matar o processo.
+    /// Usamos 55% como estimativa conservadora e estatica (nao flutua como availableRAM).
+    ///
+    /// macOS: apps podem usar a maior parte da RAM unificada.
+    /// Usamos 75% para deixar espaco para o sistema.
+    public static var modelMemoryBudget: Int64 {
+        #if os(iOS) || os(tvOS) || os(watchOS) || os(visionOS)
+        return Int64(Double(totalRAM) * 0.55)
+        #else
+        return Int64(Double(totalRAM) * 0.75)
+        #endif
+    }
+
+    /// Orcamento em GB (arredondado para baixo).
+    public static var modelMemoryBudgetGB: Int {
+        Int(modelMemoryBudget / 1_073_741_824)
+    }
+
+    /// Tier de RAM do dispositivo para recomendacoes de modelos.
+    public static var ramTier: RAMTier {
+        let budget = modelMemoryBudgetGB
+        if budget >= 24 { return .desktop }
+        if budget >= 10 { return .workstation }
+        if budget >= 5 { return .standard }
+        if budget >= 3 { return .compact }
+        return .minimal
+    }
+
+    /// True se o app esta rodando no macOS (vs iOS/iPadOS).
+    public static var isMac: Bool {
+        #if os(macOS)
+        return true
+        #else
+        return false
         #endif
     }
 
@@ -46,13 +91,16 @@ public enum DeviceCapability {
     }
 
     /// Verifica se o dispositivo pode carregar um modelo que requer `gb` GB de RAM.
-    /// Compara contra RAM **total** do dispositivo (nao disponivel no momento),
-    /// porque compatibilidade e uma propriedade estatica do hardware — a RAM
-    /// disponivel flutua com o uso do sistema e geraria falsos negativos
-    /// (ex: iPhone 15 Pro Max com 8GB marcando modelos de 6GB como incompativeis).
+    /// Compara contra o **orcamento de memoria** (nao RAM total), que leva em
+    /// conta limites da plataforma (jetsam no iOS, overhead no macOS).
+    ///
+    /// Exemplos:
+    /// - iPhone 15 Pro Max (8GB total): budget ~4.4GB → modelos ate 4GB
+    /// - MacBook Air M4 (16GB total): budget ~12GB → modelos ate 12GB
+    /// - Mac Studio M4 Max (64GB total): budget ~48GB → modelos ate 48GB
     public static func canLoadModel(requiringRAM gb: Int) -> Bool {
         let requiredBytes = Int64(gb) * 1_073_741_824
-        return requiredBytes <= totalRAM
+        return requiredBytes <= modelMemoryBudget
     }
 
     /// Threshold de memoria (80% do total) — acima disso, exibir aviso ao usuario.
@@ -68,5 +116,33 @@ public enum DeviceCapability {
         #else
         return false
         #endif
+    }
+}
+
+/// Tier de RAM para recomendacoes de modelos na UI.
+public enum RAMTier: String, Codable, Sendable, Comparable, CaseIterable {
+    /// <3GB budget: apenas modelos 1B (iPhone 12/13 base, iPad mini 6)
+    case minimal
+    /// 3-4GB budget: modelos ate 3B (iPhone 14, 15 non-Pro, 6GB devices)
+    case compact
+    /// 5-9GB budget: modelos ate 7B (iPhone 15 Pro+, 16, 8GB Macs)
+    case standard
+    /// 10-23GB budget: modelos ate 13B (16-32GB Macs)
+    case workstation
+    /// 24GB+ budget: modelos ate 70B+ (M Pro/Max/Ultra Macs)
+    case desktop
+
+    private var sortOrder: Int {
+        switch self {
+        case .minimal: return 0
+        case .compact: return 1
+        case .standard: return 2
+        case .workstation: return 3
+        case .desktop: return 4
+        }
+    }
+
+    public static func < (lhs: RAMTier, rhs: RAMTier) -> Bool {
+        lhs.sortOrder < rhs.sortOrder
     }
 }

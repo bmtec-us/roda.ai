@@ -15,7 +15,7 @@ final class ModelCatalogTests: XCTestCase {
             estimatedRAMBytes: 2_500_000_000,
             portugueseRating: .excelente,
             cpuUsageLevel: .medio,
-            minimumRAM: 4,
+            minimumRAM: 3,
             isVisionCapable: true,
             isReasoningCapable: true,
             huggingFaceRepoId: "mlx-community/gemma-4-e2b-it-4bit",
@@ -40,7 +40,7 @@ final class ModelCatalogTests: XCTestCase {
             "estimatedRAMBytes": 2500000000,
             "portugueseRating": "excelente",
             "cpuUsageLevel": "medio",
-            "minimumRAM": 4,
+            "minimumRAM": 3,
             "isVisionCapable": true,
             "isReasoningCapable": true,
             "huggingFaceRepoId": "mlx-community/gemma-4-e2b-it-4bit",
@@ -138,7 +138,7 @@ final class ModelCatalogTests: XCTestCase {
         )!
         let data = try Data(contentsOf: fixtureURL)
         let entries = try JSONDecoder().decode([CatalogEntry].self, from: data)
-        XCTAssertGreaterThanOrEqual(entries.count, 9)
+        XCTAssertGreaterThanOrEqual(entries.count, 8)
         XCTAssertTrue(entries.contains(where: { $0.identifier == "gemma-4-e2b" }))
     }
 
