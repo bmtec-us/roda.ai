@@ -4,19 +4,19 @@ import MLXVLM
 import MLXLMCommon
 import MLX
 
-// Disambigua o name clash entre RodaAiCore.ModelConfiguration (value type)
-// e MLXLMCommon.ModelConfiguration (configuracao MLX para load).
-private typealias MLXModelConfiguration = MLXLMCommon.ModelConfiguration
+// Reusa `MLXModelConfiguration` typealias + `makeConfiguration(for:)` static
+// method definidos em MLXInferenceProvider.swift (internal).
 
 /// Actor de inferencia para modelos VLM (Vision Language Models).
 /// Ref: concurrency-model.md — actor custom.
 /// Ref: Intro.md Secao 3.3 — VisionInferenceService.
 /// Erros: InferenceError (ref: error-types.md).
 ///
-/// Fix audit gap #5: agora L A e usa os attachments de ChatMessage.
+/// Fix audit gap #5: agora le e usa os attachments de ChatMessage.
 /// Antes: `messages.map { $0.content }.joined()` — ignorava imagens.
-/// Agora: constroi `UserInput` com `images` a partir de `Attachment.url`,
-/// deixando o `UserInputProcessor` do modelo VLM processar as imagens.
+/// Agora: converte `[ChatMessage]` em `[Chat.Message]` (MLXLMCommon) com
+/// images inline por mensagem via `Attachment.url`, e `UserInput(chat:)`
+/// aplica o template VLM correto com placeholders de imagem.
 public actor VisionInferenceProvider: InferenceProvider {
 
     public var isModelLoaded: Bool { modelContainer != nil }
@@ -26,7 +26,7 @@ public actor VisionInferenceProvider: InferenceProvider {
 
     public init() {}
 
-    /// Carrega modelo VLM.
+    /// Carrega modelo VLM do HF repo ID ou path local.
     /// - Throws: InferenceError.modelNotFound, .modelCorrupted
     public func loadModel(identifier: String) async throws {
         if modelContainer != nil {
@@ -34,7 +34,8 @@ public actor VisionInferenceProvider: InferenceProvider {
         }
 
         do {
-            let configuration = MLXModelConfiguration(id: identifier)
+            // Reusa a logica de makeConfiguration do MLXInferenceProvider
+            let configuration = MLXInferenceProvider.makeConfiguration(for: identifier)
             let container = try await VLMModelFactory.shared.loadContainer(
                 configuration: configuration
             )
@@ -47,8 +48,7 @@ public actor VisionInferenceProvider: InferenceProvider {
 
     /// Gera tokens em streaming para modelos VLM.
     /// Suporta imagens via `attachments` nos `ChatMessages` (campo `url`).
-    /// Imagens sao passadas ao `UserInputProcessor` do modelo, que faz o
-    /// embedding via encoder visual antes do forward pass.
+    /// Cada attachment com mimeType `image/*` e injetado na respectiva Chat.Message.
     /// - Throws: InferenceError.modelNotLoaded, .generationFailed, .generationCancelled
     public func generate(messages: [ChatMessage], config: GenerationConfig) -> AsyncThrowingStream<String, Error> {
         guard let container = modelContainer else {
@@ -65,23 +65,22 @@ public actor VisionInferenceProvider: InferenceProvider {
             Task {
                 do {
                     try await container.perform { context in
-                        // Constroi prompt concatenando texto dos messages
-                        let prompt = capturedMessages.map { $0.content }.joined(separator: "\n")
-
-                        // Extrai imagens dos attachments (somente as com URL, ignora demais)
-                        let imageURLs: [URL] = capturedMessages
-                            .flatMap { $0.attachments }
-                            .compactMap { attachment in
-                                // Aceita apenas imagens (mimeType image/*)
-                                guard attachment.mimeType.hasPrefix("image/") else { return nil }
-                                return attachment.url
+                        // Converte ChatMessage -> Chat.Message com imagens por mensagem
+                        let chatMessages = capturedMessages.map { msg -> Chat.Message in
+                            let role: Chat.Message.Role
+                            switch msg.role {
+                            case .system: role = .system
+                            case .user: role = .user
+                            case .assistant: role = .assistant
                             }
-                        let userInputImages: [UserInput.Image] = imageURLs.map { .url($0) }
+                            // Extrai imagens dos attachments desta mensagem especifica
+                            let images: [UserInput.Image] = msg.attachments
+                                .filter { $0.mimeType.hasPrefix("image/") }
+                                .map { .url($0.url) }
+                            return Chat.Message(role: role, content: msg.content, images: images)
+                        }
 
-                        // UserInput com imagens (antes: sem imagens)
-                        var userInput = UserInput(prompt: prompt)
-                        userInput.images = userInputImages
-
+                        let userInput = UserInput(chat: chatMessages)
                         let input = try await context.processor.prepare(input: userInput)
                         var tokenCount = 0
 

@@ -14,6 +14,9 @@ public final class ModelManager {
     public private(set) var downloadProgress: [String: Double] = [:]
     public private(set) var downloadError: [String: String] = [:]
     public private(set) var catalog: [CatalogEntry] = []
+    /// Diretorios que existem em disco mas falharam validacao minima.
+    /// Expostos separadamente para que UI possa oferecer "Continuar" ou "Remover".
+    public private(set) var partialDownloads: [String] = []
 
     // MARK: - Dependencies
     private let downloader: any ModelDownloader
@@ -58,8 +61,12 @@ public final class ModelManager {
         catalog = ModelCatalog.loadSafe()
     }
 
-    /// Escaneia o diretorio de modelos e popula `downloadedModels` com os que ja
-    /// estao no disco. Util apos um launch do app.
+    /// Escaneia o diretorio de modelos no launch do app e popula:
+    /// - `downloadedModels` com os que passam `isValidModelDirectoryQuickCheck`
+    /// - `partialDownloads` com os que falham validacao minima
+    ///
+    /// Previne que um crash durante download resulte em um modelo "fantasma"
+    /// listado como instalado que falharia ao ser ativado.
     public func scanDownloadedModels() {
         let fm = FileManager.default
         let dir = modelsDirectory
@@ -68,20 +75,40 @@ public final class ModelManager {
             includingPropertiesForKeys: [.isDirectoryKey]
         ) else {
             downloadedModels = []
+            partialDownloads = []
             return
         }
 
         var found: [LocalModel] = []
+        var partials: [String] = []
         for subdir in contents where (try? subdir.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true {
             let identifier = subdir.lastPathComponent
-            let sizeOnDisk = (try? storageManager.modelDirectorySize(at: subdir)) ?? 0
-            found.append(LocalModel(
-                identifier: identifier,
-                displayName: displayName(for: identifier),
-                sizeOnDisk: sizeOnDisk
-            ))
+
+            if validator.isValidModelDirectoryQuickCheck(at: subdir) {
+                let sizeOnDisk = (try? storageManager.modelDirectorySize(at: subdir)) ?? 0
+                found.append(LocalModel(
+                    identifier: identifier,
+                    displayName: displayName(for: identifier),
+                    sizeOnDisk: sizeOnDisk
+                ))
+            } else {
+                RodaLog.model.warning("Partial download detected: \(identifier, privacy: .public)")
+                partials.append(identifier)
+            }
         }
         downloadedModels = found
+        partialDownloads = partials
+        RodaLog.model.info("Scan complete: \(found.count) valid, \(partials.count) partial")
+    }
+
+    /// Remove um dir de modelo parcialmente baixado.
+    public func cleanPartialDownload(identifier: String) throws {
+        let dir = modelsDirectory.appendingPathComponent(identifier)
+        if FileManager.default.fileExists(atPath: dir.path) {
+            try FileManager.default.removeItem(at: dir)
+        }
+        partialDownloads.removeAll { $0 == identifier }
+        RodaLog.model.info("Cleaned partial download: \(identifier, privacy: .public)")
     }
 
     private func displayName(for identifier: String) -> String {
@@ -101,6 +128,7 @@ public final class ModelManager {
     /// 4. Registra LocalModel com tamanho real em disco
     /// 5. Limpa erro/progresso
     public func downloadModel(_ entry: CatalogEntry) async throws {
+        RodaLog.model.info("Starting model download: \(entry.identifier, privacy: .public)")
         let destination = modelsDirectory.appendingPathComponent(entry.identifier)
         downloadError[entry.identifier] = nil
         downloadProgress[entry.identifier] = 0
@@ -113,6 +141,7 @@ public final class ModelManager {
             )
 
             // 3. VALIDAR (antes faltando — ref: audit gap #16)
+            RodaLog.model.debug("Validating downloaded model at \(destination.path, privacy: .public)")
             let validation = try await validator.validate(modelDirectory: destination)
             guard validation.isValid else {
                 throw DownloadError.checksumMismatch(
@@ -132,11 +161,14 @@ public final class ModelManager {
             downloadedModels.removeAll { $0.identifier == entry.identifier }
             downloadedModels.append(model)
             downloadProgress[entry.identifier] = 1.0
+            RodaLog.model.info("Model registered: \(entry.identifier, privacy: .public) (\(validation.sizeOnDisk) bytes)")
         } catch let error as DownloadError {
+            RodaLog.model.error("Download failed: \(error.localizedDescription, privacy: .public)")
             downloadError[entry.identifier] = error.errorDescription ?? "\(error)"
             downloadProgress[entry.identifier] = nil
             throw error
         } catch {
+            RodaLog.model.error("Download unexpected error: \(error.localizedDescription, privacy: .public)")
             downloadError[entry.identifier] = error.localizedDescription
             downloadProgress[entry.identifier] = nil
             throw DownloadError.serverError(statusCode: -1)
@@ -146,15 +178,23 @@ public final class ModelManager {
     // MARK: - Load / Unload (ref: state-machines.md secao 4)
 
     public func loadModel(_ model: LocalModel) async throws {
-        guard let provider = inferenceProvider else { return }
+        guard let provider = inferenceProvider else {
+            RodaLog.model.warning("loadModel called but no inferenceProvider configured")
+            return
+        }
         // Usa o path do modelo no disco para carregar com MLX
         let modelPath = modelsDirectory.appendingPathComponent(model.identifier)
+        RodaLog.model.info("Activating model: \(model.identifier, privacy: .public) from \(modelPath.path, privacy: .public)")
         try await provider.loadModel(identifier: modelPath.path)
         activeModel = model
+        RodaLog.model.info("Model activated: \(model.identifier, privacy: .public)")
     }
 
     public func unloadModel() async {
         guard let provider = inferenceProvider else { return }
+        if let active = activeModel {
+            RodaLog.model.info("Deactivating model: \(active.identifier, privacy: .public)")
+        }
         await provider.unloadModel()
         activeModel = nil
     }

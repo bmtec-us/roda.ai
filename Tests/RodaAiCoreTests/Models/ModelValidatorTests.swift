@@ -90,6 +90,66 @@ struct ModelValidatorTests {
         }
     }
 
+    // MARK: - Quick check (sync) — partial download detection
+
+    @Test("quick check passes when config and tokenizer present")
+    func testQuickCheckValid() throws {
+        try createFile("config.json", content: "{\"model_type\": \"gemma\"}")
+        try createFile("tokenizer.json", content: "{\"version\": \"1.0\"}")
+
+        let validator = ModelValidator()
+        #expect(validator.isValidModelDirectoryQuickCheck(at: tempDir) == true)
+    }
+
+    @Test("quick check accepts tokenizer_config.json as alternative to tokenizer.json")
+    func testQuickCheckAcceptsTokenizerConfig() throws {
+        try createFile("config.json", content: "{\"model_type\": \"llama\"}")
+        try createFile("tokenizer_config.json", content: "{}")
+
+        let validator = ModelValidator()
+        #expect(validator.isValidModelDirectoryQuickCheck(at: tempDir) == true)
+    }
+
+    @Test("quick check fails when config.json is missing")
+    func testQuickCheckMissingConfig() throws {
+        try createFile("tokenizer.json", content: "{\"version\": \"1.0\"}")
+
+        let validator = ModelValidator()
+        #expect(validator.isValidModelDirectoryQuickCheck(at: tempDir) == false)
+    }
+
+    @Test("quick check fails when tokenizer is missing")
+    func testQuickCheckMissingTokenizer() throws {
+        try createFile("config.json", content: "{\"model_type\": \"gemma\"}")
+
+        let validator = ModelValidator()
+        #expect(validator.isValidModelDirectoryQuickCheck(at: tempDir) == false)
+    }
+
+    @Test("quick check fails when config.json is empty")
+    func testQuickCheckEmptyConfig() throws {
+        try createFile("config.json", content: "")
+        try createFile("tokenizer.json", content: "{}")
+
+        let validator = ModelValidator()
+        #expect(validator.isValidModelDirectoryQuickCheck(at: tempDir) == false)
+    }
+
+    @Test("quick check fails when config.json is not JSON")
+    func testQuickCheckInvalidJSON() throws {
+        try createFile("config.json", content: "not valid json at all")
+        try createFile("tokenizer.json", content: "{}")
+
+        let validator = ModelValidator()
+        #expect(validator.isValidModelDirectoryQuickCheck(at: tempDir) == false)
+    }
+
+    @Test("quick check fails for empty directory")
+    func testQuickCheckEmptyDir() {
+        let validator = ModelValidator()
+        #expect(validator.isValidModelDirectoryQuickCheck(at: tempDir) == false)
+    }
+
     // MARK: - Helpers
 
     private func createFile(_ name: String, content: String) throws {

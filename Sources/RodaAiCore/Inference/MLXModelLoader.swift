@@ -2,9 +2,7 @@ import Foundation
 import MLXLLM
 import MLXLMCommon
 
-// Disambigua o name clash entre RodaAiCore.ModelConfiguration (value type)
-// e MLXLMCommon.ModelConfiguration (configuracao MLX para load).
-private typealias MLXModelConfiguration = MLXLMCommon.ModelConfiguration
+// Reusa `MLXModelConfiguration` typealias definido em MLXInferenceProvider.swift.
 
 /// Carrega modelos MLX do disco.
 /// Ref: Intro.md Secao 3.3 — InferenceModule.

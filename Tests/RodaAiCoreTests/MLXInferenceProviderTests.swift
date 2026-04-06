@@ -133,4 +133,52 @@ final class MLXInferenceProviderTests: XCTestCase {
             XCTAssertEqual(error as? InferenceError, .modelNotLoaded)
         }
     }
+
+    // MARK: - Configuration factory (path vs repo ID)
+
+    func testMakeConfigurationWithHuggingFaceRepoID() {
+        // HF repo IDs nao comecam com /
+        let config = MLXInferenceProvider.makeConfiguration(for: "mlx-community/gemma-4-e2b-it-4bit")
+        XCTAssertFalse(MLXInferenceProvider.isLocalPath("mlx-community/gemma-4-e2b-it-4bit"))
+        // O name deve refletir o repo ID (porem via Identifier.id path)
+        if case .id(let id, _) = config.id {
+            XCTAssertEqual(id, "mlx-community/gemma-4-e2b-it-4bit")
+        } else {
+            XCTFail("Expected .id case for HF repo ID")
+        }
+    }
+
+    func testMakeConfigurationWithAbsolutePath() {
+        let path = "/Users/test/RodaAi/models/gemma-4-e2b"
+        XCTAssertTrue(MLXInferenceProvider.isLocalPath(path))
+        let config = MLXInferenceProvider.makeConfiguration(for: path)
+        if case .directory(let url) = config.id {
+            XCTAssertEqual(url.path, path)
+        } else {
+            XCTFail("Expected .directory case for local path")
+        }
+    }
+
+    func testMakeConfigurationWithFileURL() {
+        let urlString = "file:///Users/test/RodaAi/models/gemma"
+        XCTAssertTrue(MLXInferenceProvider.isLocalPath(urlString))
+        let config = MLXInferenceProvider.makeConfiguration(for: urlString)
+        if case .directory = config.id {
+            // OK
+        } else {
+            XCTFail("Expected .directory case for file:// URL")
+        }
+    }
+
+    func testIsLocalPathHandlesEdgeCases() {
+        // Paths absolutos
+        XCTAssertTrue(MLXInferenceProvider.isLocalPath("/tmp/model"))
+        XCTAssertTrue(MLXInferenceProvider.isLocalPath("/"))
+        XCTAssertTrue(MLXInferenceProvider.isLocalPath("file:///Users/a"))
+        // HF repo IDs
+        XCTAssertFalse(MLXInferenceProvider.isLocalPath("mlx-community/gemma"))
+        XCTAssertFalse(MLXInferenceProvider.isLocalPath("meta-llama/Llama-3.2-1B"))
+        // Edge: string vazia — nao e path local (seguro)
+        XCTAssertFalse(MLXInferenceProvider.isLocalPath(""))
+    }
 }

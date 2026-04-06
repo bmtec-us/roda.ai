@@ -11,6 +11,33 @@ public struct ValidationResult: Sendable {
 public struct ModelValidator: Sendable {
     public init() {}
 
+    /// Validacao sincrona rapida — apenas verifica presenca dos arquivos minimos.
+    /// Usado em `ModelManager.scanDownloadedModels` no launch do app para filtrar
+    /// downloads parciais sem o custo do I/O assincrono ou SHA256.
+    ///
+    /// Retorna `true` se o diretorio tem `config.json` + (`tokenizer.json` OU
+    /// `tokenizer_config.json`).
+    public func isValidModelDirectoryQuickCheck(at modelDirectory: URL) -> Bool {
+        let fm = FileManager.default
+
+        let configURL = modelDirectory.appendingPathComponent("config.json")
+        guard fm.fileExists(atPath: configURL.path) else { return false }
+
+        let tokenizerURL = modelDirectory.appendingPathComponent("tokenizer.json")
+        let tokenizerConfigURL = modelDirectory.appendingPathComponent("tokenizer_config.json")
+        guard fm.fileExists(atPath: tokenizerURL.path)
+              || fm.fileExists(atPath: tokenizerConfigURL.path) else { return false }
+
+        // Valida que config.json nao esta vazio nem corrompido
+        guard let data = try? Data(contentsOf: configURL),
+              !data.isEmpty,
+              (try? JSONSerialization.jsonObject(with: data)) != nil else {
+            return false
+        }
+
+        return true
+    }
+
     /// Valida diretorio do modelo conforme Fluxo de Download (data-flows.md)
     /// 1. Verifica config.json parseavel
     /// 2. Verifica tokenizer.json presente

@@ -68,6 +68,7 @@ public final class HuggingFaceDownloader: ModelDownloader {
     // MARK: - ModelDownloader
 
     public func download(repoId: String, to destination: URL) async throws {
+        RodaLog.download.info("Starting download: \(repoId, privacy: .public) -> \(destination.path, privacy: .public)")
         downloadCallCount += 1
         downloadStartTime = Date()
         progress = 0
@@ -81,6 +82,7 @@ public final class HuggingFaceDownloader: ModelDownloader {
                 withIntermediateDirectories: true
             )
         } catch {
+            RodaLog.download.error("Failed to create destination dir: \(error.localizedDescription, privacy: .public)")
             throw DownloadError.fileWriteFailed(
                 path: destination.path,
                 reason: error.localizedDescription
@@ -89,6 +91,7 @@ public final class HuggingFaceDownloader: ModelDownloader {
 
         // 2. Buscar listagem de arquivos
         let files = try await fetchFileTree(repoId: repoId)
+        RodaLog.download.debug("Fetched file tree: \(files.count) entries")
         let required = files.filter { entry in
             entry.type == "file" && Self.isRequired(filename: entry.path)
         }
@@ -106,11 +109,15 @@ public final class HuggingFaceDownloader: ModelDownloader {
         // 4. Verificar espaco em disco (lanca DownloadError.insufficientStorage)
         try storageManager.checkStorage(requiredBytes: total)
 
+        RodaLog.download.info("Will download \(required.count) files totaling \(total) bytes")
+
         // 5. Baixar cada arquivo
         for entry in required {
             if Task.isCancelled {
+                RodaLog.download.info("Download cancelled by user")
                 throw DownloadError.downloadCancelled
             }
+            RodaLog.download.debug("Downloading file: \(entry.path, privacy: .public)")
             try await downloadFile(
                 repoId: repoId,
                 filename: entry.path,
@@ -118,6 +125,7 @@ public final class HuggingFaceDownloader: ModelDownloader {
                 to: destination.appendingPathComponent(entry.path)
             )
         }
+        RodaLog.download.info("Download complete: \(repoId, privacy: .public)")
     }
 
     public func cancelDownload() {

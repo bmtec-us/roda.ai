@@ -168,4 +168,73 @@ struct ModelManagerTests {
 
         #expect(manager.downloadedModels.count == 2)
     }
+
+    // MARK: - Partial download detection
+
+    @Test("scan detects partial download and excludes from downloadedModels")
+    @MainActor
+    func testScanDetectsPartialDownload() throws {
+        // Setup: dir com config faltando (simula download interrompido)
+        let tmpDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: tmpDir, withIntermediateDirectories: true)
+
+        // Modelo valido: config + tokenizer
+        let validModelDir = tmpDir.appendingPathComponent("valid-model")
+        try FileManager.default.createDirectory(at: validModelDir, withIntermediateDirectories: true)
+        try #"{"model_type":"gemma"}"#.write(
+            to: validModelDir.appendingPathComponent("config.json"),
+            atomically: true, encoding: .utf8
+        )
+        try #"{"version":"1.0"}"#.write(
+            to: validModelDir.appendingPathComponent("tokenizer.json"),
+            atomically: true, encoding: .utf8
+        )
+
+        // Modelo parcial: so tokenizer, sem config
+        let partialModelDir = tmpDir.appendingPathComponent("partial-model")
+        try FileManager.default.createDirectory(at: partialModelDir, withIntermediateDirectories: true)
+        try #"{"version":"1.0"}"#.write(
+            to: partialModelDir.appendingPathComponent("tokenizer.json"),
+            atomically: true, encoding: .utf8
+        )
+
+        let manager = ModelManager(
+            downloader: MockModelDownloader(),
+            modelsDirectoryOverride: tmpDir
+        )
+        manager.scanDownloadedModels()
+
+        #expect(manager.downloadedModels.count == 1)
+        #expect(manager.downloadedModels.first?.identifier == "valid-model")
+        #expect(manager.partialDownloads == ["partial-model"])
+    }
+
+    @Test("cleanPartialDownload removes dir and clears from list")
+    @MainActor
+    func testCleanPartialDownload() throws {
+        let tmpDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: tmpDir, withIntermediateDirectories: true)
+
+        // Criar dir parcial
+        let partialDir = tmpDir.appendingPathComponent("partial-model")
+        try FileManager.default.createDirectory(at: partialDir, withIntermediateDirectories: true)
+        try #"{}"#.write(
+            to: partialDir.appendingPathComponent("tokenizer.json"),
+            atomically: true, encoding: .utf8
+        )
+
+        let manager = ModelManager(
+            downloader: MockModelDownloader(),
+            modelsDirectoryOverride: tmpDir
+        )
+        manager.scanDownloadedModels()
+        #expect(manager.partialDownloads == ["partial-model"])
+
+        try manager.cleanPartialDownload(identifier: "partial-model")
+
+        #expect(manager.partialDownloads.isEmpty)
+        #expect(!FileManager.default.fileExists(atPath: partialDir.path))
+    }
 }
