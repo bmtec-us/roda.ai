@@ -1,0 +1,86 @@
+import XCTest
+@testable import RodaAiCore
+
+final class ModelBackendTests: XCTestCase {
+
+    func testModelBackendCases() {
+        XCTAssertEqual(ModelBackend.allCases.count, 3)
+        XCTAssertTrue(ModelBackend.allCases.contains(.mlx))
+        XCTAssertTrue(ModelBackend.allCases.contains(.gguf))
+        XCTAssertTrue(ModelBackend.allCases.contains(.api))
+    }
+
+    func testModelBackendRawValues() {
+        XCTAssertEqual(ModelBackend.mlx.rawValue, "mlx")
+        XCTAssertEqual(ModelBackend.gguf.rawValue, "gguf")
+        XCTAssertEqual(ModelBackend.api.rawValue, "api")
+    }
+
+    func testModelBackendCodable() throws {
+        let encoded = try JSONEncoder().encode(ModelBackend.gguf)
+        let decoded = try JSONDecoder().decode(ModelBackend.self, from: encoded)
+        XCTAssertEqual(decoded, .gguf)
+    }
+
+    func testCatalogEntryBackendDefaultsToMLX() {
+        let entry = TestData.makeCatalogEntry()
+        XCTAssertEqual(entry.backend, .mlx)
+        XCTAssertNil(entry.specificDownloadFile)
+    }
+
+    func testCatalogEntryWithGGUFBackend() {
+        let entry = CatalogEntry(
+            identifier: "gemma-4-e2b",
+            displayName: "Gemma 4 E2B",
+            provider: "Google",
+            familyName: "Gemma",
+            parameterCount: "E2B",
+            quantization: "Q4_K_M",
+            downloadSizeBytes: 2_100_000_000,
+            estimatedRAMBytes: 2_800_000_000,
+            portugueseRating: .excelente,
+            cpuUsageLevel: .medio,
+            minimumRAM: 4,
+            isVisionCapable: true,
+            isReasoningCapable: true,
+            huggingFaceRepoId: "bartowski/google_gemma-4-E2B-it-GGUF",
+            modelBackend: .gguf,
+            downloadFileName: "google_gemma-4-E2B-it-Q4_K_M.gguf"
+        )
+        XCTAssertEqual(entry.backend, .gguf)
+        XCTAssertEqual(entry.specificDownloadFile, "google_gemma-4-E2B-it-Q4_K_M.gguf")
+    }
+
+    @MainActor
+    func testManagerRoutesToGGUFProvider() async throws {
+        let mockDownloader = MockModelDownloader()
+        let mlxProvider = MockInferenceProvider()
+        let ggufProvider = MockInferenceProvider()
+
+        let tmpDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+        let manager = ModelManager(
+            downloader: mockDownloader,
+            inferenceProvider: mlxProvider,
+            ggufInferenceProvider: ggufProvider,
+            modelsDirectoryOverride: tmpDir
+        )
+
+        // loadCatalog popula a partir do ModelCatalog.json de producao
+        // que agora inclui gemma-4-e2b com backend "gguf"
+        manager.loadCatalog()
+        let gemmaEntry = manager.catalog.first { $0.identifier == "gemma-4-e2b" }
+        XCTAssertNotNil(gemmaEntry, "Production catalog must have gemma-4-e2b")
+        XCTAssertEqual(gemmaEntry?.backend, .gguf)
+
+        // Download (usa mock)
+        try await manager.downloadModel(gemmaEntry!)
+        try await manager.loadModel(manager.downloadedModels[0])
+
+        // GGUF provider should have been used, not MLX
+        let ggufLoadCount = await ggufProvider.loadModelCallCount
+        let mlxLoadCount = await mlxProvider.loadModelCallCount
+        XCTAssertEqual(ggufLoadCount, 1, "GGUF provider should be used for GGUF models")
+        XCTAssertEqual(mlxLoadCount, 0, "MLX provider should NOT be used for GGUF models")
+    }
+}

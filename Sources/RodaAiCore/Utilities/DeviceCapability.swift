@@ -46,10 +46,13 @@ public enum DeviceCapability {
     }
 
     /// Verifica se o dispositivo pode carregar um modelo que requer `gb` GB de RAM.
-    /// Usa threshold de 80% da RAM disponivel para margem de seguranca.
+    /// Compara contra RAM **total** do dispositivo (nao disponivel no momento),
+    /// porque compatibilidade e uma propriedade estatica do hardware — a RAM
+    /// disponivel flutua com o uso do sistema e geraria falsos negativos
+    /// (ex: iPhone 15 Pro Max com 8GB marcando modelos de 6GB como incompativeis).
     public static func canLoadModel(requiringRAM gb: Int) -> Bool {
         let requiredBytes = Int64(gb) * 1_073_741_824
-        return requiredBytes < availableRAM
+        return requiredBytes <= totalRAM
     }
 
     /// Threshold de memoria (80% do total) — acima disso, exibir aviso ao usuario.

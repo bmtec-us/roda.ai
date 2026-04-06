@@ -25,6 +25,16 @@ final class DeviceCapabilityTests: XCTestCase {
         XCTAssertFalse(DeviceCapability.canLoadModel(requiringRAM: 1024))
     }
 
+    func testCanLoadModelUsesTotalRAMNotAvailableRAM() {
+        // Verifica que canLoadModel usa totalRAM (capacidade do device)
+        // e nao availableRAM (valor flutuante do momento).
+        // Um modelo que cabe na RAM total DEVE ser compativel.
+        let totalGB = Int(DeviceCapability.totalRAM / 1_073_741_824)
+        if totalGB > 0 {
+            XCTAssertTrue(DeviceCapability.canLoadModel(requiringRAM: totalGB))
+        }
+    }
+
     func testChipNameIsNotEmpty() {
         XCTAssertFalse(DeviceCapability.chipName.isEmpty)
     }

@@ -17,8 +17,23 @@ public struct CatalogEntry: Codable, Sendable, Equatable, Identifiable {
     public let isVisionCapable: Bool
     public let isReasoningCapable: Bool
     public let huggingFaceRepoId: String
+    /// Backend de inferencia. nil = `.mlx` (backward compat com JSON antigo).
+    private let modelBackend: ModelBackend?
+    /// Nome do arquivo especifico para download (ex: GGUF). nil = download padrao.
+    private let downloadFileName: String?
 
     public var id: String { identifier }
+
+    /// Backend efetivo — default `.mlx` se nao especificado no JSON.
+    public var backend: ModelBackend {
+        modelBackend ?? .mlx
+    }
+
+    /// Arquivo especifico para download (GGUF single-file).
+    /// nil = download multi-arquivo padrao (MLX safetensors).
+    public var specificDownloadFile: String? {
+        downloadFileName
+    }
 
     /// Modelo zero-download (built-in, ex: Apple Foundation Model)
     /// nao requer fetch do HuggingFace.
@@ -40,7 +55,9 @@ public struct CatalogEntry: Codable, Sendable, Equatable, Identifiable {
         minimumRAM: Int,
         isVisionCapable: Bool,
         isReasoningCapable: Bool,
-        huggingFaceRepoId: String
+        huggingFaceRepoId: String,
+        modelBackend: ModelBackend? = nil,
+        downloadFileName: String? = nil
     ) {
         self.identifier = identifier
         self.displayName = displayName
@@ -56,5 +73,7 @@ public struct CatalogEntry: Codable, Sendable, Equatable, Identifiable {
         self.isVisionCapable = isVisionCapable
         self.isReasoningCapable = isReasoningCapable
         self.huggingFaceRepoId = huggingFaceRepoId
+        self.modelBackend = modelBackend
+        self.downloadFileName = downloadFileName
     }
 }

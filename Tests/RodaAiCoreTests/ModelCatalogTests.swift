@@ -9,16 +9,18 @@ final class ModelCatalogTests: XCTestCase {
             displayName: "Gemma 4 E2B",
             provider: "Google",
             familyName: "Gemma",
-            parameterCount: "2B",
-            quantization: "4-bit",
-            downloadSizeBytes: 1_500_000_000,
-            estimatedRAMBytes: 2_000_000_000,
-            portugueseRating: .bom,
+            parameterCount: "E2B",
+            quantization: "Q4_K_M",
+            downloadSizeBytes: 2_100_000_000,
+            estimatedRAMBytes: 2_800_000_000,
+            portugueseRating: .excelente,
             cpuUsageLevel: .medio,
             minimumRAM: 4,
-            isVisionCapable: false,
-            isReasoningCapable: false,
-            huggingFaceRepoId: "mlx-community/gemma-4-e2b-it-4bit"
+            isVisionCapable: true,
+            isReasoningCapable: true,
+            huggingFaceRepoId: "bartowski/google_gemma-4-E2B-it-GGUF",
+            modelBackend: .gguf,
+            downloadFileName: "google_gemma-4-E2B-it-Q4_K_M.gguf"
         )
         Task { @MainActor in
             _ = entry.identifier // Sendable check via compilation
@@ -33,23 +35,52 @@ final class ModelCatalogTests: XCTestCase {
             "displayName": "Gemma 4 E2B",
             "provider": "Google",
             "familyName": "Gemma",
-            "parameterCount": "2B",
-            "quantization": "4-bit",
-            "downloadSizeBytes": 1500000000,
-            "estimatedRAMBytes": 2000000000,
-            "portugueseRating": "bom",
+            "parameterCount": "E2B",
+            "quantization": "Q4_K_M",
+            "downloadSizeBytes": 2100000000,
+            "estimatedRAMBytes": 2800000000,
+            "portugueseRating": "excelente",
             "cpuUsageLevel": "medio",
             "minimumRAM": 4,
-            "isVisionCapable": false,
-            "isReasoningCapable": false,
-            "huggingFaceRepoId": "mlx-community/gemma-4-e2b-it-4bit"
+            "isVisionCapable": true,
+            "isReasoningCapable": true,
+            "huggingFaceRepoId": "bartowski/google_gemma-4-E2B-it-GGUF",
+            "modelBackend": "gguf",
+            "downloadFileName": "google_gemma-4-E2B-it-Q4_K_M.gguf"
         }
         """.data(using: .utf8)!
 
         let entry = try JSONDecoder().decode(CatalogEntry.self, from: json)
         XCTAssertEqual(entry.identifier, "gemma-4-e2b")
-        XCTAssertEqual(entry.portugueseRating, .bom)
-        XCTAssertFalse(entry.isVisionCapable)
+        XCTAssertEqual(entry.portugueseRating, .excelente)
+        XCTAssertTrue(entry.isVisionCapable)
+        XCTAssertEqual(entry.backend, .gguf)
+        XCTAssertEqual(entry.specificDownloadFile, "google_gemma-4-E2B-it-Q4_K_M.gguf")
+    }
+
+    func testCatalogEntryDecodesWithoutBackendDefaultsToMLX() throws {
+        let json = """
+        {
+            "identifier": "llama-3.2-1b",
+            "displayName": "Llama 3.2 1B",
+            "provider": "Meta",
+            "familyName": "Llama",
+            "parameterCount": "1B",
+            "quantization": "4-bit",
+            "downloadSizeBytes": 700000000,
+            "estimatedRAMBytes": 900000000,
+            "portugueseRating": "bom",
+            "cpuUsageLevel": "baixo",
+            "minimumRAM": 2,
+            "isVisionCapable": false,
+            "isReasoningCapable": false,
+            "huggingFaceRepoId": "mlx-community/Llama-3.2-1B-Instruct-4bit"
+        }
+        """.data(using: .utf8)!
+
+        let entry = try JSONDecoder().decode(CatalogEntry.self, from: json)
+        XCTAssertEqual(entry.backend, .mlx)
+        XCTAssertNil(entry.specificDownloadFile)
     }
 
     func testCatalogEntryEncodesToJSON() throws {
