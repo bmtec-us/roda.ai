@@ -32,6 +32,10 @@ public actor MockInferenceProvider: InferenceProvider {
         generateResponses = responses
     }
 
+    public func setTokenDelay(_ delay: Duration) {
+        tokenDelay = delay
+    }
+
     public func loadModel(identifier: String) async throws {
         loadModelCallCount += 1
         if let error = shouldThrowOnLoad { throw error }
