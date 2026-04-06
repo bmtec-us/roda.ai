@@ -21,6 +21,9 @@ public final class ModelManager {
     // MARK: - Dependencies
     private let downloader: any ModelDownloader
     private let inferenceProvider: (any InferenceProvider)?
+    private let visionInferenceProvider: (any InferenceProvider)?
+    private let ggufInferenceProvider: (any InferenceProvider)?
+    private let apiInferenceProvider: (any InferenceProvider)?
     private let storageManager: StorageManager
     private let validator: ModelValidator
     private let modelsDirectoryOverride: URL?
@@ -42,15 +45,39 @@ public final class ModelManager {
     public init(
         downloader: any ModelDownloader,
         inferenceProvider: (any InferenceProvider)? = nil,
+        visionInferenceProvider: (any InferenceProvider)? = nil,
+        ggufInferenceProvider: (any InferenceProvider)? = nil,
+        apiInferenceProvider: (any InferenceProvider)? = nil,
         storageManager: StorageManager = StorageManager(),
         validator: ModelValidator = ModelValidator(),
         modelsDirectoryOverride: URL? = nil
     ) {
         self.downloader = downloader
         self.inferenceProvider = inferenceProvider
+        self.visionInferenceProvider = visionInferenceProvider
+        self.ggufInferenceProvider = ggufInferenceProvider
+        self.apiInferenceProvider = apiInferenceProvider
         self.storageManager = storageManager
         self.validator = validator
         self.modelsDirectoryOverride = modelsDirectoryOverride
+    }
+
+    /// Retorna o provider correto baseado no backend e capacidades do modelo.
+    /// Modelos vision-capable com backend MLX usam VisionInferenceProvider.
+    private func provider(for identifier: String) -> (any InferenceProvider)? {
+        let entry = catalog.first { $0.identifier == identifier }
+        let modelBackend = entry?.backend ?? .mlx
+
+        // Vision-capable MLX models use VLMModelFactory
+        if entry?.isVisionCapable == true && modelBackend == .mlx {
+            return visionInferenceProvider ?? inferenceProvider
+        }
+
+        switch modelBackend {
+        case .mlx: return inferenceProvider
+        case .gguf: return ggufInferenceProvider ?? inferenceProvider
+        case .api: return apiInferenceProvider
+        }
     }
 
     // MARK: - Catalog loading
@@ -144,10 +171,20 @@ public final class ModelManager {
 
         do {
             // 1+2. Download (downloader verifica espaco internamente)
-            try await downloader.download(
-                repoId: entry.huggingFaceRepoId,
-                to: destination
-            )
+            if let fileName = entry.specificDownloadFile {
+                // GGUF single-file download
+                try await downloader.downloadFile(
+                    repoId: entry.huggingFaceRepoId,
+                    fileName: fileName,
+                    to: destination
+                )
+            } else {
+                // MLX multi-file download
+                try await downloader.download(
+                    repoId: entry.huggingFaceRepoId,
+                    to: destination
+                )
+            }
 
             // 3. VALIDAR (antes faltando — ref: audit gap #16)
             RodaLog.model.debug("Validating downloaded model at \(destination.path, privacy: .public)")
@@ -187,24 +224,23 @@ public final class ModelManager {
     // MARK: - Load / Unload (ref: state-machines.md secao 4)
 
     public func loadModel(_ model: LocalModel) async throws {
-        guard let provider = inferenceProvider else {
-            RodaLog.model.warning("loadModel called but no inferenceProvider configured")
+        guard let prov = provider(for: model.identifier) else {
+            RodaLog.model.warning("loadModel called but no provider for \(model.identifier, privacy: .public)")
             return
         }
-        // Usa o path do modelo no disco para carregar com MLX
         let modelPath = modelsDirectory.appendingPathComponent(model.identifier)
-        RodaLog.model.info("Activating model: \(model.identifier, privacy: .public) from \(modelPath.path, privacy: .public)")
-        try await provider.loadModel(identifier: modelPath.path)
+        RodaLog.model.info("Activating model: \(model.identifier, privacy: .public)")
+        try await prov.loadModel(identifier: modelPath.path)
         activeModel = model
         RodaLog.model.info("Model activated: \(model.identifier, privacy: .public)")
     }
 
     public func unloadModel() async {
-        guard let provider = inferenceProvider else { return }
-        if let active = activeModel {
-            RodaLog.model.info("Deactivating model: \(active.identifier, privacy: .public)")
+        guard let active = activeModel else { return }
+        RodaLog.model.info("Deactivating model: \(active.identifier, privacy: .public)")
+        if let prov = provider(for: active.identifier) {
+            await prov.unloadModel()
         }
-        await provider.unloadModel()
         activeModel = nil
     }
 

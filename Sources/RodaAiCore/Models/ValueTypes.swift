@@ -50,6 +50,14 @@ public enum DarkModePreference: String, Codable, Sendable, CaseIterable {
     case system, light, dark
 }
 
+/// Backend de inferencia para execucao do modelo.
+/// - `mlx`: MLX framework (safetensors, on-device Apple Silicon)
+/// - `gguf`: llama.cpp via GGUF (on-device, mais amplo suporte de arquiteturas)
+/// - `api`: Inferencia remota via API compativel com OpenAI
+public enum ModelBackend: String, Codable, Sendable, CaseIterable {
+    case mlx, gguf, api
+}
+
 public struct Attachment: Sendable, Equatable {
     public let url: URL
     public let mimeType: String

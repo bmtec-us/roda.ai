@@ -21,6 +21,25 @@ public protocol ModelDownloader: AnyObject {
     ///           `.invalidRepository`, `.fileWriteFailed`)
     func download(repoId: String, to destination: URL) async throws(DownloadError)
 
+    /// Baixa um arquivo especifico do repositorio (ex: GGUF single-file).
+    /// Default: chama `download(repoId:to:)` (backward compat).
+    func downloadFile(
+        repoId: String,
+        fileName: String,
+        to destination: URL
+    ) async throws(DownloadError)
+
     /// Cancela download em andamento.
     func cancelDownload()
+}
+
+extension ModelDownloader {
+    public func downloadFile(
+        repoId: String,
+        fileName: String,
+        to destination: URL
+    ) async throws(DownloadError) {
+        // Default: baixa repositorio inteiro (MLX multi-file).
+        try await download(repoId: repoId, to: destination)
+    }
 }

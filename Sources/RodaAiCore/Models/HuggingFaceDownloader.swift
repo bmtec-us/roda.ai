@@ -128,6 +128,62 @@ public final class HuggingFaceDownloader: ModelDownloader {
         RodaLog.download.info("Download complete: \(repoId, privacy: .public)")
     }
 
+    /// Baixa um arquivo especifico de um repo HF (ex: um .gguf).
+    /// Cria o diretorio destino e coloca o arquivo dentro dele.
+    public func downloadFile(
+        repoId: String,
+        fileName: String,
+        to destination: URL
+    ) async throws(DownloadError) {
+        RodaLog.download.info(
+            "Downloading single file \(fileName, privacy: .public) from \(repoId, privacy: .public)"
+        )
+        downloadCallCount += 1
+        downloadStartTime = Date()
+        progress = 0
+        downloadedBytes = 0
+
+        // Criar diretorio
+        do {
+            try FileManager.default.createDirectory(
+                at: destination,
+                withIntermediateDirectories: true
+            )
+        } catch {
+            throw DownloadError.fileWriteFailed(
+                path: destination.path,
+                reason: error.localizedDescription
+            )
+        }
+
+        // Buscar tamanho do arquivo via tree API
+        let files = try await fetchFileTree(repoId: repoId)
+        guard let entry = files.first(where: { $0.path == fileName }) else {
+            throw DownloadError.invalidRepository(repoId: repoId)
+        }
+        totalBytes = entry.size ?? 0
+
+        // Verificar espaco
+        try storageManager.checkStorage(requiredBytes: totalBytes)
+
+        // Baixar o arquivo
+        try await downloadFile(
+            repoId: repoId,
+            filename: fileName,
+            expectedSize: entry.size,
+            to: destination.appendingPathComponent(fileName)
+        )
+
+        // Criar config.json minimo para ModelValidator (GGUF nao tem um)
+        let configPath = destination.appendingPathComponent("config.json")
+        if !FileManager.default.fileExists(atPath: configPath.path) {
+            let minimalConfig = #"{"model_type":"gguf","quantization_config":{}}"#
+            try? minimalConfig.write(to: configPath, atomically: true, encoding: .utf8)
+        }
+
+        RodaLog.download.info("Single file download complete: \(fileName, privacy: .public)")
+    }
+
     public func cancelDownload() {
         downloadTask?.cancel()
         downloadTask = nil
