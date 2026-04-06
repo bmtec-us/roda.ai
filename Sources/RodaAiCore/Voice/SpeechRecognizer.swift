@@ -8,7 +8,7 @@ import AVFoundation
 #endif
 
 @MainActor
-public class SpeechRecognizer: ObservableObject {
+public class SpeechRecognizer: ObservableObject, SpeechRecognizing {
     @Published public var transcript: String = ""
     @Published public var isListening: Bool = false
 

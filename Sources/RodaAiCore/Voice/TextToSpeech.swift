@@ -5,7 +5,7 @@ import AVFoundation
 #endif
 
 @MainActor
-public class TextToSpeechService: ObservableObject {
+public class TextToSpeechService: ObservableObject, TextToSpeaking {
     @Published public var isSpeaking: Bool = false
     public private(set) var isUsingFallback: Bool
 

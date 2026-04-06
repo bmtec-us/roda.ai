@@ -13,7 +13,7 @@ public final class ChatViewModel {
     // MARK: - Dependencies
     private let inferenceProvider: any InferenceProvider
     private let repository: ConversationRepository?
-    private var currentConversationId: UUID?
+    public private(set) var currentConversationId: UUID?
     private var generationTask: Task<Void, Never>?
 
     // MARK: - Init
@@ -27,13 +27,13 @@ public final class ChatViewModel {
 
     // MARK: - Actions
 
-    /// Envia mensagem seguindo o Fluxo de Chat (data-flows.md secao 1)
-    /// 1. Cria Message(role: .user)
-    /// 2. Cria Message(role: .assistant, content: "")
-    /// 3. state = .loading
-    /// 4. Consome AsyncThrowingStream do InferenceProvider
-    /// 5. Atualiza assistente em tempo real
-    /// 6. state = .completed ou .error
+    /// Envia mensagem seguindo o Fluxo de Chat (data-flows.md secao 1).
+    ///
+    /// Streaming e cancelamento:
+    /// O loop de geracao roda dentro de `generationTask = Task { ... }`. Chamar
+    /// `stopGeneration()` cancela essa Task, que por sua vez faz com que o actor
+    /// `InferenceProvider` detecte `Task.isCancelled` e finalize o stream com
+    /// `.generationCancelled`, preservando os tokens ja recebidos.
     public func send(_ text: String) async {
         // Auto-reset state se a conversa anterior terminou (.completed ou .error).
         // Sem isso, o segundo send falharia silenciosamente porque o state machine
@@ -59,92 +59,120 @@ public final class ChatViewModel {
         }
         errorMessage = nil
 
-        let startTime = ContinuousClock.now
-        var tokenCount = 0
+        // Cria uma task cancelavel para a geracao. Armazena em `generationTask`
+        // para que `stopGeneration()` possa cancela-la.
+        let provider = inferenceProvider
+        let task = Task<Void, Never> { [weak self] in
+            guard let self else { return }
+            let startTime = ContinuousClock.now
+            var tokenCount = 0
 
-        do {
-            let stream = await inferenceProvider.generate(
-                messages: messages, config: GenerationConfig()
-            )
-
-            for try await token in stream {
-                if tokenCount == 0 {
-                    try chatState.transition(.firstToken)
-                }
-                messages[assistantIndex] = ChatMessage(
-                    role: .assistant,
-                    content: messages[assistantIndex].content + token
-                )
-                tokenCount += 1
-                try chatState.transition(.tokenReceived)
-            }
-
-            let duration = Int(startTime.duration(to: .now).components.attoseconds / 1_000_000_000_000_000)
-            try chatState.transition(.finished(durationMs: duration))
-        } catch is CancellationError {
-            try? chatState.transition(.cancel)
-        } catch let error as InferenceError {
-            if error == .generationCancelled {
-                try? chatState.transition(.cancel)
-            } else {
-                try? chatState.transition(.error(error))
-                errorMessage = error.errorDescription
-                // Remove empty assistant message on error
-                if messages[assistantIndex].content.isEmpty {
-                    messages.remove(at: assistantIndex)
-                }
-            }
-        } catch {
-            let inferenceError = InferenceError.generationFailed(
-                reason: error.localizedDescription
-            )
-            try? chatState.transition(.error(inferenceError))
-            errorMessage = inferenceError.errorDescription
-        }
-
-        // Ref: data-flows.md secao 4 — "Fluxo de Persistencia"
-        if let repository {
             do {
-                // 1. Cria conversa se nao existir
-                if currentConversationId == nil {
-                    let summary = try await repository.create(
-                        title: "",
-                        modelIdentifier: modelId
-                    )
-                    currentConversationId = summary.id
+                let stream = await provider.generate(
+                    messages: self.messages, config: GenerationConfig()
+                )
 
-                    // Auto-titulo apos primeira mensagem
-                    try await repository.addMessage(
-                        to: summary.id,
-                        role: .user,
-                        content: text,
-                        modelIdentifier: nil
+                for try await token in stream {
+                    if Task.isCancelled { break }
+                    if tokenCount == 0 {
+                        try self.chatState.transition(.firstToken)
+                    }
+                    self.messages[assistantIndex] = ChatMessage(
+                        role: .assistant,
+                        content: self.messages[assistantIndex].content + token
                     )
-                    let _ = try await repository.generateAutoTitle(
-                        for: summary.id
-                    )
-                } else {
-                    try await repository.addMessage(
-                        to: currentConversationId!,
-                        role: .user,
-                        content: text,
-                        modelIdentifier: nil
-                    )
+                    tokenCount += 1
+                    try self.chatState.transition(.tokenReceived)
                 }
 
-                // 2. Salva resposta do assistente
-                if let conversationId = currentConversationId {
-                    try await repository.addMessage(
-                        to: conversationId,
-                        role: .assistant,
-                        content: messages[assistantIndex].content,
-                        modelIdentifier: modelId
-                    )
+                if Task.isCancelled {
+                    try? self.chatState.transition(.cancel)
+                } else {
+                    let durationNanoseconds = startTime.duration(to: .now).components.attoseconds / 1_000_000_000
+                    let duration = Int(durationNanoseconds / 1_000_000)
+                    try self.chatState.transition(.finished(durationMs: duration))
+                }
+            } catch is CancellationError {
+                try? self.chatState.transition(.cancel)
+            } catch let error as InferenceError {
+                if error == .generationCancelled {
+                    try? self.chatState.transition(.cancel)
+                } else {
+                    try? self.chatState.transition(.error(error))
+                    self.errorMessage = error.errorDescription
+                    if self.messages.indices.contains(assistantIndex),
+                       self.messages[assistantIndex].content.isEmpty {
+                        self.messages.remove(at: assistantIndex)
+                    }
                 }
             } catch {
-                // PersistenceError — log mas nao interrompe UX
-                print("Erro ao persistir: \(error)")
+                let inferenceError = InferenceError.generationFailed(
+                    reason: error.localizedDescription
+                )
+                try? self.chatState.transition(.error(inferenceError))
+                self.errorMessage = inferenceError.errorDescription
             }
+        }
+        generationTask = task
+        await task.value
+        generationTask = nil
+
+        // Persistencia (ref: data-flows.md secao 4 — "Fluxo de Persistencia")
+        // Nota: roda fora do generationTask para garantir que mensagens sao
+        // persistidas mesmo quando a geracao e cancelada (preservando parcial).
+        await persistMessages(userText: text, modelId: modelId, assistantIndex: assistantIndex)
+    }
+
+    private func persistMessages(
+        userText: String,
+        modelId: String,
+        assistantIndex: Int
+    ) async {
+        guard let repository else { return }
+        guard messages.indices.contains(assistantIndex) else { return }
+        let assistantContent = messages[assistantIndex].content
+
+        do {
+            let conversationId: UUID
+            let isNewConversation: Bool
+            if let existing = currentConversationId {
+                conversationId = existing
+                isNewConversation = false
+            } else {
+                let summary = try await repository.create(
+                    title: "",
+                    modelIdentifier: modelId
+                )
+                conversationId = summary.id
+                currentConversationId = summary.id
+                isNewConversation = true
+            }
+
+            // Sempre persistir a mensagem do usuario
+            try await repository.addMessage(
+                to: conversationId,
+                role: .user,
+                content: userText,
+                modelIdentifier: nil
+            )
+
+            // Persistir resposta do assistente (mesmo que vazia apos cancel)
+            if !assistantContent.isEmpty {
+                try await repository.addMessage(
+                    to: conversationId,
+                    role: .assistant,
+                    content: assistantContent,
+                    modelIdentifier: modelId
+                )
+            }
+
+            // Auto-titulo apos primeira mensagem (SALVA no conversation)
+            if isNewConversation {
+                try await repository.generateAutoTitle(for: conversationId)
+            }
+        } catch {
+            // PersistenceError — log mas nao interrompe UX
+            print("Erro ao persistir: \(error)")
         }
     }
 
@@ -158,17 +186,34 @@ public final class ChatViewModel {
             messages = messageSummaries.map { summary in
                 ChatMessage(role: summary.role, content: summary.content)
             }
+            // Reset state para permitir novos envios
+            if case .idle = chatState {
+                // ja esta idle
+            } else {
+                try? chatState.transition(.reset)
+            }
         } catch {
             print("Erro ao carregar conversa: \(error)")
         }
     }
 
-    /// Cancela geracao em andamento (Fluxo de Cancelamento, data-flows.md)
-    /// Mensagem assistente e mantida ate o ponto atual
-    public func stopGeneration() {
+    /// Inicia nova conversa (limpa estado e historico).
+    public func startNewConversation() {
         generationTask?.cancel()
         generationTask = nil
-        try? chatState.transition(.cancel)
+        messages.removeAll()
+        currentConversationId = nil
+        errorMessage = nil
+        if !chatState.isIdle {
+            try? chatState.transition(.reset)
+        }
+    }
+
+    /// Cancela geracao em andamento (Fluxo de Cancelamento, data-flows.md).
+    /// A mensagem do assistente e mantida ate o ponto atual.
+    public func stopGeneration() {
+        generationTask?.cancel()
+        // state transition ocorre dentro do loop de geracao quando detecta Task.isCancelled
     }
 
     /// Reseta estado de erro para permitir novo envio

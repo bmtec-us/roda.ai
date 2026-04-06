@@ -1,4 +1,10 @@
 // Sources/RodaAiCore/Voice/VoiceService.swift
+//
+// Orquestra o pipeline de voz STT -> Inference -> TTS.
+// Aceita qualquer `SpeechRecognizing` e `TextToSpeaking` via protocol existentials,
+// permitindo injetar implementacoes reais (hardware) ou mocks (testes).
+// Ref: concurrency-model.md — @MainActor porque expoe @Published state a views.
+// Ref: state-machines.md secao 3 — VoiceState.
 import Foundation
 
 @MainActor
@@ -7,14 +13,16 @@ public class VoiceService: ObservableObject {
     @Published public private(set) var transcript: String = ""
     @Published public private(set) var response: String = ""
 
-    private let speechRecognizer: MockSpeechRecognizer  // Protocol in production
-    private let textToSpeech: MockTextToSpeech           // Protocol in production
+    private let speechRecognizer: any SpeechRecognizing
+    private let textToSpeech: any TextToSpeaking
     private let inferenceProvider: any InferenceProvider
     private var conversationTask: Task<Void, Error>?
 
-    public init(speechRecognizer: MockSpeechRecognizer,
-                textToSpeech: MockTextToSpeech,
-                inferenceProvider: any InferenceProvider) {
+    public init(
+        speechRecognizer: any SpeechRecognizing,
+        textToSpeech: any TextToSpeaking,
+        inferenceProvider: any InferenceProvider
+    ) {
         self.speechRecognizer = speechRecognizer
         self.textToSpeech = textToSpeech
         self.inferenceProvider = inferenceProvider
@@ -71,8 +79,9 @@ public class VoiceService: ObservableObject {
 
     public func cancel() {
         conversationTask?.cancel()
+        conversationTask = nil
+        speechRecognizer.stopListening()
+        textToSpeech.stop()
         state = .idle
-        speechRecognizer.isListening = false
-        textToSpeech.isSpeaking = false
     }
 }

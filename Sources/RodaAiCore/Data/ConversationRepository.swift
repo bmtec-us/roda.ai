@@ -149,10 +149,28 @@ public actor ConversationRepository {
         }
     }
 
+    // MARK: - Update
+
+    /// Atualiza o titulo de uma conversa e persiste.
+    public func updateTitle(id: UUID, title: String) throws {
+        guard let conversation = try findConversation(by: id) else {
+            throw PersistenceError.conversationNotFound(id: id)
+        }
+        conversation.title = title
+        conversation.updatedAt = Date()
+        do {
+            try modelContext.save()
+        } catch {
+            throw PersistenceError.saveFailed(reason: error.localizedDescription)
+        }
+    }
+
     // MARK: - Auto-Titulo
 
-    /// Gera titulo automatico a partir da primeira mensagem do usuario
+    /// Gera titulo automatico a partir da primeira mensagem do usuario,
+    /// SALVA no conversation, e retorna o titulo.
     /// Trunca em 50 caracteres com "..."
+    @discardableResult
     public func generateAutoTitle(for conversationId: UUID) throws -> String {
         guard let conversation = try findConversation(by: conversationId) else {
             throw PersistenceError.conversationNotFound(id: conversationId)
@@ -162,14 +180,26 @@ public actor ConversationRepository {
             .sorted { $0.timestamp < $1.timestamp }
             .first { $0.role == .user }
 
-        guard let content = firstUserMessage?.content, !content.isEmpty else {
-            return "Nova conversa"
+        let title: String
+        if let content = firstUserMessage?.content, !content.isEmpty {
+            if content.count <= 50 {
+                title = content
+            } else {
+                title = String(content.prefix(47)) + "..."
+            }
+        } else {
+            title = "Nova conversa"
         }
 
-        if content.count <= 50 {
-            return content
+        // Persiste o titulo no conversation (antes, era apenas retornado e perdido)
+        conversation.title = title
+        do {
+            try modelContext.save()
+        } catch {
+            throw PersistenceError.saveFailed(reason: error.localizedDescription)
         }
-        return String(content.prefix(47)) + "..."
+
+        return title
     }
 
     // MARK: - Private

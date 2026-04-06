@@ -4,7 +4,7 @@ import Foundation
 /// Mock de SpeechRecognizer para testes.
 /// Ref: mock-strategy.md — MockSpeechRecognizer.
 @MainActor
-public class MockSpeechRecognizer: ObservableObject {
+public class MockSpeechRecognizer: ObservableObject, SpeechRecognizing {
     @Published public var transcript: String = ""
     @Published public var isListening: Bool = false
 

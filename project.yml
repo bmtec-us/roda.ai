@@ -1,0 +1,146 @@
+name: RodaAi
+options:
+  bundleIdPrefix: com.bmtec.rodaai
+  deploymentTarget:
+    iOS: "18.0"
+    macOS: "15.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+    SWIFT_STRICT_CONCURRENCY: complete
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+
+packages:
+  RodaAiCore:
+    path: .
+
+targets:
+  # ============================================================
+  # iOS App
+  # ============================================================
+  RodaAi-iOS:
+    type: application
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - path: Sources/RodaAi
+        excludes:
+          - "**/.gitkeep"
+          - "**/*.entitlements"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.bmtec.rodaai
+        PRODUCT_NAME: RodaAi
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SUPPORTS_MACCATALYST: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: ""
+        INFOPLIST_FILE: App/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Sources/RodaAi/RodaAi.entitlements
+        GENERATE_INFOPLIST_FILE: NO
+    dependencies:
+      - package: RodaAiCore
+        product: RodaAiCore
+      - package: RodaAiCore
+        product: Textual
+
+  # ============================================================
+  # macOS App
+  # ============================================================
+  RodaAi-macOS:
+    type: application
+    platform: macOS
+    deploymentTarget: "15.0"
+    sources:
+      - path: Sources/RodaAi
+        excludes:
+          - "**/.gitkeep"
+          - "**/*.entitlements"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.bmtec.rodaai
+        PRODUCT_NAME: RodaAi
+        ASSETCATALOG_COMPILER_APPICON_NAME: ""
+        INFOPLIST_FILE: App/Info-macOS.plist
+        CODE_SIGN_ENTITLEMENTS: App/RodaAi-macOS.entitlements
+        GENERATE_INFOPLIST_FILE: NO
+    dependencies:
+      - package: RodaAiCore
+        product: RodaAiCore
+      - package: RodaAiCore
+        product: Textual
+
+  # ============================================================
+  # iOS Unit Tests (RodaAiTests)
+  # ============================================================
+  RodaAiTests-iOS:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - path: Tests/RodaAiTests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.bmtec.rodaai.tests
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/RodaAi.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/RodaAi"
+        GENERATE_INFOPLIST_FILE: YES
+    dependencies:
+      - target: RodaAi-iOS
+      - package: RodaAiCore
+        product: RodaAiCore
+
+  # ============================================================
+  # iOS UI Tests (RodaAiUITests)
+  # ============================================================
+  RodaAiUITests-iOS:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - path: Tests/RodaAiUITests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.bmtec.rodaai.uitests
+        TEST_TARGET_NAME: RodaAi-iOS
+        GENERATE_INFOPLIST_FILE: YES
+    dependencies:
+      - target: RodaAi-iOS
+
+schemes:
+  RodaAi-iOS:
+    build:
+      targets:
+        RodaAi-iOS: all
+        RodaAiTests-iOS: [test]
+        RodaAiUITests-iOS: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - RodaAiTests-iOS
+        - RodaAiUITests-iOS
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
+
+  RodaAi-macOS:
+    build:
+      targets:
+        RodaAi-macOS: all
+    run:
+      config: Debug
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release

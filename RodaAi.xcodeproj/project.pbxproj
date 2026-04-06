@@ -1,0 +1,1158 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		022D05D170135D9E5BDA8E16 /* VoiceModeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4286691DE40E8471C9BB6B71 /* VoiceModeView.swift */; };
+		044DA7428B93FF9A79DD8156 /* ErrorRecoveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABD1C6AFD84C52C399CC1D04 /* ErrorRecoveryView.swift */; };
+		08AF9AB142515721A9000879 /* VoiceModeUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FEF1F584810DD2D6F49F8B7 /* VoiceModeUITests.swift */; };
+		0A6C954471EBBAAF3C1CFECC /* MessageComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87516FD22E8FCD5FAEB2BDE9 /* MessageComposer.swift */; };
+		1050F7956E30596BCA1C6497 /* ColorTokensTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 306A51A3B510EA49581BF315 /* ColorTokensTests.swift */; };
+		137579CB117021CF3FFA4EE0 /* RodaAiControlWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A13111DD5A681E4734F3007A /* RodaAiControlWidget.swift */; };
+		18D158E7A235EABFD5CD3532 /* ProgressRing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96AB29CB75B54FE68F00D70F /* ProgressRing.swift */; };
+		1AFCA61BA914FCE3957710F0 /* ImageAttachmentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F347277DA01AC93659F7A4FF /* ImageAttachmentView.swift */; };
+		1D38484AB0CDD825940DBB2A /* AttachmentPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = E79E652AB400213CEB0B6BEE /* AttachmentPicker.swift */; };
+		1FB89984E3DB80EEAD58F442 /* RodaAiApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04246D0E43DC937F21665C90 /* RodaAiApp.swift */; };
+		21520EBDB0255F1877DC98A2 /* MessageBubble.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85F9E5053C84328880BDB89D /* MessageBubble.swift */; };
+		21C34B4D3B4E014D99736310 /* AttachmentPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = E79E652AB400213CEB0B6BEE /* AttachmentPicker.swift */; };
+		2315DFBE3ECD0FA4BBF7ED7E /* InferenceServiceLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CEE7991393036EBE7EAF0DF /* InferenceServiceLocator.swift */; };
+		268CC646E74D33797938B2EE /* CodeBlockView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3BC9AD868432AFF24A0E5EF /* CodeBlockView.swift */; };
+		274281202431CB05A06A5DB6 /* SettingsUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C696F247565AB5AD9E24CD79 /* SettingsUITests.swift */; };
+		289A23745F90DBE7154BB3C4 /* Textual in Frameworks */ = {isa = PBXBuildFile; productRef = 8D709E227F12DB7AB651B499 /* Textual */; };
+		35368985DE944CD33EFB9728 /* ConversationRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CB6BDDA4DD294A6BE2E77FE /* ConversationRow.swift */; };
+		367B8504106F7AF0CD2E06E3 /* RodaAiApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04246D0E43DC937F21665C90 /* RodaAiApp.swift */; };
+		36986205EF67454FDE558AD4 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3397A7F06789822C08CF5399 /* ChatView.swift */; };
+		379F170C56764BF2C3ABEB44 /* ConversationListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 156F3C4F6471A4688342F4CF /* ConversationListView.swift */; };
+		38976BEF9E1FE9CF352EB376 /* InferenceServiceLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CEE7991393036EBE7EAF0DF /* InferenceServiceLocator.swift */; };
+		39D918DAFAACA86F72CFF841 /* Colors.swift in Sources */ = {isa = PBXBuildFile; fileRef = A60B0E2CF00ABFF87760A182 /* Colors.swift */; };
+		3B40AB3AF065277829BF54A3 /* OnboardingState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A84A551561F1F1262DE7DA1 /* OnboardingState.swift */; };
+		3E74765F262508394CE55DC5 /* GlassCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDCEF2B4686B590BB1B2D9D3 /* GlassCard.swift */; };
+		465A2856EE9AA7973D655833 /* RodaAiControlWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A13111DD5A681E4734F3007A /* RodaAiControlWidget.swift */; };
+		48787BFF373F764DDEAAABC2 /* OnboardingState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A84A551561F1F1262DE7DA1 /* OnboardingState.swift */; };
+		4B4598380460E2EFB7378FA8 /* RodaAiCore in Frameworks */ = {isa = PBXBuildFile; productRef = 5749F281F3FDB90442D7EDB2 /* RodaAiCore */; };
+		50FFB15664E7F72415568F60 /* AttachmentFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E87BC659BA9CCF07F5C2161 /* AttachmentFlowTests.swift */; };
+		5607AF2AA9390B6193917199 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7F4D4E0E75999D1C0B24A32 /* ContentView.swift */; };
+		5613B0D98E0F4F9FC1E78FB6 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 104DFDFFAB0551B06EF5D5C8 /* SettingsView.swift */; };
+		59A1C2B5B4DA77FE7563925F /* OnboardingStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3F4E422EC9E339E58382F78 /* OnboardingStateTests.swift */; };
+		5BE7F81AA93393B919C0A79D /* AccessibilityLabels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5872DA97BC6D4A1A81BE515A /* AccessibilityLabels.swift */; };
+		5EA81997748C5BE7F1324A25 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 104DFDFFAB0551B06EF5D5C8 /* SettingsView.swift */; };
+		5EE9C68F83714F42F76BDD9A /* Textual in Frameworks */ = {isa = PBXBuildFile; productRef = 030D35812574E0B676D2B807 /* Textual */; };
+		625875B4B1707BD6B368A7B8 /* PersonalizationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCE98EBAB20170EE222DBDB6 /* PersonalizationView.swift */; };
+		6565974E4DC658B364E9FE57 /* ErrorRecoveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABD1C6AFD84C52C399CC1D04 /* ErrorRecoveryView.swift */; };
+		67561D17562A9A9D62622514 /* SettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C396FDF7B83A417DCD99ACBF /* SettingsViewModel.swift */; };
+		67FDFB78FFB24712301DD6DE /* RodaAiCore in Frameworks */ = {isa = PBXBuildFile; productRef = BD12FA5E875789D19162F756 /* RodaAiCore */; };
+		6AAAFEF325FE6900066C01ED /* VoiceWaveform.swift in Sources */ = {isa = PBXBuildFile; fileRef = 613D3241C382E5C7BCD846BA /* VoiceWaveform.swift */; };
+		6D74D1EE25E28CA74786EB41 /* DownloadProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36CCE30A4788EA64F2DD8960 /* DownloadProgressView.swift */; };
+		6DADEA6CE6E06D8C2B699204 /* SiriShortcutsProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55DB64FABA1210F8C020EAF8 /* SiriShortcutsProvider.swift */; };
+		6F822E95E80C6914485AE05E /* ConversationRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CB6BDDA4DD294A6BE2E77FE /* ConversationRow.swift */; };
+		71CEC91D76E0B80C2B23CEBE /* CodeBlockView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3BC9AD868432AFF24A0E5EF /* CodeBlockView.swift */; };
+		746CD1902D14E4379280FE50 /* ComponentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48FA881A0036C5AD927F8DEC /* ComponentTests.swift */; };
+		757E45D7880C266377CD5EAC /* AppDependencies.swift in Sources */ = {isa = PBXBuildFile; fileRef = 578C409EE51275EEB31F5A08 /* AppDependencies.swift */; };
+		7C179B5FB7C7FC695F88F479 /* ModelEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1EFA6FF677CDFFDDF8F6EB8 /* ModelEntity.swift */; };
+		8299788370A29E8F792B1621 /* ProgressRing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96AB29CB75B54FE68F00D70F /* ProgressRing.swift */; };
+		82E2E0D5EF108B9DBCB3C5D7 /* ImageAttachmentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F347277DA01AC93659F7A4FF /* ImageAttachmentView.swift */; };
+		8535DBF3976DFF8D6FC24077 /* ModelGalleryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E0C53C85FCD30A669A2F1B0 /* ModelGalleryView.swift */; };
+		8EA3AF6015F5C499055636E2 /* AnalyzeImageIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = B647ED99C727B2DAEAAA4AF4 /* AnalyzeImageIntent.swift */; };
+		91A84FFA88A64ED144C2B549 /* SettingsViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 528A8D85051514148CFC0E2C /* SettingsViewModelTests.swift */; };
+		994364B10561374924DA0553 /* AppIntentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 519F807FDF8E3CCACEAEDBB2 /* AppIntentTests.swift */; };
+		9ABCC33E0F54AAEB8EE54BFA /* AskRodaAiIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0ACF784BAC2C2314E7FDF9A5 /* AskRodaAiIntent.swift */; };
+		9ACD7823780551A68F208B92 /* AnimatedDots.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AE8CE1C3A1388E5631F8B03 /* AnimatedDots.swift */; };
+		9B5B2C3E69D410A1A05582E9 /* AnimatedDots.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AE8CE1C3A1388E5631F8B03 /* AnimatedDots.swift */; };
+		9C7BB9D64D615B8EEE3D897B /* AnalyzeImageIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = B647ED99C727B2DAEAAA4AF4 /* AnalyzeImageIntent.swift */; };
+		9F5AFCC58459F8B5BACAD357 /* MessageComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87516FD22E8FCD5FAEB2BDE9 /* MessageComposer.swift */; };
+		9FD93CBCBB4B48CA4CA45511 /* MessageBubble.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85F9E5053C84328880BDB89D /* MessageBubble.swift */; };
+		A0985B8527B2B6D8C80F7FC5 /* ModelGalleryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E0C53C85FCD30A669A2F1B0 /* ModelGalleryView.swift */; };
+		A0AC039916863F576D6749C6 /* TypographyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59613A5169ADCA5B106044AB /* TypographyTests.swift */; };
+		A11808D7A5F3232AA029B6CD /* AccessibilityLabelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 755C36E608AF704768346350 /* AccessibilityLabelTests.swift */; };
+		A48CB2F2F2E4FCAFB7973EEA /* DownloadProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36CCE30A4788EA64F2DD8960 /* DownloadProgressView.swift */; };
+		A579680409EB69EE2BBB48D3 /* Colors.swift in Sources */ = {isa = PBXBuildFile; fileRef = A60B0E2CF00ABFF87760A182 /* Colors.swift */; };
+		AA73F4A45B3021CFF0ACD3CB /* RodaAiCore in Frameworks */ = {isa = PBXBuildFile; productRef = 5E9780A4DB9B7EF9B7021C3D /* RodaAiCore */; };
+		AD7D2BDB04946E04DCC36C6C /* SettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C396FDF7B83A417DCD99ACBF /* SettingsViewModel.swift */; };
+		AF77566230908C289234C27D /* LocalizationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4639EAC1E3A25CF415DB77D5 /* LocalizationTests.swift */; };
+		B0010400879CD98E0FBEE6EA /* ChatFlowUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A699CD94FECC97B9451A0E2 /* ChatFlowUITests.swift */; };
+		B0067CDE24B7C5765613F795 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CC27A512D84BCED76479201 /* OnboardingView.swift */; };
+		B1CC195631CC5A64E7E7487F /* VoiceModeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4286691DE40E8471C9BB6B71 /* VoiceModeView.swift */; };
+		B94133DE75204C8E98CFD680 /* ConversationListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 156F3C4F6471A4688342F4CF /* ConversationListView.swift */; };
+		BAAD54943D1A2FF5B243C5C6 /* ModelCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DD30FC4B528132E5B45E30D /* ModelCard.swift */; };
+		C03CC7C3254A574690D6049F /* GlassCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDCEF2B4686B590BB1B2D9D3 /* GlassCard.swift */; };
+		C36432C87FC368BB5B9DA13A /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3397A7F06789822C08CF5399 /* ChatView.swift */; };
+		C70F67B17A45741A888E6EF0 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CC27A512D84BCED76479201 /* OnboardingView.swift */; };
+		D06A01C0755D62C393526450 /* ModelDownloadUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB36125EC23138F6E2CE986 /* ModelDownloadUITests.swift */; };
+		D278EF1B53288E8F6135E8C2 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 2AF92C9DB4E339329D7A3B2C /* Localizable.xcstrings */; };
+		D8255DDB420782F980A8446F /* VoiceWaveform.swift in Sources */ = {isa = PBXBuildFile; fileRef = 613D3241C382E5C7BCD846BA /* VoiceWaveform.swift */; };
+		D901A547D6BA0C55C511D633 /* AccessibilityLabels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5872DA97BC6D4A1A81BE515A /* AccessibilityLabels.swift */; };
+		DF49D2EA752CEC74B1E1C06C /* AccessibilityUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21C9CA006616EA72B7CDF077 /* AccessibilityUITests.swift */; };
+		E1955D12975226496C1BD97A /* Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD90AA9970BFD37AD6D1AD10 /* Typography.swift */; };
+		E2342CF1B1D528F0241B211A /* Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD90AA9970BFD37AD6D1AD10 /* Typography.swift */; };
+		E3DA3FB93BDADC38DF8CDE2E /* SiriShortcutsProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55DB64FABA1210F8C020EAF8 /* SiriShortcutsProvider.swift */; };
+		E71F2B91DC45C67679D98122 /* AppDependencies.swift in Sources */ = {isa = PBXBuildFile; fileRef = 578C409EE51275EEB31F5A08 /* AppDependencies.swift */; };
+		F0C08C0F1738D2B71AB5A8FF /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7F4D4E0E75999D1C0B24A32 /* ContentView.swift */; };
+		F49A8325514D33AF626759F6 /* AskRodaAiIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0ACF784BAC2C2314E7FDF9A5 /* AskRodaAiIntent.swift */; };
+		F7914815D2709C2243CAF455 /* ModelCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DD30FC4B528132E5B45E30D /* ModelCard.swift */; };
+		FE6ED47953A33A43B6AB9E6D /* PersonalizationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCE98EBAB20170EE222DBDB6 /* PersonalizationView.swift */; };
+		FEFECF359A3FB1D1CB48B82F /* ModelEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1EFA6FF677CDFFDDF8F6EB8 /* ModelEntity.swift */; };
+		FFCC6CA4C10B3F62BE98DF01 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 2AF92C9DB4E339329D7A3B2C /* Localizable.xcstrings */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		8EDDB30C1CE8F358B99704FA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A5E3EA93E1AD9AD17C4D0ADB /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 359CC9B513147A36BBAC080F;
+			remoteInfo = "RodaAi-iOS";
+		};
+		A58A2591CDB43CF57E79D3C1 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A5E3EA93E1AD9AD17C4D0ADB /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 359CC9B513147A36BBAC080F;
+			remoteInfo = "RodaAi-iOS";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		04246D0E43DC937F21665C90 /* RodaAiApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RodaAiApp.swift; sourceTree = "<group>"; };
+		0A84A551561F1F1262DE7DA1 /* OnboardingState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingState.swift; sourceTree = "<group>"; };
+		0ACF784BAC2C2314E7FDF9A5 /* AskRodaAiIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AskRodaAiIntent.swift; sourceTree = "<group>"; };
+		104DFDFFAB0551B06EF5D5C8 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		156F3C4F6471A4688342F4CF /* ConversationListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationListView.swift; sourceTree = "<group>"; };
+		21C9CA006616EA72B7CDF077 /* AccessibilityUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityUITests.swift; sourceTree = "<group>"; };
+		2AF92C9DB4E339329D7A3B2C /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		306A51A3B510EA49581BF315 /* ColorTokensTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorTokensTests.swift; sourceTree = "<group>"; };
+		30B8D0E7CC9AE54A678D05CE /* RodaAiUITests-iOS.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = "RodaAiUITests-iOS.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		3397A7F06789822C08CF5399 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
+		36CCE30A4788EA64F2DD8960 /* DownloadProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadProgressView.swift; sourceTree = "<group>"; };
+		37184F91CDD8A04F52204B40 /* roda.ai */ = {isa = PBXFileReference; lastKnownFileType = folder; name = roda.ai; path = .; sourceTree = SOURCE_ROOT; };
+		3BFDE4809D6EFEC82009339A /* RodaAi-macOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "RodaAi-macOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		3CC27A512D84BCED76479201 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		3CEE7991393036EBE7EAF0DF /* InferenceServiceLocator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InferenceServiceLocator.swift; sourceTree = "<group>"; };
+		4286691DE40E8471C9BB6B71 /* VoiceModeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceModeView.swift; sourceTree = "<group>"; };
+		4639EAC1E3A25CF415DB77D5 /* LocalizationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationTests.swift; sourceTree = "<group>"; };
+		48FA881A0036C5AD927F8DEC /* ComponentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComponentTests.swift; sourceTree = "<group>"; };
+		4AB36125EC23138F6E2CE986 /* ModelDownloadUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelDownloadUITests.swift; sourceTree = "<group>"; };
+		519F807FDF8E3CCACEAEDBB2 /* AppIntentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIntentTests.swift; sourceTree = "<group>"; };
+		528A8D85051514148CFC0E2C /* SettingsViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewModelTests.swift; sourceTree = "<group>"; };
+		55DB64FABA1210F8C020EAF8 /* SiriShortcutsProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SiriShortcutsProvider.swift; sourceTree = "<group>"; };
+		578C409EE51275EEB31F5A08 /* AppDependencies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDependencies.swift; sourceTree = "<group>"; };
+		5872DA97BC6D4A1A81BE515A /* AccessibilityLabels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityLabels.swift; sourceTree = "<group>"; };
+		59613A5169ADCA5B106044AB /* TypographyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TypographyTests.swift; sourceTree = "<group>"; };
+		5A699CD94FECC97B9451A0E2 /* ChatFlowUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatFlowUITests.swift; sourceTree = "<group>"; };
+		5E87BC659BA9CCF07F5C2161 /* AttachmentFlowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttachmentFlowTests.swift; sourceTree = "<group>"; };
+		613D3241C382E5C7BCD846BA /* VoiceWaveform.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceWaveform.swift; sourceTree = "<group>"; };
+		72FCAEC9AED16AD17BE8BD2B /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
+		755C36E608AF704768346350 /* AccessibilityLabelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityLabelTests.swift; sourceTree = "<group>"; };
+		85F9E5053C84328880BDB89D /* MessageBubble.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageBubble.swift; sourceTree = "<group>"; };
+		87516FD22E8FCD5FAEB2BDE9 /* MessageComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageComposer.swift; sourceTree = "<group>"; };
+		8FEF1F584810DD2D6F49F8B7 /* VoiceModeUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceModeUITests.swift; sourceTree = "<group>"; };
+		96AB29CB75B54FE68F00D70F /* ProgressRing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressRing.swift; sourceTree = "<group>"; };
+		9AE8CE1C3A1388E5631F8B03 /* AnimatedDots.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnimatedDots.swift; sourceTree = "<group>"; };
+		9CB6BDDA4DD294A6BE2E77FE /* ConversationRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationRow.swift; sourceTree = "<group>"; };
+		9DD30FC4B528132E5B45E30D /* ModelCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelCard.swift; sourceTree = "<group>"; };
+		9E0C53C85FCD30A669A2F1B0 /* ModelGalleryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelGalleryView.swift; sourceTree = "<group>"; };
+		A13111DD5A681E4734F3007A /* RodaAiControlWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RodaAiControlWidget.swift; sourceTree = "<group>"; };
+		A60B0E2CF00ABFF87760A182 /* Colors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Colors.swift; sourceTree = "<group>"; };
+		A7F4D4E0E75999D1C0B24A32 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		ABD1C6AFD84C52C399CC1D04 /* ErrorRecoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorRecoveryView.swift; sourceTree = "<group>"; };
+		B3BC9AD868432AFF24A0E5EF /* CodeBlockView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodeBlockView.swift; sourceTree = "<group>"; };
+		B3F4E422EC9E339E58382F78 /* OnboardingStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingStateTests.swift; sourceTree = "<group>"; };
+		B50D9AEC047B02F6B8A589E8 /* RodaAiTests-iOS.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = "RodaAiTests-iOS.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		B647ED99C727B2DAEAAA4AF4 /* AnalyzeImageIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyzeImageIntent.swift; sourceTree = "<group>"; };
+		C396FDF7B83A417DCD99ACBF /* SettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewModel.swift; sourceTree = "<group>"; };
+		C696F247565AB5AD9E24CD79 /* SettingsUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsUITests.swift; sourceTree = "<group>"; };
+		CCE98EBAB20170EE222DBDB6 /* PersonalizationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonalizationView.swift; sourceTree = "<group>"; };
+		CD90AA9970BFD37AD6D1AD10 /* Typography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Typography.swift; sourceTree = "<group>"; };
+		D1EFA6FF677CDFFDDF8F6EB8 /* ModelEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelEntity.swift; sourceTree = "<group>"; };
+		D5BF49898C7DF8D2BAE4E0CA /* RodaAi-iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "RodaAi-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		E79E652AB400213CEB0B6BEE /* AttachmentPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttachmentPicker.swift; sourceTree = "<group>"; };
+		F347277DA01AC93659F7A4FF /* ImageAttachmentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageAttachmentView.swift; sourceTree = "<group>"; };
+		FDCEF2B4686B590BB1B2D9D3 /* GlassCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassCard.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		13EB4F103E07DE78B8310030 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA73F4A45B3021CFF0ACD3CB /* RodaAiCore in Frameworks */,
+				289A23745F90DBE7154BB3C4 /* Textual in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		278627BEB822BD2689CD5DD6 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4B4598380460E2EFB7378FA8 /* RodaAiCore in Frameworks */,
+				5EE9C68F83714F42F76BDD9A /* Textual in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C59A05077DB7B9F25AF456BE /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				67FDFB78FFB24712301DD6DE /* RodaAiCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		0781CE97C02AA1B88C6804CB /* Design */ = {
+			isa = PBXGroup;
+			children = (
+				A60B0E2CF00ABFF87760A182 /* Colors.swift */,
+				CD90AA9970BFD37AD6D1AD10 /* Typography.swift */,
+				AFC6D39B2DBE6865BEFDA3B3 /* Components */,
+			);
+			path = Design;
+			sourceTree = "<group>";
+		};
+		07B0BBB2813E8EEC485EC18D /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				528A8D85051514148CFC0E2C /* SettingsViewModelTests.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		09F3F9A1F222A239D1B6320F /* ConversationList */ = {
+			isa = PBXGroup;
+			children = (
+				156F3C4F6471A4688342F4CF /* ConversationListView.swift */,
+				9CB6BDDA4DD294A6BE2E77FE /* ConversationRow.swift */,
+			);
+			path = ConversationList;
+			sourceTree = "<group>";
+		};
+		0AE79CCBC9EB7E0210E783A9 /* Siri */ = {
+			isa = PBXGroup;
+			children = (
+				55DB64FABA1210F8C020EAF8 /* SiriShortcutsProvider.swift */,
+			);
+			path = Siri;
+			sourceTree = "<group>";
+		};
+		10B289509550CD12D310033C /* Localization */ = {
+			isa = PBXGroup;
+			children = (
+				4639EAC1E3A25CF415DB77D5 /* LocalizationTests.swift */,
+			);
+			path = Localization;
+			sourceTree = "<group>";
+		};
+		1A254A13A19B849B010899BB /* RodaAi */ = {
+			isa = PBXGroup;
+			children = (
+				F23C1A8E436A82779BD51D76 /* Accessibility */,
+				E1D7B2CBFD41E138730FE2B7 /* App */,
+				0781CE97C02AA1B88C6804CB /* Design */,
+				922A6009BA926EADC990182A /* Features */,
+				1D7ACD126C946EFF3612EFED /* Integrations */,
+				C33CE41FD98A428F443D3A05 /* Resources */,
+			);
+			path = RodaAi;
+			sourceTree = "<group>";
+		};
+		1D7ACD126C946EFF3612EFED /* Integrations */ = {
+			isa = PBXGroup;
+			children = (
+				CB938E66F6438BD5403813BC /* Intents */,
+				0AE79CCBC9EB7E0210E783A9 /* Siri */,
+				D550D55D6EC2129BE09CBC72 /* Widgets */,
+			);
+			path = Integrations;
+			sourceTree = "<group>";
+		};
+		26988C573586819181091613 /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				0A84A551561F1F1262DE7DA1 /* OnboardingState.swift */,
+				3CC27A512D84BCED76479201 /* OnboardingView.swift */,
+			);
+			path = Onboarding;
+			sourceTree = "<group>";
+		};
+		300612D46683B819EE36709C /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				37184F91CDD8A04F52204B40 /* roda.ai */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
+		31F765387F7B3D4796656868 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				1A254A13A19B849B010899BB /* RodaAi */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		360D44B2C459D2C6A29272B2 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				CCE98EBAB20170EE222DBDB6 /* PersonalizationView.swift */,
+				104DFDFFAB0551B06EF5D5C8 /* SettingsView.swift */,
+				C396FDF7B83A417DCD99ACBF /* SettingsViewModel.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		44F6287C1364EDED2F56E3FB /* Accessibility */ = {
+			isa = PBXGroup;
+			children = (
+				755C36E608AF704768346350 /* AccessibilityLabelTests.swift */,
+			);
+			path = Accessibility;
+			sourceTree = "<group>";
+		};
+		54014780A3CB317B38C29F30 /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				B3F4E422EC9E339E58382F78 /* OnboardingStateTests.swift */,
+			);
+			path = Onboarding;
+			sourceTree = "<group>";
+		};
+		60194DC5F28B39856AB5C8F5 /* Integrations */ = {
+			isa = PBXGroup;
+			children = (
+				519F807FDF8E3CCACEAEDBB2 /* AppIntentTests.swift */,
+			);
+			path = Integrations;
+			sourceTree = "<group>";
+		};
+		649850D00BB70927A2EC5D05 /* ModelGallery */ = {
+			isa = PBXGroup;
+			children = (
+				36CCE30A4788EA64F2DD8960 /* DownloadProgressView.swift */,
+				9DD30FC4B528132E5B45E30D /* ModelCard.swift */,
+				9E0C53C85FCD30A669A2F1B0 /* ModelGalleryView.swift */,
+			);
+			path = ModelGallery;
+			sourceTree = "<group>";
+		};
+		67016FE43367E51A44369042 = {
+			isa = PBXGroup;
+			children = (
+				300612D46683B819EE36709C /* Packages */,
+				31F765387F7B3D4796656868 /* Sources */,
+				9EAC7BAA4DC9EDB03DBF7F87 /* Tests */,
+				9D7B5D9FD6CE1E760AB6A15C /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		6F52D4C504E6B0D980B02D2C /* Design */ = {
+			isa = PBXGroup;
+			children = (
+				306A51A3B510EA49581BF315 /* ColorTokensTests.swift */,
+				48FA881A0036C5AD927F8DEC /* ComponentTests.swift */,
+				59613A5169ADCA5B106044AB /* TypographyTests.swift */,
+			);
+			path = Design;
+			sourceTree = "<group>";
+		};
+		7704CDC536B9DB159498AECA /* Chat */ = {
+			isa = PBXGroup;
+			children = (
+				E79E652AB400213CEB0B6BEE /* AttachmentPicker.swift */,
+				3397A7F06789822C08CF5399 /* ChatView.swift */,
+				F347277DA01AC93659F7A4FF /* ImageAttachmentView.swift */,
+				85F9E5053C84328880BDB89D /* MessageBubble.swift */,
+				87516FD22E8FCD5FAEB2BDE9 /* MessageComposer.swift */,
+			);
+			path = Chat;
+			sourceTree = "<group>";
+		};
+		827DD658844556D793C4DDFF /* Chat */ = {
+			isa = PBXGroup;
+			children = (
+				5E87BC659BA9CCF07F5C2161 /* AttachmentFlowTests.swift */,
+			);
+			path = Chat;
+			sourceTree = "<group>";
+		};
+		922A6009BA926EADC990182A /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				7704CDC536B9DB159498AECA /* Chat */,
+				09F3F9A1F222A239D1B6320F /* ConversationList */,
+				649850D00BB70927A2EC5D05 /* ModelGallery */,
+				26988C573586819181091613 /* Onboarding */,
+				360D44B2C459D2C6A29272B2 /* Settings */,
+				F02421F2D60D6C0CB0EB473F /* Shared */,
+				E52FD907658539CB2409AC92 /* Voice */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		9D7B5D9FD6CE1E760AB6A15C /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				D5BF49898C7DF8D2BAE4E0CA /* RodaAi-iOS.app */,
+				3BFDE4809D6EFEC82009339A /* RodaAi-macOS.app */,
+				B50D9AEC047B02F6B8A589E8 /* RodaAiTests-iOS.xctest */,
+				30B8D0E7CC9AE54A678D05CE /* RodaAiUITests-iOS.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		9EAC7BAA4DC9EDB03DBF7F87 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				B92F60B4756BFFB1170EB271 /* RodaAiTests */,
+				DECB9A44552D2B496F6F2F66 /* RodaAiUITests */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
+		AFC6D39B2DBE6865BEFDA3B3 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				9AE8CE1C3A1388E5631F8B03 /* AnimatedDots.swift */,
+				B3BC9AD868432AFF24A0E5EF /* CodeBlockView.swift */,
+				FDCEF2B4686B590BB1B2D9D3 /* GlassCard.swift */,
+				96AB29CB75B54FE68F00D70F /* ProgressRing.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		B92F60B4756BFFB1170EB271 /* RodaAiTests */ = {
+			isa = PBXGroup;
+			children = (
+				44F6287C1364EDED2F56E3FB /* Accessibility */,
+				827DD658844556D793C4DDFF /* Chat */,
+				6F52D4C504E6B0D980B02D2C /* Design */,
+				60194DC5F28B39856AB5C8F5 /* Integrations */,
+				10B289509550CD12D310033C /* Localization */,
+				54014780A3CB317B38C29F30 /* Onboarding */,
+				07B0BBB2813E8EEC485EC18D /* Settings */,
+			);
+			path = RodaAiTests;
+			sourceTree = "<group>";
+		};
+		C33CE41FD98A428F443D3A05 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				2AF92C9DB4E339329D7A3B2C /* Localizable.xcstrings */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		CB938E66F6438BD5403813BC /* Intents */ = {
+			isa = PBXGroup;
+			children = (
+				B647ED99C727B2DAEAAA4AF4 /* AnalyzeImageIntent.swift */,
+				0ACF784BAC2C2314E7FDF9A5 /* AskRodaAiIntent.swift */,
+				3CEE7991393036EBE7EAF0DF /* InferenceServiceLocator.swift */,
+				D1EFA6FF677CDFFDDF8F6EB8 /* ModelEntity.swift */,
+			);
+			path = Intents;
+			sourceTree = "<group>";
+		};
+		D550D55D6EC2129BE09CBC72 /* Widgets */ = {
+			isa = PBXGroup;
+			children = (
+				A13111DD5A681E4734F3007A /* RodaAiControlWidget.swift */,
+			);
+			path = Widgets;
+			sourceTree = "<group>";
+		};
+		DECB9A44552D2B496F6F2F66 /* RodaAiUITests */ = {
+			isa = PBXGroup;
+			children = (
+				72FCAEC9AED16AD17BE8BD2B /* .gitkeep */,
+				21C9CA006616EA72B7CDF077 /* AccessibilityUITests.swift */,
+				5A699CD94FECC97B9451A0E2 /* ChatFlowUITests.swift */,
+				4AB36125EC23138F6E2CE986 /* ModelDownloadUITests.swift */,
+				C696F247565AB5AD9E24CD79 /* SettingsUITests.swift */,
+				8FEF1F584810DD2D6F49F8B7 /* VoiceModeUITests.swift */,
+			);
+			path = RodaAiUITests;
+			sourceTree = "<group>";
+		};
+		E1D7B2CBFD41E138730FE2B7 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				578C409EE51275EEB31F5A08 /* AppDependencies.swift */,
+				A7F4D4E0E75999D1C0B24A32 /* ContentView.swift */,
+				04246D0E43DC937F21665C90 /* RodaAiApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		E52FD907658539CB2409AC92 /* Voice */ = {
+			isa = PBXGroup;
+			children = (
+				4286691DE40E8471C9BB6B71 /* VoiceModeView.swift */,
+				613D3241C382E5C7BCD846BA /* VoiceWaveform.swift */,
+			);
+			path = Voice;
+			sourceTree = "<group>";
+		};
+		F02421F2D60D6C0CB0EB473F /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				ABD1C6AFD84C52C399CC1D04 /* ErrorRecoveryView.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		F23C1A8E436A82779BD51D76 /* Accessibility */ = {
+			isa = PBXGroup;
+			children = (
+				5872DA97BC6D4A1A81BE515A /* AccessibilityLabels.swift */,
+			);
+			path = Accessibility;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		16C534ED0BBA648D9B7E6069 /* RodaAi-macOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8DE4E5732CCD51D3A0094AD7 /* Build configuration list for PBXNativeTarget "RodaAi-macOS" */;
+			buildPhases = (
+				867224B4757B3860A30C39D5 /* Sources */,
+				FB655B3158A4619194F62CB9 /* Resources */,
+				13EB4F103E07DE78B8310030 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "RodaAi-macOS";
+			packageProductDependencies = (
+				5E9780A4DB9B7EF9B7021C3D /* RodaAiCore */,
+				8D709E227F12DB7AB651B499 /* Textual */,
+			);
+			productName = "RodaAi-macOS";
+			productReference = 3BFDE4809D6EFEC82009339A /* RodaAi-macOS.app */;
+			productType = "com.apple.product-type.application";
+		};
+		359CC9B513147A36BBAC080F /* RodaAi-iOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0619B7894225C068D3E6B60C /* Build configuration list for PBXNativeTarget "RodaAi-iOS" */;
+			buildPhases = (
+				7BE5CE9D882BC8AF00D74209 /* Sources */,
+				F29CD72423EA335310CCBDEF /* Resources */,
+				278627BEB822BD2689CD5DD6 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "RodaAi-iOS";
+			packageProductDependencies = (
+				5749F281F3FDB90442D7EDB2 /* RodaAiCore */,
+				030D35812574E0B676D2B807 /* Textual */,
+			);
+			productName = "RodaAi-iOS";
+			productReference = D5BF49898C7DF8D2BAE4E0CA /* RodaAi-iOS.app */;
+			productType = "com.apple.product-type.application";
+		};
+		7179356B70BF00E31FCA8519 /* RodaAiTests-iOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 880041B6019B8EAB4A98CDCA /* Build configuration list for PBXNativeTarget "RodaAiTests-iOS" */;
+			buildPhases = (
+				E791A2E24EDCDEAD843E620A /* Sources */,
+				C59A05077DB7B9F25AF456BE /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D301BCBE030C87EE6C5F2314 /* PBXTargetDependency */,
+			);
+			name = "RodaAiTests-iOS";
+			packageProductDependencies = (
+				BD12FA5E875789D19162F756 /* RodaAiCore */,
+			);
+			productName = "RodaAiTests-iOS";
+			productReference = B50D9AEC047B02F6B8A589E8 /* RodaAiTests-iOS.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		ECEEE0790BA1EE362850A5E6 /* RodaAiUITests-iOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4234D8C4AFC8AC25B225F2BD /* Build configuration list for PBXNativeTarget "RodaAiUITests-iOS" */;
+			buildPhases = (
+				731F934B9B3C2CF725A57D4E /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				0E18EEF0B006A1379FD401DD /* PBXTargetDependency */,
+			);
+			name = "RodaAiUITests-iOS";
+			packageProductDependencies = (
+			);
+			productName = "RodaAiUITests-iOS";
+			productReference = 30B8D0E7CC9AE54A678D05CE /* RodaAiUITests-iOS.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A5E3EA93E1AD9AD17C4D0ADB /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					16C534ED0BBA648D9B7E6069 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+					359CC9B513147A36BBAC080F = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+					7179356B70BF00E31FCA8519 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+					ECEEE0790BA1EE362850A5E6 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+						TestTargetID = 359CC9B513147A36BBAC080F;
+					};
+				};
+			};
+			buildConfigurationList = 49A0BDFBFBD7D9CA2BF3DF0C /* Build configuration list for PBXProject "RodaAi" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+				"pt-BR",
+			);
+			mainGroup = 67016FE43367E51A44369042;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				D3C21ECF326834C71E3F1795 /* XCLocalSwiftPackageReference "." */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 9D7B5D9FD6CE1E760AB6A15C /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				359CC9B513147A36BBAC080F /* RodaAi-iOS */,
+				16C534ED0BBA648D9B7E6069 /* RodaAi-macOS */,
+				7179356B70BF00E31FCA8519 /* RodaAiTests-iOS */,
+				ECEEE0790BA1EE362850A5E6 /* RodaAiUITests-iOS */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		F29CD72423EA335310CCBDEF /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FFCC6CA4C10B3F62BE98DF01 /* Localizable.xcstrings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FB655B3158A4619194F62CB9 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D278EF1B53288E8F6135E8C2 /* Localizable.xcstrings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		731F934B9B3C2CF725A57D4E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DF49D2EA752CEC74B1E1C06C /* AccessibilityUITests.swift in Sources */,
+				B0010400879CD98E0FBEE6EA /* ChatFlowUITests.swift in Sources */,
+				D06A01C0755D62C393526450 /* ModelDownloadUITests.swift in Sources */,
+				274281202431CB05A06A5DB6 /* SettingsUITests.swift in Sources */,
+				08AF9AB142515721A9000879 /* VoiceModeUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7BE5CE9D882BC8AF00D74209 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5BE7F81AA93393B919C0A79D /* AccessibilityLabels.swift in Sources */,
+				9C7BB9D64D615B8EEE3D897B /* AnalyzeImageIntent.swift in Sources */,
+				9B5B2C3E69D410A1A05582E9 /* AnimatedDots.swift in Sources */,
+				E71F2B91DC45C67679D98122 /* AppDependencies.swift in Sources */,
+				9ABCC33E0F54AAEB8EE54BFA /* AskRodaAiIntent.swift in Sources */,
+				1D38484AB0CDD825940DBB2A /* AttachmentPicker.swift in Sources */,
+				36986205EF67454FDE558AD4 /* ChatView.swift in Sources */,
+				71CEC91D76E0B80C2B23CEBE /* CodeBlockView.swift in Sources */,
+				A579680409EB69EE2BBB48D3 /* Colors.swift in Sources */,
+				F0C08C0F1738D2B71AB5A8FF /* ContentView.swift in Sources */,
+				B94133DE75204C8E98CFD680 /* ConversationListView.swift in Sources */,
+				6F822E95E80C6914485AE05E /* ConversationRow.swift in Sources */,
+				A48CB2F2F2E4FCAFB7973EEA /* DownloadProgressView.swift in Sources */,
+				6565974E4DC658B364E9FE57 /* ErrorRecoveryView.swift in Sources */,
+				3E74765F262508394CE55DC5 /* GlassCard.swift in Sources */,
+				1AFCA61BA914FCE3957710F0 /* ImageAttachmentView.swift in Sources */,
+				38976BEF9E1FE9CF352EB376 /* InferenceServiceLocator.swift in Sources */,
+				9FD93CBCBB4B48CA4CA45511 /* MessageBubble.swift in Sources */,
+				0A6C954471EBBAAF3C1CFECC /* MessageComposer.swift in Sources */,
+				BAAD54943D1A2FF5B243C5C6 /* ModelCard.swift in Sources */,
+				FEFECF359A3FB1D1CB48B82F /* ModelEntity.swift in Sources */,
+				8535DBF3976DFF8D6FC24077 /* ModelGalleryView.swift in Sources */,
+				48787BFF373F764DDEAAABC2 /* OnboardingState.swift in Sources */,
+				B0067CDE24B7C5765613F795 /* OnboardingView.swift in Sources */,
+				625875B4B1707BD6B368A7B8 /* PersonalizationView.swift in Sources */,
+				8299788370A29E8F792B1621 /* ProgressRing.swift in Sources */,
+				1FB89984E3DB80EEAD58F442 /* RodaAiApp.swift in Sources */,
+				465A2856EE9AA7973D655833 /* RodaAiControlWidget.swift in Sources */,
+				5613B0D98E0F4F9FC1E78FB6 /* SettingsView.swift in Sources */,
+				67561D17562A9A9D62622514 /* SettingsViewModel.swift in Sources */,
+				6DADEA6CE6E06D8C2B699204 /* SiriShortcutsProvider.swift in Sources */,
+				E1955D12975226496C1BD97A /* Typography.swift in Sources */,
+				B1CC195631CC5A64E7E7487F /* VoiceModeView.swift in Sources */,
+				D8255DDB420782F980A8446F /* VoiceWaveform.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		867224B4757B3860A30C39D5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D901A547D6BA0C55C511D633 /* AccessibilityLabels.swift in Sources */,
+				8EA3AF6015F5C499055636E2 /* AnalyzeImageIntent.swift in Sources */,
+				9ACD7823780551A68F208B92 /* AnimatedDots.swift in Sources */,
+				757E45D7880C266377CD5EAC /* AppDependencies.swift in Sources */,
+				F49A8325514D33AF626759F6 /* AskRodaAiIntent.swift in Sources */,
+				21C34B4D3B4E014D99736310 /* AttachmentPicker.swift in Sources */,
+				C36432C87FC368BB5B9DA13A /* ChatView.swift in Sources */,
+				268CC646E74D33797938B2EE /* CodeBlockView.swift in Sources */,
+				39D918DAFAACA86F72CFF841 /* Colors.swift in Sources */,
+				5607AF2AA9390B6193917199 /* ContentView.swift in Sources */,
+				379F170C56764BF2C3ABEB44 /* ConversationListView.swift in Sources */,
+				35368985DE944CD33EFB9728 /* ConversationRow.swift in Sources */,
+				6D74D1EE25E28CA74786EB41 /* DownloadProgressView.swift in Sources */,
+				044DA7428B93FF9A79DD8156 /* ErrorRecoveryView.swift in Sources */,
+				C03CC7C3254A574690D6049F /* GlassCard.swift in Sources */,
+				82E2E0D5EF108B9DBCB3C5D7 /* ImageAttachmentView.swift in Sources */,
+				2315DFBE3ECD0FA4BBF7ED7E /* InferenceServiceLocator.swift in Sources */,
+				21520EBDB0255F1877DC98A2 /* MessageBubble.swift in Sources */,
+				9F5AFCC58459F8B5BACAD357 /* MessageComposer.swift in Sources */,
+				F7914815D2709C2243CAF455 /* ModelCard.swift in Sources */,
+				7C179B5FB7C7FC695F88F479 /* ModelEntity.swift in Sources */,
+				A0985B8527B2B6D8C80F7FC5 /* ModelGalleryView.swift in Sources */,
+				3B40AB3AF065277829BF54A3 /* OnboardingState.swift in Sources */,
+				C70F67B17A45741A888E6EF0 /* OnboardingView.swift in Sources */,
+				FE6ED47953A33A43B6AB9E6D /* PersonalizationView.swift in Sources */,
+				18D158E7A235EABFD5CD3532 /* ProgressRing.swift in Sources */,
+				367B8504106F7AF0CD2E06E3 /* RodaAiApp.swift in Sources */,
+				137579CB117021CF3FFA4EE0 /* RodaAiControlWidget.swift in Sources */,
+				5EA81997748C5BE7F1324A25 /* SettingsView.swift in Sources */,
+				AD7D2BDB04946E04DCC36C6C /* SettingsViewModel.swift in Sources */,
+				E3DA3FB93BDADC38DF8CDE2E /* SiriShortcutsProvider.swift in Sources */,
+				E2342CF1B1D528F0241B211A /* Typography.swift in Sources */,
+				022D05D170135D9E5BDA8E16 /* VoiceModeView.swift in Sources */,
+				6AAAFEF325FE6900066C01ED /* VoiceWaveform.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E791A2E24EDCDEAD843E620A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A11808D7A5F3232AA029B6CD /* AccessibilityLabelTests.swift in Sources */,
+				994364B10561374924DA0553 /* AppIntentTests.swift in Sources */,
+				50FFB15664E7F72415568F60 /* AttachmentFlowTests.swift in Sources */,
+				1050F7956E30596BCA1C6497 /* ColorTokensTests.swift in Sources */,
+				746CD1902D14E4379280FE50 /* ComponentTests.swift in Sources */,
+				AF77566230908C289234C27D /* LocalizationTests.swift in Sources */,
+				59A1C2B5B4DA77FE7563925F /* OnboardingStateTests.swift in Sources */,
+				91A84FFA88A64ED144C2B549 /* SettingsViewModelTests.swift in Sources */,
+				A0AC039916863F576D6749C6 /* TypographyTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		0E18EEF0B006A1379FD401DD /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 359CC9B513147A36BBAC080F /* RodaAi-iOS */;
+			targetProxy = A58A2591CDB43CF57E79D3C1 /* PBXContainerItemProxy */;
+		};
+		D301BCBE030C87EE6C5F2314 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 359CC9B513147A36BBAC080F /* RodaAi-iOS */;
+			targetProxy = 8EDDB30C1CE8F358B99704FA /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		3243B2974A55CFD90CAA90A4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "";
+				CODE_SIGN_ENTITLEMENTS = "App/RodaAi-macOS.entitlements";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "App/Info-macOS.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bmtec.rodaai;
+				PRODUCT_NAME = RodaAi;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		3744A0A7051D5E0475F8E99B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.bmtec.rodaai.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = "RodaAi-iOS";
+			};
+			name = Debug;
+		};
+		6B57CD906D60515A91C87876 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.bmtec.rodaai.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = "RodaAi-iOS";
+			};
+			name = Release;
+		};
+		8189CA03D6DCCED01EEA554F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.bmtec.rodaai.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/RodaAi.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/RodaAi";
+			};
+			name = Release;
+		};
+		942C883DD0E4CF8A3FA9F42F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.bmtec.rodaai.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/RodaAi.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/RodaAi";
+			};
+			name = Debug;
+		};
+		9F170AA69AF3D69DF490D807 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "";
+				CODE_SIGN_ENTITLEMENTS = "App/RodaAi-macOS.entitlements";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "App/Info-macOS.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bmtec.rodaai;
+				PRODUCT_NAME = RodaAi;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		D21EB3EE4163B443E70A53C4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "";
+				CODE_SIGN_ENTITLEMENTS = Sources/RodaAi/RodaAi.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = App/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.bmtec.rodaai;
+				PRODUCT_NAME = RodaAi;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		DADD9940FE30CF7F3C28477E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "";
+				CODE_SIGN_ENTITLEMENTS = Sources/RodaAi/RodaAi.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = App/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.bmtec.rodaai;
+				PRODUCT_NAME = RodaAi;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		EDF3F46A18653E15BAE2F525 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		F7F032C0D8ACA5AB120E5CD7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0619B7894225C068D3E6B60C /* Build configuration list for PBXNativeTarget "RodaAi-iOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D21EB3EE4163B443E70A53C4 /* Debug */,
+				DADD9940FE30CF7F3C28477E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		4234D8C4AFC8AC25B225F2BD /* Build configuration list for PBXNativeTarget "RodaAiUITests-iOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3744A0A7051D5E0475F8E99B /* Debug */,
+				6B57CD906D60515A91C87876 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		49A0BDFBFBD7D9CA2BF3DF0C /* Build configuration list for PBXProject "RodaAi" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F7F032C0D8ACA5AB120E5CD7 /* Debug */,
+				EDF3F46A18653E15BAE2F525 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		880041B6019B8EAB4A98CDCA /* Build configuration list for PBXNativeTarget "RodaAiTests-iOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				942C883DD0E4CF8A3FA9F42F /* Debug */,
+				8189CA03D6DCCED01EEA554F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		8DE4E5732CCD51D3A0094AD7 /* Build configuration list for PBXNativeTarget "RodaAi-macOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3243B2974A55CFD90CAA90A4 /* Debug */,
+				9F170AA69AF3D69DF490D807 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		D3C21ECF326834C71E3F1795 /* XCLocalSwiftPackageReference "." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = .;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		030D35812574E0B676D2B807 /* Textual */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Textual;
+		};
+		5749F281F3FDB90442D7EDB2 /* RodaAiCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = RodaAiCore;
+		};
+		5E9780A4DB9B7EF9B7021C3D /* RodaAiCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = RodaAiCore;
+		};
+		8D709E227F12DB7AB651B499 /* Textual */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Textual;
+		};
+		BD12FA5E875789D19162F756 /* RodaAiCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = RodaAiCore;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = A5E3EA93E1AD9AD17C4D0ADB /* Project object */;
+}

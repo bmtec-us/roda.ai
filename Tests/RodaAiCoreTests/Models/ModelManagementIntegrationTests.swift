@@ -11,10 +11,8 @@ struct ModelManagementIntegrationTests {
     func testFullModelLifecycle() async throws {
         let mockDownloader = MockModelDownloader()
         let mockProvider = MockInferenceProvider()
-        let manager = ModelManager(
-            downloader: mockDownloader,
-            inferenceProvider: mockProvider
-        )
+        let manager = ModelManager(downloader: mockDownloader, inferenceProvider: mockProvider
+        , modelsDirectoryOverride: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
         let entry = TestData.makeCatalogEntry(identifier: "gemma-4-e4b")
 
         // Download
@@ -43,7 +41,7 @@ struct ModelManagementIntegrationTests {
     func testDownloadFailureDoesNotRegister() async {
         let mockDownloader = MockModelDownloader()
         mockDownloader.shouldThrow = .networkUnavailable
-        let manager = ModelManager(downloader: mockDownloader)
+        let manager = ModelManager(downloader: mockDownloader, modelsDirectoryOverride: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
         let entry = TestData.makeCatalogEntry(identifier: "test-model")
 
         do {
@@ -62,10 +60,8 @@ struct ModelManagementIntegrationTests {
     func testDeleteActiveModelClearsActive() async throws {
         let mockDownloader = MockModelDownloader()
         let mockProvider = MockInferenceProvider()
-        let manager = ModelManager(
-            downloader: mockDownloader,
-            inferenceProvider: mockProvider
-        )
+        let manager = ModelManager(downloader: mockDownloader, inferenceProvider: mockProvider
+        , modelsDirectoryOverride: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
         let entry = TestData.makeCatalogEntry(identifier: "gemma-4-e4b")
 
         try await manager.downloadModel(entry)

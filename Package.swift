@@ -1,4 +1,16 @@
 // swift-tools-version: 6.0
+//
+// Package.swift defines ONLY the core library (RodaAiCore) and its unit tests.
+// The iOS and macOS app targets, app unit tests, and UI tests live in
+// RodaAi.xcodeproj (generated from project.yml via XcodeGen).
+//
+// Why split: SwiftPM cannot build iOS app bundles. The Xcode project owns
+// Sources/RodaAi/, Tests/RodaAiTests/, and Tests/RodaAiUITests/, while
+// SPM owns Sources/RodaAiCore/ and Tests/RodaAiCoreTests/.
+//
+// To regenerate the Xcode project: `xcodegen generate`
+// To build core via SPM: `swift build`
+// To run core tests via SPM: `swift test`
 
 import PackageDescription
 
@@ -18,14 +30,6 @@ let package = Package(
         .package(url: "https://github.com/gonzalezreal/textual", from: "0.3.1"),
     ],
     targets: [
-        .executableTarget(
-            name: "RodaAi",
-            dependencies: [
-                "RodaAiCore",
-                .product(name: "Textual", package: "textual"),
-            ],
-            path: "Sources/RodaAi"
-        ),
         .target(
             name: "RodaAiCore",
             dependencies: [
@@ -34,7 +38,10 @@ let package = Package(
                 .product(name: "MLXVLM", package: "mlx-swift-lm"),
                 .product(name: "Tokenizers", package: "swift-transformers"),
             ],
-            path: "Sources/RodaAiCore"
+            path: "Sources/RodaAiCore",
+            resources: [
+                .process("Resources"),
+            ]
         ),
         .testTarget(
             name: "RodaAiCoreTests",
@@ -43,23 +50,6 @@ let package = Package(
             resources: [
                 .copy("Fixtures"),
             ]
-        ),
-        .testTarget(
-            name: "RodaAiTests",
-            dependencies: ["RodaAi", "RodaAiCore"],
-            path: "Tests/RodaAiTests"
-        ),
-        // NOTE: XCUITest-style UI tests require a real Xcode project with a
-        // UI Testing bundle. SwiftPM only supports unit test bundles, so the
-        // tests in Tests/RodaAiUITests/ that use XCUIApplication will not run
-        // via `swift test`. They will run when this package is opened in Xcode
-        // and a UI Testing target is added there. For now, we add the target
-        // so the files compile and lint, but actual UI test execution requires
-        // an Xcode project wrapper (planned for Phase 10 launch prep).
-        .testTarget(
-            name: "RodaAiUITests",
-            dependencies: ["RodaAi", "RodaAiCore"],
-            path: "Tests/RodaAiUITests"
         ),
     ]
 )

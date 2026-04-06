@@ -4,7 +4,7 @@ import Foundation
 /// Mock de TextToSpeech para testes.
 /// Ref: mock-strategy.md — MockTextToSpeech.
 @MainActor
-public class MockTextToSpeech: ObservableObject {
+public class MockTextToSpeech: ObservableObject, TextToSpeaking {
     @Published public var isSpeaking: Bool = false
 
     public var lastSpokenText: String?

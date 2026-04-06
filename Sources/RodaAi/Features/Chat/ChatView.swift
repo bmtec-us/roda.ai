@@ -5,15 +5,23 @@ import RodaAiCore
 struct ChatView: View {
     @State var viewModel: ChatViewModel
 
+    /// File processor injetado para anexos (pode usar FileProcessor real ou mock).
+    var fileProcessor: any FileTextExtractor = FileProcessor()
+
     var body: some View {
         VStack(spacing: 0) {
             // Mensagens
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 12) {
-                        ForEach(Array(viewModel.messages.enumerated()), id: \.offset) { index, message in
-                            MessageBubble(message: message)
-                                .id(index)
+                        if viewModel.messages.isEmpty {
+                            emptyStateView
+                                .padding(.top, 60)
+                        } else {
+                            ForEach(Array(viewModel.messages.enumerated()), id: \.offset) { index, message in
+                                MessageBubble(message: message)
+                                    .id(index)
+                            }
                         }
                     }
                     .padding()
@@ -45,20 +53,45 @@ struct ChatView: View {
 
             Divider()
 
-            // Compositor
+            // Compositor (com anexos)
             MessageComposer(
                 isStreaming: viewModel.chatState.isStreaming,
-                onSend: { text in
-                    Task { await viewModel.send(text) }
+                onSend: { text, attachedText in
+                    Task {
+                        let fullText: String
+                        if let attached = attachedText, !attached.isEmpty {
+                            fullText = "Documento anexado:\n\(attached)\n\n\(text)"
+                        } else {
+                            fullText = text
+                        }
+                        await viewModel.send(fullText)
+                    }
                 },
                 onStop: {
                     viewModel.stopGeneration()
-                }
+                },
+                fileProcessor: fileProcessor
             )
         }
         .navigationTitle("Chat")
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
+    }
+
+    private var emptyStateView: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "message")
+                .font(.system(size: 48))
+                .foregroundStyle(ColorPalette.textTertiary)
+            Text("Comece uma conversa")
+                .font(.rodaHeadline)
+                .foregroundStyle(ColorPalette.textSecondary)
+            Text("Baixe e ative um modelo em Modelos para comecar a conversar.")
+                .font(.rodaCaption)
+                .foregroundStyle(ColorPalette.textTertiary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+        }
     }
 }

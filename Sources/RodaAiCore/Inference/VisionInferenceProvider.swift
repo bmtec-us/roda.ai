@@ -1,3 +1,4 @@
+// Sources/RodaAiCore/Inference/VisionInferenceProvider.swift
 import Foundation
 import MLXVLM
 import MLXLMCommon
@@ -11,6 +12,11 @@ private typealias MLXModelConfiguration = MLXLMCommon.ModelConfiguration
 /// Ref: concurrency-model.md — actor custom.
 /// Ref: Intro.md Secao 3.3 — VisionInferenceService.
 /// Erros: InferenceError (ref: error-types.md).
+///
+/// Fix audit gap #5: agora L A e usa os attachments de ChatMessage.
+/// Antes: `messages.map { $0.content }.joined()` — ignorava imagens.
+/// Agora: constroi `UserInput` com `images` a partir de `Attachment.url`,
+/// deixando o `UserInputProcessor` do modelo VLM processar as imagens.
 public actor VisionInferenceProvider: InferenceProvider {
 
     public var isModelLoaded: Bool { modelContainer != nil }
@@ -40,7 +46,9 @@ public actor VisionInferenceProvider: InferenceProvider {
     }
 
     /// Gera tokens em streaming para modelos VLM.
-    /// Suporta imagens via attachments nos ChatMessages.
+    /// Suporta imagens via `attachments` nos `ChatMessages` (campo `url`).
+    /// Imagens sao passadas ao `UserInputProcessor` do modelo, que faz o
+    /// embedding via encoder visual antes do forward pass.
     /// - Throws: InferenceError.modelNotLoaded, .generationFailed, .generationCancelled
     public func generate(messages: [ChatMessage], config: GenerationConfig) -> AsyncThrowingStream<String, Error> {
         guard let container = modelContainer else {
@@ -51,13 +59,30 @@ public actor VisionInferenceProvider: InferenceProvider {
 
         let maxTokens = config.maxTokens
         let temperature = config.temperature
+        let capturedMessages = messages
 
         return AsyncThrowingStream { continuation in
             Task {
                 do {
                     try await container.perform { context in
-                        let prompt = messages.map { $0.content }.joined(separator: "\n")
-                        let input = try await context.processor.prepare(input: .init(prompt: prompt))
+                        // Constroi prompt concatenando texto dos messages
+                        let prompt = capturedMessages.map { $0.content }.joined(separator: "\n")
+
+                        // Extrai imagens dos attachments (somente as com URL, ignora demais)
+                        let imageURLs: [URL] = capturedMessages
+                            .flatMap { $0.attachments }
+                            .compactMap { attachment in
+                                // Aceita apenas imagens (mimeType image/*)
+                                guard attachment.mimeType.hasPrefix("image/") else { return nil }
+                                return attachment.url
+                            }
+                        let userInputImages: [UserInput.Image] = imageURLs.map { .url($0) }
+
+                        // UserInput com imagens (antes: sem imagens)
+                        var userInput = UserInput(prompt: prompt)
+                        userInput.images = userInputImages
+
+                        let input = try await context.processor.prepare(input: userInput)
                         var tokenCount = 0
 
                         for try await output in try MLXLMCommon.generate(

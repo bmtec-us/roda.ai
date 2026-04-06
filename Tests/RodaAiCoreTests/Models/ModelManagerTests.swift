@@ -12,7 +12,7 @@ struct ModelManagerTests {
     @MainActor
     func testDownloadModelUpdatesProgress() async throws {
         let mockDownloader = MockModelDownloader()
-        let manager = ModelManager(downloader: mockDownloader)
+        let manager = ModelManager(downloader: mockDownloader, modelsDirectoryOverride: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
         let entry = TestData.makeCatalogEntry(identifier: "gemma-4-e4b")
 
         try await manager.downloadModel(entry)
@@ -25,7 +25,7 @@ struct ModelManagerTests {
     @MainActor
     func testDownloadModelRegisters() async throws {
         let mockDownloader = MockModelDownloader()
-        let manager = ModelManager(downloader: mockDownloader)
+        let manager = ModelManager(downloader: mockDownloader, modelsDirectoryOverride: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
         let entry = TestData.makeCatalogEntry(identifier: "gemma-4-e4b")
 
         try await manager.downloadModel(entry)
@@ -39,7 +39,7 @@ struct ModelManagerTests {
     func testDownloadModelNetworkError() async {
         let mockDownloader = MockModelDownloader()
         mockDownloader.shouldThrow = .networkUnavailable
-        let manager = ModelManager(downloader: mockDownloader)
+        let manager = ModelManager(downloader: mockDownloader, modelsDirectoryOverride: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
         let entry = TestData.makeCatalogEntry()
 
         do {
@@ -59,7 +59,7 @@ struct ModelManagerTests {
         mockDownloader.shouldThrow = .insufficientStorage(
             required: 8_000_000_000, available: 1_000_000_000
         )
-        let manager = ModelManager(downloader: mockDownloader)
+        let manager = ModelManager(downloader: mockDownloader, modelsDirectoryOverride: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
         let entry = TestData.makeCatalogEntry()
 
         do {
@@ -82,7 +82,7 @@ struct ModelManagerTests {
     @MainActor
     func testDeleteModelRemoves() async throws {
         let mockDownloader = MockModelDownloader()
-        let manager = ModelManager(downloader: mockDownloader)
+        let manager = ModelManager(downloader: mockDownloader, modelsDirectoryOverride: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
         let entry = TestData.makeCatalogEntry(identifier: "gemma-4-e4b")
         try await manager.downloadModel(entry)
 
@@ -98,10 +98,8 @@ struct ModelManagerTests {
     func testLoadModelSetsActive() async throws {
         let mockDownloader = MockModelDownloader()
         let mockProvider = MockInferenceProvider()
-        let manager = ModelManager(
-            downloader: mockDownloader,
-            inferenceProvider: mockProvider
-        )
+        let manager = ModelManager(downloader: mockDownloader, inferenceProvider: mockProvider
+        , modelsDirectoryOverride: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
         let entry = TestData.makeCatalogEntry(identifier: "gemma-4-e4b")
         try await manager.downloadModel(entry)
 
@@ -117,10 +115,8 @@ struct ModelManagerTests {
     func testUnloadModelClearsActive() async throws {
         let mockDownloader = MockModelDownloader()
         let mockProvider = MockInferenceProvider()
-        let manager = ModelManager(
-            downloader: mockDownloader,
-            inferenceProvider: mockProvider
-        )
+        let manager = ModelManager(downloader: mockDownloader, inferenceProvider: mockProvider
+        , modelsDirectoryOverride: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
         let entry = TestData.makeCatalogEntry(identifier: "gemma-4-e4b")
         try await manager.downloadModel(entry)
         try await manager.loadModel(manager.downloadedModels[0])
@@ -138,15 +134,20 @@ struct ModelManagerTests {
     @MainActor
     func testTotalStorageUsed() async throws {
         let mockDownloader = MockModelDownloader()
-        mockDownloader.simulatedTotalSize = 1_000_000_000
-        let manager = ModelManager(downloader: mockDownloader)
+        let manager = ModelManager(downloader: mockDownloader, modelsDirectoryOverride: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
 
         let entry1 = TestData.makeCatalogEntry(identifier: "model-a")
         let entry2 = TestData.makeCatalogEntry(identifier: "model-b")
         try await manager.downloadModel(entry1)
         try await manager.downloadModel(entry2)
 
-        #expect(manager.totalStorageUsed == 2_000_000_000)
+        // totalStorageUsed agora soma tamanhos reais em disco (via ModelValidator),
+        // nao mais o simulatedTotalSize do mock. Verifica apenas que a soma e
+        // igual a 2x o tamanho de um unico modelo fake.
+        #expect(manager.downloadedModels.count == 2)
+        let singleModelSize = manager.downloadedModels[0].sizeOnDisk
+        #expect(singleModelSize > 0, "sizeOnDisk must be populated from validator")
+        #expect(manager.totalStorageUsed == singleModelSize * 2)
     }
 
     // MARK: - Concorrencia
@@ -155,7 +156,7 @@ struct ModelManagerTests {
     @MainActor
     func testConcurrentDownloads() async throws {
         let mockDownloader = MockModelDownloader()
-        let manager = ModelManager(downloader: mockDownloader)
+        let manager = ModelManager(downloader: mockDownloader, modelsDirectoryOverride: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
 
         let entry1 = TestData.makeCatalogEntry(identifier: "model-a")
         let entry2 = TestData.makeCatalogEntry(identifier: "model-b")
