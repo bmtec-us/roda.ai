@@ -44,5 +44,10 @@ let package = Package(
                 .copy("Fixtures"),
             ]
         ),
+        .testTarget(
+            name: "RodaAiTests",
+            dependencies: ["RodaAi", "RodaAiCore"],
+            path: "Tests/RodaAiTests"
+        ),
     ]
 )
