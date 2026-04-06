@@ -96,6 +96,22 @@
         "huggingFaceRepoId": "mlx-community/DeepSeek-R1-Distill-Qwen-7B-4bit"
     },
     {
+        "identifier": "gemma-3n-e2b",
+        "displayName": "Gemma 3n E2B (Gemma 4)",
+        "provider": "Google",
+        "familyName": "Gemma",
+        "parameterCount": "E2B",
+        "quantization": "4-bit",
+        "downloadSizeBytes": 3100000000,
+        "estimatedRAMBytes": 3500000000,
+        "portugueseRating": "excelente",
+        "cpuUsageLevel": "medio",
+        "minimumRAM": 6,
+        "isVisionCapable": true,
+        "isReasoningCapable": true,
+        "huggingFaceRepoId": "mlx-community/gemma-3n-E2B-it-4bit"
+    },
+    {
         "identifier": "qwen3-vl-2b",
         "displayName": "Qwen 3 VL 2B",
         "provider": "Alibaba",
