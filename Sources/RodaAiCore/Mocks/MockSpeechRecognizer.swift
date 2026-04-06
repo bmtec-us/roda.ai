@@ -14,7 +14,7 @@ public class MockSpeechRecognizer: ObservableObject, SpeechRecognizing {
 
     public init() {}
 
-    public func startListening() async throws {
+    public func startListening() async throws(VoiceError) {
         startCallCount += 1
         if let error = shouldThrow { throw error }
         isListening = true

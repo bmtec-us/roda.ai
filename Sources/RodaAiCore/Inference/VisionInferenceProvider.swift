@@ -28,14 +28,14 @@ public actor VisionInferenceProvider: InferenceProvider {
 
     /// Carrega modelo VLM do HF repo ID ou path local.
     /// - Throws: InferenceError.modelNotFound, .modelCorrupted
-    public func loadModel(identifier: String) async throws {
+    public func loadModel(identifier: String) async throws(InferenceError) {
         if modelContainer != nil {
             await unloadModel()
         }
 
+        // Reusa a logica de makeConfiguration do MLXInferenceProvider
+        let configuration = MLXInferenceProvider.makeConfiguration(for: identifier)
         do {
-            // Reusa a logica de makeConfiguration do MLXInferenceProvider
-            let configuration = MLXInferenceProvider.makeConfiguration(for: identifier)
             let container = try await VLMModelFactory.shared.loadContainer(
                 configuration: configuration
             )
@@ -50,9 +50,9 @@ public actor VisionInferenceProvider: InferenceProvider {
     /// Suporta imagens via `attachments` nos `ChatMessages` (campo `url`).
     /// Cada attachment com mimeType `image/*` e injetado na respectiva Chat.Message.
     /// - Throws: InferenceError.modelNotLoaded, .generationFailed, .generationCancelled
-    public func generate(messages: [ChatMessage], config: GenerationConfig) -> AsyncThrowingStream<String, Error> {
+    public func generate(messages: [ChatMessage], config: GenerationConfig) -> AsyncThrowingStream<String, any Error> {
         guard let container = modelContainer else {
-            return AsyncThrowingStream { continuation in
+            return AsyncThrowingStream<String, any Error> { continuation in
                 continuation.finish(throwing: InferenceError.modelNotLoaded)
             }
         }
@@ -61,7 +61,7 @@ public actor VisionInferenceProvider: InferenceProvider {
         let temperature = config.temperature
         let capturedMessages = messages
 
-        return AsyncThrowingStream { continuation in
+        return AsyncThrowingStream<String, any Error> { continuation in
             Task {
                 do {
                     try await container.perform { context in

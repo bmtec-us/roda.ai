@@ -54,20 +54,24 @@ public actor MockInferenceProvider: InferenceProvider {
         loadDelay = delay
     }
 
-    public func loadModel(identifier: String) async throws {
+    public func loadModel(identifier: String) async throws(InferenceError) {
         loadModelCallCount += 1
         if let error = shouldThrowOnLoad { throw error }
-        if loadDelay > .zero { try await Task.sleep(for: loadDelay) }
+        if loadDelay > .zero {
+            // Task.sleep can throw CancellationError, but typed throws don't
+            // allow it through. Suppress with try? — cancellation is fine here.
+            try? await Task.sleep(for: loadDelay)
+        }
         isModelLoaded = true
         loadedModelIdentifier = identifier
     }
 
-    public func generate(messages: [ChatMessage], config: GenerationConfig) -> AsyncThrowingStream<String, Error> {
+    public func generate(messages: [ChatMessage], config: GenerationConfig) -> AsyncThrowingStream<String, any Error> {
         generateCallCount += 1
         let responses = generateResponses
         let throwError = shouldThrowOnGenerate
         let delay = tokenDelay
-        return AsyncThrowingStream { continuation in
+        return AsyncThrowingStream<String, any Error> { continuation in
             Task {
                 if let error = throwError {
                     continuation.finish(throwing: error)

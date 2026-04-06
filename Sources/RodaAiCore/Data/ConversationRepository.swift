@@ -16,7 +16,7 @@ public actor ConversationRepository {
     public func create(
         title: String,
         modelIdentifier: String
-    ) throws -> ConversationSummary {
+    ) throws(PersistenceError) -> ConversationSummary {
         let conversation = Conversation(
             title: title,
             modelIdentifier: modelIdentifier
@@ -44,7 +44,7 @@ public actor ConversationRepository {
     /// Busca conversas com filtro opcional por titulo
     /// Ordena por updatedAt descendente
     /// Ref: intro.md — "Usa fetchCount em FetchDescriptor (nao .count em arrays)"
-    public func fetch(matching query: String?) throws -> [ConversationSummary] {
+    public func fetch(matching query: String?) throws(PersistenceError) -> [ConversationSummary] {
         var descriptor = FetchDescriptor<Conversation>(
             sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
         )
@@ -74,7 +74,7 @@ public actor ConversationRepository {
     }
 
     /// Retorna contagem sem carregar dataset completo
-    public func fetchCount() throws -> Int {
+    public func fetchCount() throws(PersistenceError) -> Int {
         let descriptor = FetchDescriptor<Conversation>()
         do {
             return try modelContext.fetchCount(descriptor)
@@ -92,7 +92,7 @@ public actor ConversationRepository {
         role: MessageRole,
         content: String,
         modelIdentifier: String?
-    ) throws {
+    ) throws(PersistenceError) {
         guard let conversation = try findConversation(by: conversationId) else {
             throw PersistenceError.conversationNotFound(id: conversationId)
         }
@@ -113,7 +113,7 @@ public actor ConversationRepository {
     }
 
     /// Busca mensagens de uma conversa especifica
-    public func fetchMessages(for conversationId: UUID) throws -> [MessageSummary] {
+    public func fetchMessages(for conversationId: UUID) throws(PersistenceError) -> [MessageSummary] {
         guard let conversation = try findConversation(by: conversationId) else {
             throw PersistenceError.conversationNotFound(id: conversationId)
         }
@@ -135,7 +135,7 @@ public actor ConversationRepository {
 
     /// Deleta conversa por ID
     /// Lanca PersistenceError.conversationNotFound se nao encontrada
-    public func delete(id: UUID) throws {
+    public func delete(id: UUID) throws(PersistenceError) {
         guard let conversation = try findConversation(by: id) else {
             throw PersistenceError.conversationNotFound(id: id)
         }
@@ -152,7 +152,7 @@ public actor ConversationRepository {
     // MARK: - Update
 
     /// Atualiza o titulo de uma conversa e persiste.
-    public func updateTitle(id: UUID, title: String) throws {
+    public func updateTitle(id: UUID, title: String) throws(PersistenceError) {
         guard let conversation = try findConversation(by: id) else {
             throw PersistenceError.conversationNotFound(id: id)
         }
@@ -171,7 +171,7 @@ public actor ConversationRepository {
     /// SALVA no conversation, e retorna o titulo.
     /// Trunca em 50 caracteres com "..."
     @discardableResult
-    public func generateAutoTitle(for conversationId: UUID) throws -> String {
+    public func generateAutoTitle(for conversationId: UUID) throws(PersistenceError) -> String {
         guard let conversation = try findConversation(by: conversationId) else {
             throw PersistenceError.conversationNotFound(id: conversationId)
         }
@@ -204,11 +204,15 @@ public actor ConversationRepository {
 
     // MARK: - Private
 
-    private func findConversation(by id: UUID) throws -> Conversation? {
+    private func findConversation(by id: UUID) throws(PersistenceError) -> Conversation? {
         var descriptor = FetchDescriptor<Conversation>(
             predicate: #Predicate<Conversation> { $0.id == id }
         )
         descriptor.fetchLimit = 1
-        return try modelContext.fetch(descriptor).first
+        do {
+            return try modelContext.fetch(descriptor).first
+        } catch {
+            throw PersistenceError.fetchFailed(reason: error.localizedDescription)
+        }
     }
 }

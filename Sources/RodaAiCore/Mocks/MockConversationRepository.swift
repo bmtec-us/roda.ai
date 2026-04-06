@@ -34,7 +34,7 @@ public final class MockConversationRepository {
     public func create(
         title: String,
         modelIdentifier: String
-    ) throws -> ConversationSummary {
+    ) throws(PersistenceError) -> ConversationSummary {
         createCallCount += 1
         if let error = shouldThrow { throw error }
 
@@ -53,7 +53,7 @@ public final class MockConversationRepository {
 
     // MARK: - Fetch
 
-    public func fetch(matching query: String?) throws -> [ConversationSummary] {
+    public func fetch(matching query: String?) throws(PersistenceError) -> [ConversationSummary] {
         fetchCallCount += 1
         if let error = shouldThrow { throw error }
 
@@ -64,7 +64,7 @@ public final class MockConversationRepository {
 
     // MARK: - Delete
 
-    public func delete(id: UUID) throws {
+    public func delete(id: UUID) throws(PersistenceError) {
         deleteCallCount += 1
         if let error = shouldThrow { throw error }
 
@@ -82,7 +82,7 @@ public final class MockConversationRepository {
         role: MessageRole,
         content: String,
         modelIdentifier: String?
-    ) throws {
+    ) throws(PersistenceError) {
         addMessageCallCount += 1
         if let error = shouldThrow { throw error }
 
@@ -113,13 +113,13 @@ public final class MockConversationRepository {
         }
     }
 
-    public func fetchMessages(for conversationId: UUID) throws -> [MessageSummary] {
+    public func fetchMessages(for conversationId: UUID) throws(PersistenceError) -> [MessageSummary] {
         fetchMessagesCallCount += 1
         if let error = shouldThrow { throw error }
         return messagesByConversation[conversationId] ?? []
     }
 
-    public func generateAutoTitle(for conversationId: UUID) throws -> String {
+    public func generateAutoTitle(for conversationId: UUID) throws(PersistenceError) -> String {
         generateAutoTitleCallCount += 1
         if let error = shouldThrow { throw error }
 
@@ -144,7 +144,7 @@ public final class MockConversationRepository {
         return title
     }
 
-    public func save() throws {
+    public func save() throws(PersistenceError) {
         saveCallCount += 1
         if let error = shouldThrow { throw error }
     }

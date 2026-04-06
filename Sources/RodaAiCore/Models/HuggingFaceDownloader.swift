@@ -67,7 +67,7 @@ public final class HuggingFaceDownloader: ModelDownloader {
 
     // MARK: - ModelDownloader
 
-    public func download(repoId: String, to destination: URL) async throws {
+    public func download(repoId: String, to destination: URL) async throws(DownloadError) {
         RodaLog.download.info("Starting download: \(repoId, privacy: .public) -> \(destination.path, privacy: .public)")
         downloadCallCount += 1
         downloadStartTime = Date()
@@ -137,7 +137,7 @@ public final class HuggingFaceDownloader: ModelDownloader {
 
     /// Fetches the file tree from HuggingFace Hub API.
     /// Endpoint: https://huggingface.co/api/models/{repoId}/tree/main
-    private func fetchFileTree(repoId: String) async throws -> [HFTreeEntry] {
+    private func fetchFileTree(repoId: String) async throws(DownloadError) -> [HFTreeEntry] {
         guard let url = URL(string: "https://huggingface.co/api/models/\(repoId)/tree/main") else {
             throw DownloadError.invalidRepository(repoId: repoId)
         }
@@ -186,7 +186,7 @@ public final class HuggingFaceDownloader: ModelDownloader {
         filename: String,
         expectedSize: Int64?,
         to fileURL: URL
-    ) async throws {
+    ) async throws(DownloadError) {
         // Garante que o diretorio pai do arquivo existe (HF paths podem ter subdirs)
         let parentDir = fileURL.deletingLastPathComponent()
         try? FileManager.default.createDirectory(at: parentDir, withIntermediateDirectories: true)
@@ -272,7 +272,7 @@ public final class HuggingFaceDownloader: ModelDownloader {
 
     private nonisolated func performDownloadRequest(
         _ request: URLRequest
-    ) async throws -> (URL, URLResponse) {
+    ) async throws(DownloadError) -> (URL, URLResponse) {
         do {
             return try await session.download(for: request)
         } catch let error as URLError {
@@ -284,6 +284,8 @@ public final class HuggingFaceDownloader: ModelDownloader {
             default:
                 throw DownloadError.serverError(statusCode: error.errorCode)
             }
+        } catch {
+            throw DownloadError.serverError(statusCode: -1)
         }
     }
 
@@ -291,7 +293,7 @@ public final class HuggingFaceDownloader: ModelDownloader {
 
     private nonisolated func performRequest(
         _ request: URLRequest
-    ) async throws -> (Data, URLResponse) {
+    ) async throws(DownloadError) -> (Data, URLResponse) {
         do {
             return try await session.data(for: request)
         } catch let error as URLError {
@@ -303,12 +305,14 @@ public final class HuggingFaceDownloader: ModelDownloader {
             default:
                 throw DownloadError.serverError(statusCode: error.errorCode)
             }
+        } catch {
+            throw DownloadError.serverError(statusCode: -1)
         }
     }
 
     private nonisolated func performBytesRequest(
         _ request: URLRequest
-    ) async throws -> (URLSession.AsyncBytes, URLResponse) {
+    ) async throws(DownloadError) -> (URLSession.AsyncBytes, URLResponse) {
         do {
             return try await session.bytes(for: request)
         } catch let error as URLError {
@@ -320,6 +324,8 @@ public final class HuggingFaceDownloader: ModelDownloader {
             default:
                 throw DownloadError.serverError(statusCode: error.errorCode)
             }
+        } catch {
+            throw DownloadError.serverError(statusCode: -1)
         }
     }
 

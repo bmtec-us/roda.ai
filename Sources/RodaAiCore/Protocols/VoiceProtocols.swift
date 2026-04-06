@@ -15,9 +15,10 @@ public protocol SpeechRecognizing: AnyObject {
     var isListening: Bool { get }
 
     /// Inicia captura do microfone e transcricao.
-    /// - Throws: `VoiceError.microphonePermissionDenied`,
-    ///           `.speechRecognizerUnavailable`, `.audioEngineStartFailed`.
-    func startListening() async throws
+    /// - Throws: `VoiceError` (typed throws — `.microphonePermissionDenied`,
+    ///           `.speechRecognizerUnavailable`, `.audioEngineStartFailed`,
+    ///           `.recognitionTimeout`, `.noSpeechDetected`)
+    func startListening() async throws(VoiceError)
 
     /// Interrompe captura.
     func stopListening()
@@ -31,8 +32,9 @@ public protocol TextToSpeaking: AnyObject {
     var isSpeaking: Bool { get }
 
     /// Sintetiza e reproduz o texto.
-    /// - Throws: `VoiceError.synthesisUnavailable`, `.audioPlaybackFailed`.
-    func speak(_ text: String) async throws
+    /// - Throws: `VoiceError` (typed throws — `.synthesisUnavailable`,
+    ///           `.audioPlaybackFailed`)
+    func speak(_ text: String) async throws(VoiceError)
 
     /// Interrompe a reproducao em andamento.
     func stop()

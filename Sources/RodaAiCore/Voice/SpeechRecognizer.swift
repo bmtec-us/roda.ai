@@ -21,7 +21,7 @@ public class SpeechRecognizer: ObservableObject, SpeechRecognizing {
 
     public init() {}
 
-    public func startListening() async throws {
+    public func startListening() async throws(VoiceError) {
         #if canImport(Speech)
         guard await requestPermissions() else {
             throw VoiceError.microphonePermissionDenied

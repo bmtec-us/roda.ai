@@ -8,40 +8,31 @@ public actor FoundationModelInferenceProvider: InferenceProvider {
 
     public init() {}
 
-    public func loadModel(identifier: String) async throws {
-        // No-op: Foundation Model is always available on supported devices
-        // Verify availability at runtime
+    public func loadModel(identifier: String) async throws(InferenceError) {
+        // No-op: Foundation Model is always available on supported devices.
+        // Verify identifier matches.
         guard identifier == "apple-foundation-model" else {
             throw InferenceError.modelNotFound(identifier: identifier)
         }
     }
 
     public func generate(messages: [ChatMessage], config: GenerationConfig)
-        -> AsyncThrowingStream<String, Error> {
-        AsyncThrowingStream { continuation in
-            Task {
-                do {
-                    // Use Apple Foundation Models API
-                    // import FoundationModels
-                    // let session = LanguageModelSession()
-                    // let response = try await session.streamResponse(to: prompt)
-                    // for try await partial in response {
-                    //     continuation.yield(partial.text)
-                    // }
-                    // continuation.finish()
-
-                    // Placeholder until Foundation Models framework is available
-                    continuation.finish(throwing: InferenceError.generationFailed(
-                        reason: "Foundation Models API not yet linked"
-                    ))
-                } catch {
-                    if Task.isCancelled {
-                        continuation.finish(throwing: InferenceError.generationCancelled)
-                    } else {
-                        continuation.finish(throwing: error)
-                    }
-                }
-            }
+        -> AsyncThrowingStream<String, any Error> {
+        AsyncThrowingStream<String, any Error> { continuation in
+            // STUB — to be implemented in Phase 19 when iOS 26 Foundation Models
+            // framework stabilizes. See docs/phases/phase-19-foundation-models.md
+            //
+            // Real implementation will:
+            //   import FoundationModels
+            //   let session = LanguageModelSession()
+            //   let response = try await session.streamResponse(to: prompt)
+            //   for try await partial in response {
+            //       continuation.yield(partial.text)
+            //   }
+            //   continuation.finish()
+            continuation.finish(throwing: InferenceError.generationFailed(
+                reason: "Foundation Models API not yet linked (Phase 19)"
+            ))
         }
     }
 

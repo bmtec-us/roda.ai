@@ -16,8 +16,10 @@ public protocol ModelDownloader: AnyObject {
     var downloadedBytes: Int64 { get }
 
     /// Baixa modelo do repositorio HuggingFace para o destino local.
-    /// - Throws: DownloadError.networkUnavailable, .serverError, .insufficientStorage, .checksumMismatch
-    func download(repoId: String, to destination: URL) async throws
+    /// - Throws: DownloadError (typed throws — `.networkUnavailable`, `.serverError`,
+    ///           `.insufficientStorage`, `.checksumMismatch`, `.downloadCancelled`,
+    ///           `.invalidRepository`, `.fileWriteFailed`)
+    func download(repoId: String, to destination: URL) async throws(DownloadError)
 
     /// Cancela download em andamento.
     func cancelDownload()

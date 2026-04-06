@@ -6,8 +6,11 @@ import Foundation
 /// Fluxo: data-flows.md Secao 5 (Anexo de Arquivo).
 public protocol FileTextExtractor: Sendable {
     /// Extrai texto do arquivo na URL fornecida.
-    /// - Throws: FileProcessorError.unsupportedFormat, .fileTooLarge, .fileNotReadable, .pdfExtractionFailed
-    func extractText(from url: URL) async throws -> String
+    /// - Throws: `FileProcessorError` (typed throws — `.unsupportedFormat`,
+    ///           `.fileTooLarge`, `.fileNotReadable`, `.pdfExtractionFailed`,
+    ///           `.encodingError`)
+    func extractText(from url: URL) async throws(FileProcessorError) -> String
+
     /// Extrai texto com limite de tamanho customizado.
-    func extractText(from url: URL, maxBytes: Int64) async throws -> String
+    func extractText(from url: URL, maxBytes: Int64) async throws(FileProcessorError) -> String
 }

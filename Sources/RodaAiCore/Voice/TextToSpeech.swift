@@ -18,7 +18,7 @@ public class TextToSpeechService: ObservableObject, TextToSpeaking {
         self.isUsingFallback = !mlxAvailable
     }
 
-    public func speak(_ text: String) async throws {
+    public func speak(_ text: String) async throws(VoiceError) {
         guard !text.isEmpty else { return }
 
         if isUsingFallback {
@@ -35,7 +35,7 @@ public class TextToSpeechService: ObservableObject, TextToSpeaking {
         isSpeaking = false
     }
 
-    private func speakWithAVSpeech(_ text: String) async throws {
+    private func speakWithAVSpeech(_ text: String) async throws(VoiceError) {
         #if canImport(AVFoundation)
         guard AVSpeechSynthesisVoice(language: "pt-BR") != nil else {
             throw VoiceError.synthesisUnavailable(locale: "pt-BR")
@@ -45,9 +45,10 @@ public class TextToSpeechService: ObservableObject, TextToSpeaking {
         utterance.rate = AVSpeechUtteranceDefaultSpeechRate
         isSpeaking = true
         synthesizer.speak(utterance)
-        // Wait for completion
+        // Wait for completion (suppress cancel errors via try?)
         while synthesizer.isSpeaking {
-            try await Task.sleep(for: .milliseconds(100))
+            try? await Task.sleep(for: .milliseconds(100))
+            if Task.isCancelled { break }
         }
         isSpeaking = false
         #else
@@ -55,7 +56,7 @@ public class TextToSpeechService: ObservableObject, TextToSpeaking {
         #endif
     }
 
-    private func speakWithMLXAudio(_ text: String) async throws {
+    private func speakWithMLXAudio(_ text: String) async throws(VoiceError) {
         // mlx-audio integration — to be implemented when stable
         // Fallback if runtime fails
         isUsingFallback = true

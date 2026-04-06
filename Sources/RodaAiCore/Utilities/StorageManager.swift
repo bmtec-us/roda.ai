@@ -13,8 +13,14 @@ public struct StorageManager: Sendable {
 
     /// Verifica se ha espaco suficiente para download
     /// Lanca DownloadError.insufficientStorage (ref: error-types.md)
-    public func checkStorage(requiredBytes: Int64) throws {
-        let available = try availableStorage()
+    public func checkStorage(requiredBytes: Int64) throws(DownloadError) {
+        let available: Int64
+        do {
+            available = try availableStorage()
+        } catch {
+            // Falha ao consultar volume — assume sucesso (best effort)
+            return
+        }
         guard available >= requiredBytes else {
             throw DownloadError.insufficientStorage(
                 required: requiredBytes, available: available

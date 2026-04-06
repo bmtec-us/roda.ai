@@ -17,11 +17,11 @@ public struct FileProcessor: FileTextExtractor, Sendable {
 
     public init() {}
 
-    public func extractText(from url: URL) async throws -> String {
+    public func extractText(from url: URL) async throws(FileProcessorError) -> String {
         try await extractText(from: url, maxBytes: Self.defaultMaxBytes)
     }
 
-    public func extractText(from url: URL, maxBytes: Int64) async throws -> String {
+    public func extractText(from url: URL, maxBytes: Int64) async throws(FileProcessorError) -> String {
         let ext = url.pathExtension.lowercased()
 
         // Validate format
@@ -35,8 +35,13 @@ public struct FileProcessor: FileTextExtractor, Sendable {
         }
 
         // Validate size
-        let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
-        let fileSize = (attributes[.size] as? Int64) ?? 0
+        let fileSize: Int64
+        do {
+            let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+            fileSize = (attributes[.size] as? Int64) ?? 0
+        } catch {
+            throw FileProcessorError.fileNotReadable(path: url.path)
+        }
         if fileSize > maxBytes {
             throw FileProcessorError.fileTooLarge(sizeBytes: fileSize, maxBytes: maxBytes)
         }
@@ -50,7 +55,7 @@ public struct FileProcessor: FileTextExtractor, Sendable {
         }
     }
 
-    private func extractPDFText(from url: URL) throws -> String {
+    private func extractPDFText(from url: URL) throws(FileProcessorError) -> String {
         #if canImport(PDFKit)
         guard let document = PDFDocument(url: url) else {
             throw FileProcessorError.pdfExtractionFailed(reason: "Nao foi possivel abrir o PDF")
@@ -73,7 +78,7 @@ public struct FileProcessor: FileTextExtractor, Sendable {
         #endif
     }
 
-    private func extractPlainText(from url: URL) throws -> String {
+    private func extractPlainText(from url: URL) throws(FileProcessorError) -> String {
         do {
             return try String(contentsOf: url, encoding: .utf8)
         } catch {

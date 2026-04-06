@@ -13,7 +13,7 @@ public class MockTextToSpeech: ObservableObject, TextToSpeaking {
 
     public init() {}
 
-    public func speak(_ text: String) async throws {
+    public func speak(_ text: String) async throws(VoiceError) {
         speakCallCount += 1
         if let error = shouldThrow { throw error }
         isSpeaking = true

@@ -12,12 +12,12 @@ public struct MockFileProcessor: FileTextExtractor {
 
     public init() {}
 
-    public func extractText(from url: URL) async throws -> String {
+    public func extractText(from url: URL) async throws(FileProcessorError) -> String {
         if let error = shouldThrow { throw error }
         return extractedTexts[url.lastPathComponent] ?? "Conteudo mock"
     }
 
-    public func extractText(from url: URL, maxBytes: Int64) async throws -> String {
+    public func extractText(from url: URL, maxBytes: Int64) async throws(FileProcessorError) -> String {
         try await extractText(from: url)
     }
 }

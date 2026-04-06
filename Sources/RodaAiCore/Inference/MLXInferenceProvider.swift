@@ -35,7 +35,7 @@ public actor MLXInferenceProvider: InferenceProvider {
     /// baixados em `~/Documents/RodaAi/models/`.
     ///
     /// - Throws: InferenceError.modelNotFound, .modelCorrupted, .insufficientMemory
-    public func loadModel(identifier: String) async throws {
+    public func loadModel(identifier: String) async throws(InferenceError) {
         RodaLog.inference.info("Loading model: \(identifier, privacy: .public)")
         let startTime = ContinuousClock.now
 
@@ -44,8 +44,8 @@ public actor MLXInferenceProvider: InferenceProvider {
             await unloadModel()
         }
 
+        let configuration = Self.makeConfiguration(for: identifier)
         do {
-            let configuration = Self.makeConfiguration(for: identifier)
             let container = try await LLMModelFactory.shared.loadContainer(
                 configuration: configuration
             )
@@ -55,11 +55,8 @@ public actor MLXInferenceProvider: InferenceProvider {
             RodaLog.inference.info(
                 "Model loaded successfully in \(String(describing: elapsed), privacy: .public): \(identifier, privacy: .public)"
             )
-        } catch let error as InferenceError {
-            RodaLog.inference.error("Model load failed: \(error.localizedDescription, privacy: .public)")
-            throw error
         } catch {
-            // Mapeia erros MLX para InferenceError
+            // MLX lanca diversos tipos de erro untyped — mapeia para InferenceError.
             RodaLog.inference.error(
                 "Model load raw error: \(error.localizedDescription, privacy: .public)"
             )
@@ -75,6 +72,9 @@ public actor MLXInferenceProvider: InferenceProvider {
                     identifier: identifier,
                     reason: error.localizedDescription
                 )
+            }
+            if message.contains("unsupported") || message.contains("unknown model type") {
+                throw InferenceError.unsupportedArchitecture(identifier: identifier)
             }
             throw InferenceError.modelNotFound(identifier: identifier)
         }
@@ -110,9 +110,9 @@ public actor MLXInferenceProvider: InferenceProvider {
     /// `<|start_header_id|>`, etc.) via `tokenizer.applyChatTemplate`.
     ///
     /// - Throws: InferenceError.modelNotLoaded, .generationFailed, .generationCancelled
-    public func generate(messages: [ChatMessage], config: GenerationConfig) -> AsyncThrowingStream<String, Error> {
+    public func generate(messages: [ChatMessage], config: GenerationConfig) -> AsyncThrowingStream<String, any Error> {
         guard let container = modelContainer else {
-            return AsyncThrowingStream { continuation in
+            return AsyncThrowingStream<String, any Error> { continuation in
                 continuation.finish(throwing: InferenceError.modelNotLoaded)
             }
         }
@@ -123,7 +123,7 @@ public actor MLXInferenceProvider: InferenceProvider {
         let repetitionPenalty = config.repetitionPenalty
         let capturedMessages = messages
 
-        return AsyncThrowingStream { continuation in
+        return AsyncThrowingStream<String, any Error> { continuation in
             Task {
                 do {
                     try await container.perform { context in
