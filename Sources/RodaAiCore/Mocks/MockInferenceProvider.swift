@@ -10,6 +10,7 @@ public actor MockInferenceProvider: InferenceProvider {
     private var generateResponses: [String] = ["Ola", ", ", "mundo", "!"]
     private var shouldThrowOnLoad: InferenceError?
     private var shouldThrowOnGenerate: InferenceError?
+    private var alwaysLoaded: Bool = false
     public var loadDelay: Duration = .zero
     public var tokenDelay: Duration = .milliseconds(50)
 
@@ -24,8 +25,21 @@ public actor MockInferenceProvider: InferenceProvider {
         shouldThrowOnLoad = error
     }
 
+    public func setThrowOnLoad(_ error: InferenceError?) {
+        shouldThrowOnLoad = error
+    }
+
     public func setShouldThrowOnGenerate(_ error: InferenceError?) {
         shouldThrowOnGenerate = error
+    }
+
+    public func setThrowOnGenerate(_ error: InferenceError?) {
+        shouldThrowOnGenerate = error
+    }
+
+    public func setAlwaysLoaded(_ value: Bool) {
+        alwaysLoaded = value
+        if value { isModelLoaded = true }
     }
 
     public func setGenerateResponses(_ responses: [String]) {
