@@ -1,0 +1,2 @@
+Conteudo de teste para o RodaAi.
+Este arquivo contem texto simples para validar a extracao.

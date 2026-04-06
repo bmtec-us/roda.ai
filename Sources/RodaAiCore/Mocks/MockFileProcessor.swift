@@ -16,4 +16,8 @@ public struct MockFileProcessor: FileTextExtractor {
         if let error = shouldThrow { throw error }
         return extractedTexts[url.lastPathComponent] ?? "Conteudo mock"
     }
+
+    public func extractText(from url: URL, maxBytes: Int64) async throws -> String {
+        try await extractText(from: url)
+    }
 }
