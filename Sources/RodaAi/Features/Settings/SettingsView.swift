@@ -1,5 +1,6 @@
 // Sources/RodaAi/Features/Settings/SettingsView.swift
 import SwiftUI
+import SwiftData
 import RodaAiCore
 
 struct SettingsView: View {

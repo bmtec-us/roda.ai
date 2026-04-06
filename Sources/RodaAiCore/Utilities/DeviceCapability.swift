@@ -14,11 +14,14 @@ public enum DeviceCapability {
     }
 
     /// RAM disponivel estimada em bytes.
+    /// `os_proc_available_memory()` so esta disponivel em iOS/iPadOS/tvOS/watchOS/visionOS.
+    /// No macOS, retorna uma estimativa baseada na memoria total.
     public static var availableRAM: Int64 {
-        #if canImport(Darwin)
+        #if os(iOS) || os(tvOS) || os(watchOS) || os(visionOS)
         return Int64(os_proc_available_memory())
         #else
-        return totalRAM / 2
+        // macOS nao expoe esta API. Estima 60% da RAM total como disponivel.
+        return Int64(Double(totalRAM) * 0.6)
         #endif
     }
 

@@ -4,6 +4,10 @@ import MLXLMCommon
 import MLX
 import Tokenizers
 
+// Disambigua o name clash entre RodaAiCore.ModelConfiguration (value type)
+// e MLXLMCommon.ModelConfiguration (configuracao MLX para load).
+private typealias MLXModelConfiguration = MLXLMCommon.ModelConfiguration
+
 /// Actor principal de inferencia MLX.
 /// Ref: concurrency-model.md — actor custom.
 /// Ref: Intro.md Secao 3.3 — InferenceModule.
@@ -28,7 +32,7 @@ public actor MLXInferenceProvider: InferenceProvider {
         }
 
         do {
-            let configuration = ModelConfiguration(id: identifier, defaultPrompt: "")
+            let configuration = MLXModelConfiguration(id: identifier)
             let container = try await LLMModelFactory.shared.loadContainer(
                 configuration: configuration
             )
@@ -93,7 +97,9 @@ public actor MLXInferenceProvider: InferenceProvider {
                                 return
                             }
 
-                            continuation.yield(output.chunk)
+                            if let chunk = output.chunk {
+                                continuation.yield(chunk)
+                            }
                         }
 
                         continuation.finish()

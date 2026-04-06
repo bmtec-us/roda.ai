@@ -21,7 +21,9 @@ struct ColorPalette: Sendable {
     // MARK: - Text (Light)
     static let textPrimary = Color(hex: "#1A1A1A")
     static let textSecondary = Color(hex: "#6B6B6B")
-    static let textTertiary = Color(hex: "#9B9B9B")
+    // Note: WCAG AA requires 3:1 for large text. #9B9B9B (2.66:1) was below threshold.
+    // Darkened to #898989 (3.35:1) on #FAFAFA surface.
+    static let textTertiary = Color(hex: "#898989")
 
     // MARK: - Dark Mode Registry
     private static let darkVariants: [String: Color] = [

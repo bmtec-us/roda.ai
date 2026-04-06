@@ -35,6 +35,15 @@ public final class ChatViewModel {
     /// 5. Atualiza assistente em tempo real
     /// 6. state = .completed ou .error
     public func send(_ text: String) async {
+        // Auto-reset state se a conversa anterior terminou (.completed ou .error).
+        // Sem isso, o segundo send falharia silenciosamente porque o state machine
+        // nao aceita .completed -> .send (apenas .idle -> .send).
+        if case .completed = chatState {
+            try? chatState.transition(.reset)
+        } else if case .error = chatState {
+            try? chatState.transition(.reset)
+        }
+
         let userMessage = ChatMessage(role: .user, content: text)
         messages.append(userMessage)
 

@@ -3,6 +3,10 @@ import MLXVLM
 import MLXLMCommon
 import MLX
 
+// Disambigua o name clash entre RodaAiCore.ModelConfiguration (value type)
+// e MLXLMCommon.ModelConfiguration (configuracao MLX para load).
+private typealias MLXModelConfiguration = MLXLMCommon.ModelConfiguration
+
 /// Actor de inferencia para modelos VLM (Vision Language Models).
 /// Ref: concurrency-model.md — actor custom.
 /// Ref: Intro.md Secao 3.3 — VisionInferenceService.
@@ -24,7 +28,7 @@ public actor VisionInferenceProvider: InferenceProvider {
         }
 
         do {
-            let configuration = ModelConfiguration(id: identifier, defaultPrompt: "")
+            let configuration = MLXModelConfiguration(id: identifier)
             let container = try await VLMModelFactory.shared.loadContainer(
                 configuration: configuration
             )
@@ -70,7 +74,9 @@ public actor VisionInferenceProvider: InferenceProvider {
                                 continuation.finish()
                                 return
                             }
-                            continuation.yield(output.chunk)
+                            if let chunk = output.chunk {
+                                continuation.yield(chunk)
+                            }
                         }
                         continuation.finish()
                     }

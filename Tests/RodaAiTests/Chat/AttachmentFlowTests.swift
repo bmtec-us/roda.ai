@@ -7,7 +7,7 @@ import XCTest
 final class AttachmentFlowTests: XCTestCase {
 
     func testAttachmentPrependsTextToPrompt() async throws {
-        let mockProcessor = MockFileProcessor()
+        var mockProcessor = MockFileProcessor()
         mockProcessor.extractedTexts["test.pdf"] = "Conteudo do PDF de teste"
         let url = URL(fileURLWithPath: "/tmp/test.pdf")
 

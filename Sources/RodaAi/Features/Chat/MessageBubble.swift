@@ -20,7 +20,7 @@ struct MessageBubble: View {
 
                 Text(message.content)
                     .padding(12)
-                    .background(isUser ? Color.accentColor : Color(.systemGray6))
+                    .background(isUser ? Color.accentColor : MessageBubble.bubbleBackground)
                     .foregroundStyle(isUser ? .white : .primary)
                     .clipShape(RoundedRectangle(cornerRadius: 16))
                     .textSelection(.enabled)
@@ -28,5 +28,14 @@ struct MessageBubble: View {
 
             if !isUser { Spacer(minLength: 60) }
         }
+    }
+
+    /// Cor de fundo da bolha do assistente. Adapta-se entre iOS e macOS.
+    private static var bubbleBackground: Color {
+        #if os(iOS)
+        return Color(.systemGray6)
+        #else
+        return Color.gray.opacity(0.15)
+        #endif
     }
 }

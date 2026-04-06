@@ -8,7 +8,7 @@ final class InferenceConcurrencyTests: XCTestCase {
     func testConcurrentLoadAndGenerate() async throws {
         let mock = MockInferenceProvider()
         await mock.setGenerateResponses(["A", "B", "C"])
-        mock.loadDelay = .milliseconds(50)
+        await mock.setLoadDelay(.milliseconds(50))
 
         // Load e generate concorrentes — actor serializa
         async let loadResult: Void = mock.loadModel(identifier: "test")
@@ -30,7 +30,7 @@ final class InferenceConcurrencyTests: XCTestCase {
     func testMultipleConcurrentGenerateCalls() async throws {
         let mock = MockInferenceProvider()
         await mock.setGenerateResponses(["X"])
-        mock.tokenDelay = .milliseconds(10)
+        await mock.setTokenDelay(.milliseconds(10))
         try await mock.loadModel(identifier: "test")
 
         let messages = [ChatMessage(role: .user, content: "test")]
@@ -64,7 +64,7 @@ final class InferenceConcurrencyTests: XCTestCase {
     func testCancelOneOfManyConcurrentGenerations() async throws {
         let mock = MockInferenceProvider()
         await mock.setGenerateResponses(["A", "B", "C", "D", "E"])
-        mock.tokenDelay = .milliseconds(100)
+        await mock.setTokenDelay(.milliseconds(100))
         try await mock.loadModel(identifier: "test")
 
         let messages = [ChatMessage(role: .user, content: "test")]
@@ -127,7 +127,7 @@ final class InferenceConcurrencyTests: XCTestCase {
     func testStreamCrossesActorBoundaryToMainActor() async throws {
         let mock = MockInferenceProvider()
         await mock.setGenerateResponses(["token1", "token2"])
-        mock.tokenDelay = .zero
+        await mock.setTokenDelay(.zero)
         try await mock.loadModel(identifier: "test")
 
         // Simulate what ChatViewModel does: receive stream on @MainActor

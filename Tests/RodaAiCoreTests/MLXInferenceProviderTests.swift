@@ -21,7 +21,7 @@ final class MLXInferenceProviderTests: XCTestCase {
     func testCancelDuringStreamingYieldsPartialTokens() async throws {
         let mock = MockInferenceProvider()
         await mock.setGenerateResponses(["A", "B", "C", "D", "E", "F", "G", "H"])
-        mock.tokenDelay = .milliseconds(100)
+        await mock.setTokenDelay(.milliseconds(100))
         try await mock.loadModel(identifier: "test")
 
         let task = Task {
@@ -53,7 +53,7 @@ final class MLXInferenceProviderTests: XCTestCase {
     func testConcurrentGenerateCallsAreSerializedByActor() async throws {
         let mock = MockInferenceProvider()
         await mock.setGenerateResponses(["token1"])
-        mock.tokenDelay = .milliseconds(50)
+        await mock.setTokenDelay(.milliseconds(50))
         try await mock.loadModel(identifier: "test")
 
         let messages = [ChatMessage(role: .user, content: "test")]

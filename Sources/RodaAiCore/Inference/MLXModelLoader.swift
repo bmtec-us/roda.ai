@@ -2,6 +2,10 @@ import Foundation
 import MLXLLM
 import MLXLMCommon
 
+// Disambigua o name clash entre RodaAiCore.ModelConfiguration (value type)
+// e MLXLMCommon.ModelConfiguration (configuracao MLX para load).
+private typealias MLXModelConfiguration = MLXLMCommon.ModelConfiguration
+
 /// Carrega modelos MLX do disco.
 /// Ref: Intro.md Secao 3.3 — InferenceModule.
 /// Erros: InferenceError.modelNotFound, .modelCorrupted, .insufficientMemory.
@@ -29,7 +33,7 @@ public struct MLXModelLoader: Sendable {
         }
 
         do {
-            let configuration = ModelConfiguration(id: path.path, defaultPrompt: "")
+            let configuration = MLXModelConfiguration(directory: path)
             let container = try await LLMModelFactory.shared.loadContainer(
                 configuration: configuration
             )
@@ -44,7 +48,7 @@ public struct MLXModelLoader: Sendable {
 
     /// Estima uso de memoria para um modelo com a configuracao dada.
     /// - Returns: Bytes estimados de RAM necessarios.
-    public func estimateMemory(for config: RodaAiCore.ModelConfiguration) -> Int64 {
+    public func estimateMemory(for config: ModelConfiguration) -> Int64 {
         config.estimatedRAM
     }
 }

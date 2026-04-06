@@ -2,8 +2,8 @@
 import AppIntents
 
 struct AnalyzeImageIntent: AppIntent {
-    static var title: LocalizedStringResource = "Analisar Imagem"
-    static var description = IntentDescription("Analisa uma imagem usando modelo de visao local")
+    static let title: LocalizedStringResource = "Analisar Imagem"
+    static let description = IntentDescription("Analisa uma imagem usando modelo de visao local")
 
     @Parameter(title: "Imagem")
     var image: IntentFile

@@ -125,4 +125,89 @@ struct DownloadStateTests {
         try state.transition(.valid(sizeOnDisk: 2_000_000_000))
         #expect(state == .installed(sizeOnDisk: 2_000_000_000))
     }
+
+    // MARK: - Phase 2 Original Test Names (Aliases)
+    //
+    // Preserve original Phase 2 naming convention. Same coverage as renamed tests
+    // above. Both phase docs reference these tests.
+
+    @Test("Phase 2 alias: queued to downloading via start event")
+    func testQueuedToDownloadingOnStart() throws {
+        var state: DownloadState = .queued
+        try state.transition(.start)
+        #expect(state == .downloading(progress: 0.0, bytesDownloaded: 0, totalBytes: 0))
+    }
+
+    @Test("Phase 2 alias: downloading to paused via pause event")
+    func testDownloadingToPausedOnPause() throws {
+        var state: DownloadState = .downloading(
+            progress: 0.5, bytesDownloaded: 1_000_000_000, totalBytes: 2_000_000_000
+        )
+        try state.transition(.pause)
+        #expect(state == .paused(bytesDownloaded: 1_000_000_000, totalBytes: 2_000_000_000))
+    }
+
+    @Test("Phase 2 alias: paused to downloading via resume event")
+    func testPausedToDownloadingOnResume() throws {
+        var state: DownloadState = .paused(
+            bytesDownloaded: 500_000_000, totalBytes: 2_000_000_000
+        )
+        try state.transition(.resume)
+        if case .downloading = state {
+            // OK
+        } else {
+            Issue.record("Expected .downloading after resume")
+        }
+    }
+
+    @Test("Phase 2 alias: downloading to validating via complete event")
+    func testDownloadingToValidatingOnComplete() throws {
+        var state: DownloadState = .downloading(
+            progress: 1.0, bytesDownloaded: 2_000_000_000, totalBytes: 2_000_000_000
+        )
+        try state.transition(.complete)
+        #expect(state == .validating)
+    }
+
+    @Test("Phase 2 alias: validating to installed via valid event")
+    func testValidatingToInstalledOnValid() throws {
+        var state: DownloadState = .validating
+        try state.transition(.valid(sizeOnDisk: 2_000_000_000))
+        #expect(state == .installed(sizeOnDisk: 2_000_000_000))
+    }
+
+    @Test("Phase 2 alias: validating to failed via invalid event")
+    func testValidatingToFailedOnInvalid() throws {
+        var state: DownloadState = .validating
+        try state.transition(.invalid(.checksumMismatch(file: "model.safetensors", expected: "abc", actual: "def")))
+        if case .failed = state {
+            // OK
+        } else {
+            Issue.record("Expected .failed after invalid")
+        }
+    }
+
+    @Test("Phase 2 alias: downloading to failed via error event")
+    func testDownloadingToFailedOnError() throws {
+        var state: DownloadState = .downloading(
+            progress: 0.3, bytesDownloaded: 600_000_000, totalBytes: 2_000_000_000
+        )
+        try state.transition(.error(.networkUnavailable))
+        if case .failed = state {
+            // OK
+        } else {
+            Issue.record("Expected .failed after error")
+        }
+    }
+
+    @Test("Phase 2 alias: failed to downloading via retry event")
+    func testFailedToDownloadingOnRetry() throws {
+        var state: DownloadState = .failed(.networkUnavailable)
+        try state.transition(.retry)
+        if case .downloading = state {
+            // OK
+        } else {
+            Issue.record("Expected .downloading after retry")
+        }
+    }
 }

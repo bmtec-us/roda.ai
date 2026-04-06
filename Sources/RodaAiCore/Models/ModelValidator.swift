@@ -66,12 +66,18 @@ public struct ModelValidator: Sendable {
         // Calcula tamanho total
         var totalSize: Int64 = 0
         var files: [String] = []
-        if let enumerator = fm.enumerator(at: modelDirectory, includingPropertiesForKeys: [.fileSizeKey]) {
-            for case let fileURL as URL in enumerator {
-                let attrs = try fileURL.resourceValues(forKeys: [.fileSizeKey])
-                totalSize += Int64(attrs.fileSize ?? 0)
-                files.append(fileURL.lastPathComponent)
+        // FileManager.enumerator nao e async-safe. Coletamos os URLs sincronamente
+        // antes do contexto async, depois iteramos.
+        let urls: [URL] = {
+            guard let enumerator = fm.enumerator(at: modelDirectory, includingPropertiesForKeys: [.fileSizeKey]) else {
+                return []
             }
+            return enumerator.compactMap { $0 as? URL }
+        }()
+        for fileURL in urls {
+            let attrs = try fileURL.resourceValues(forKeys: [.fileSizeKey])
+            totalSize += Int64(attrs.fileSize ?? 0)
+            files.append(fileURL.lastPathComponent)
         }
 
         return ValidationResult(isValid: true, sizeOnDisk: totalSize, files: files)

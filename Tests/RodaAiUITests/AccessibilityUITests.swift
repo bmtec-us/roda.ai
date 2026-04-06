@@ -1,11 +1,25 @@
 // Tests/RodaAiUITests/AccessibilityUITests.swift
+//
+// IMPORTANT: These tests use XCUIApplication which requires a real Xcode UI
+// Testing bundle. They cannot run via `swift test` (SwiftPM only supports unit
+// test bundles). They will run when this package is opened in Xcode and the
+// host app target is configured correctly.
+//
+// Detection of the SPM environment: NSXPCConnection fails to launch the host
+// app, so we skip these tests when not running in an Xcode UI test runner.
 import XCTest
 
 final class AccessibilityUITests: XCTestCase {
 
     private var app: XCUIApplication!
 
-    override func setUp() {
+    override func setUpWithError() throws {
+        // Skip in SwiftPM environment — XCUIApplication requires Xcode UI Testing bundle.
+        try XCTSkipIf(
+            ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"]?
+                .contains("RodaAiUITests") != true,
+            "AccessibilityUITests require Xcode UI Testing bundle (not available via swift test)"
+        )
         continueAfterFailure = false
         app = XCUIApplication()
         app.launch()

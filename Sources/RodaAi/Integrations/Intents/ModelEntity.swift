@@ -9,8 +9,8 @@ struct ModelEntity: AppEntity {
         DisplayRepresentation(title: "\(name)")
     }
 
-    static var typeDisplayRepresentation: TypeDisplayRepresentation = "Modelo de IA"
-    static var defaultQuery = ModelEntityQuery()
+    static let typeDisplayRepresentation: TypeDisplayRepresentation = "Modelo de IA"
+    static let defaultQuery = ModelEntityQuery()
 }
 
 struct ModelEntityQuery: EntityQuery {

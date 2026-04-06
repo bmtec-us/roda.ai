@@ -1,4 +1,5 @@
 // Tests/RodaAiCoreTests/Models/HuggingFaceDownloaderTests.swift
+import Foundation
 import Testing
 @testable import RodaAiCore
 

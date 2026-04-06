@@ -72,7 +72,10 @@ final class AppIntentTests: XCTestCase {
     func testModelEntityDisplayRepresentation() {
         let entity = ModelEntity(id: "gemma-4-e4b", name: "Gemma 4 E4B")
         XCTAssertEqual(entity.id, "gemma-4-e4b")
-        XCTAssertEqual(entity.displayRepresentation.title, "Gemma 4 E4B")
+        // displayRepresentation.title is a LocalizedStringResource built via interpolation.
+        // Compare via String(localized:) which resolves the interpolation.
+        let titleString = String(localized: entity.displayRepresentation.title)
+        XCTAssertEqual(titleString, "Gemma 4 E4B")
     }
 
     // MARK: - SiriShortcutsProvider

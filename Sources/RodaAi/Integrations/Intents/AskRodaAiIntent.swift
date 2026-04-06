@@ -3,8 +3,8 @@ import AppIntents
 import RodaAiCore
 
 struct AskRodaAiIntent: AppIntent {
-    static var title: LocalizedStringResource = "Perguntar ao RodaAi"
-    static var description = IntentDescription("Faz uma pergunta ao modelo de IA local")
+    static let title: LocalizedStringResource = "Perguntar ao RodaAi"
+    static let description = IntentDescription("Faz uma pergunta ao modelo de IA local")
 
     @Parameter(title: "Pergunta")
     var question: String
@@ -13,7 +13,7 @@ struct AskRodaAiIntent: AppIntent {
     var model: ModelEntity?
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        let provider = InferenceServiceLocator.shared.currentProvider
+        let provider = await InferenceServiceLocator.shared.currentProvider
         let response = try await perform(with: provider)
         return .result(dialog: "\(response)")
     }

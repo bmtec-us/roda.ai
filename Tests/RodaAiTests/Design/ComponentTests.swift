@@ -8,12 +8,12 @@ final class ComponentTests: XCTestCase {
     // MARK: - GlassCard
 
     func testGlassCardInitializesWithContent() {
-        let card = GlassCard { Text("Test content") }
+        let card = GlassCard<Text> { Text("Test content") }
         XCTAssertNotNil(card, "GlassCard must initialize with content closure")
     }
 
     func testGlassCardHasCornerRadius() {
-        XCTAssertGreaterThan(GlassCard.cornerRadius, 0, "GlassCard must have positive corner radius")
+        XCTAssertGreaterThan(GlassCard<Text>.cornerRadius, 0, "GlassCard must have positive corner radius")
     }
 
     // MARK: - ProgressRing

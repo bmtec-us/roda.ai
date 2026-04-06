@@ -1,5 +1,6 @@
 // Tests/RodaAiTests/Design/TypographyTests.swift
 import XCTest
+import SwiftUI
 @testable import RodaAi
 
 final class TypographyTests: XCTestCase {

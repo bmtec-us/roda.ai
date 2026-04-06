@@ -49,5 +49,17 @@ let package = Package(
             dependencies: ["RodaAi", "RodaAiCore"],
             path: "Tests/RodaAiTests"
         ),
+        // NOTE: XCUITest-style UI tests require a real Xcode project with a
+        // UI Testing bundle. SwiftPM only supports unit test bundles, so the
+        // tests in Tests/RodaAiUITests/ that use XCUIApplication will not run
+        // via `swift test`. They will run when this package is opened in Xcode
+        // and a UI Testing target is added there. For now, we add the target
+        // so the files compile and lint, but actual UI test execution requires
+        // an Xcode project wrapper (planned for Phase 10 launch prep).
+        .testTarget(
+            name: "RodaAiUITests",
+            dependencies: ["RodaAi", "RodaAiCore"],
+            path: "Tests/RodaAiUITests"
+        ),
     ]
 )

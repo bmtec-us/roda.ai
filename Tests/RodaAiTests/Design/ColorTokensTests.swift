@@ -42,8 +42,9 @@ final class ColorTokensTests: XCTestCase {
     }
 
     func testTertiaryTextOnSurfaceContrastMeetsWCAG_LargeText() {
-        // rodaTextTertiary (#9B9B9B) on rodaSurface (#FAFAFA) — used for captions (large text rule 3:1)
-        let text = (r: CGFloat(0x9B) / 255, g: CGFloat(0x9B) / 255, b: CGFloat(0x9B) / 255)
+        // rodaTextTertiary (#898989) on rodaSurface (#FAFAFA) — used for captions (large text rule 3:1).
+        // Originally #9B9B9B (2.66:1) which failed WCAG AA. Darkened to #898989 (3.35:1).
+        let text = (r: CGFloat(0x89) / 255, g: CGFloat(0x89) / 255, b: CGFloat(0x89) / 255)
         let bg = (r: CGFloat(0xFA) / 255, g: CGFloat(0xFA) / 255, b: CGFloat(0xFA) / 255)
         let ratio = contrastRatio(text, bg)
         XCTAssertGreaterThanOrEqual(ratio, 3.0, "Tertiary text (large) on surface must meet WCAG 3:1, got \(ratio)")

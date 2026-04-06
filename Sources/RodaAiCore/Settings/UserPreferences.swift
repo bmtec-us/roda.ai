@@ -14,7 +14,7 @@ public final class UserPreferences {
     public var systemPrompt: String = ""
     public var defaultTemperature: Float = 0.7
     public var voiceEnabled: Bool = true
-    public var appearanceMode: AppearanceMode = .system
+    public var appearanceMode: AppearanceMode = AppearanceMode.system
     public var hasCompletedOnboarding: Bool = false
 
     public var clampedTemperature: Float {

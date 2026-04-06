@@ -103,4 +103,58 @@ struct ChatStateTests {
         try state.transition(.reset)
         #expect(state == .idle)
     }
+
+    // MARK: - Phase 2 Original Test Names (Aliases)
+    //
+    // Preserve original Phase 2 naming convention. Same coverage as renamed tests
+    // above. Both phase docs reference these tests.
+
+    @Test("Phase 2 alias: idle to loading on send event")
+    func testIdleToLoadingOnSend() throws {
+        var state: ChatState = .idle
+        try state.transition(.send(modelIdentifier: "alias-model"))
+        #expect(state == .loading(modelIdentifier: "alias-model"))
+    }
+
+    @Test("Phase 2 alias: loading to streaming on first token")
+    func testLoadingToStreamingOnFirstToken() throws {
+        var state: ChatState = .loading(modelIdentifier: "alias-model")
+        try state.transition(.firstToken)
+        #expect(state == .streaming(tokensReceived: 0))
+    }
+
+    @Test("Phase 2 alias: streaming increments on token received")
+    func testStreamingIncrementsOnTokenReceived() throws {
+        var state: ChatState = .streaming(tokensReceived: 5)
+        try state.transition(.tokenReceived)
+        #expect(state == .streaming(tokensReceived: 6))
+    }
+
+    @Test("Phase 2 alias: streaming to completed on finished")
+    func testStreamingToCompletedOnFinished() throws {
+        var state: ChatState = .streaming(tokensReceived: 10)
+        try state.transition(.finished(durationMs: 1234))
+        #expect(state == .completed(totalTokens: 10, durationMs: 1234))
+    }
+
+    @Test("Phase 2 alias: streaming returns to idle on cancel")
+    func testStreamingToIdleOnCancel() throws {
+        var state: ChatState = .streaming(tokensReceived: 7)
+        try state.transition(.cancel)
+        #expect(state == .idle)
+    }
+
+    @Test("Phase 2 alias: loading transitions to error on error event")
+    func testLoadingToErrorOnError() throws {
+        var state: ChatState = .loading(modelIdentifier: "x")
+        try state.transition(.error(.modelNotFound(identifier: "x")))
+        #expect(state == .error(.modelNotFound(identifier: "x")))
+    }
+
+    @Test("Phase 2 alias: error to idle via reset")
+    func testErrorToIdleOnReset() throws {
+        var state: ChatState = .error(.modelNotFound(identifier: "z"))
+        try state.transition(.reset)
+        #expect(state == .idle)
+    }
 }
