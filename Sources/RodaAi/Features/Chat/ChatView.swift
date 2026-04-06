@@ -53,10 +53,10 @@ struct ChatView: View {
 
             Divider()
 
-            // Compositor (com anexos)
+            // Compositor (com anexos de arquivo + imagem)
             MessageComposer(
                 isStreaming: viewModel.chatState.isStreaming,
-                onSend: { text, attachedText in
+                onSend: { text, attachedText, imageData in
                     Task {
                         let fullText: String
                         if let attached = attachedText, !attached.isEmpty {
@@ -64,7 +64,7 @@ struct ChatView: View {
                         } else {
                             fullText = text
                         }
-                        await viewModel.send(fullText)
+                        await viewModel.send(fullText, imageData: imageData)
                     }
                 },
                 onStop: {

@@ -56,6 +56,7 @@
 		8299788370A29E8F792B1621 /* ProgressRing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96AB29CB75B54FE68F00D70F /* ProgressRing.swift */; };
 		82E2E0D5EF108B9DBCB3C5D7 /* ImageAttachmentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F347277DA01AC93659F7A4FF /* ImageAttachmentView.swift */; };
 		8535DBF3976DFF8D6FC24077 /* ModelGalleryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E0C53C85FCD30A669A2F1B0 /* ModelGalleryView.swift */; };
+		8D95CBCE3356EFD1EB4F23C5 /* QuickActionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0692D2F88BE433E34A3CCED7 /* QuickActionHandler.swift */; };
 		8EA3AF6015F5C499055636E2 /* AnalyzeImageIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = B647ED99C727B2DAEAAA4AF4 /* AnalyzeImageIntent.swift */; };
 		91A84FFA88A64ED144C2B549 /* SettingsViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 528A8D85051514148CFC0E2C /* SettingsViewModelTests.swift */; };
 		994364B10561374924DA0553 /* AppIntentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 519F807FDF8E3CCACEAEDBB2 /* AppIntentTests.swift */; };
@@ -81,6 +82,7 @@
 		C03CC7C3254A574690D6049F /* GlassCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDCEF2B4686B590BB1B2D9D3 /* GlassCard.swift */; };
 		C36432C87FC368BB5B9DA13A /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3397A7F06789822C08CF5399 /* ChatView.swift */; };
 		C70F67B17A45741A888E6EF0 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CC27A512D84BCED76479201 /* OnboardingView.swift */; };
+		CB457D3C5CA440739E2B739A /* QuickActionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0692D2F88BE433E34A3CCED7 /* QuickActionHandler.swift */; };
 		D06A01C0755D62C393526450 /* ModelDownloadUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB36125EC23138F6E2CE986 /* ModelDownloadUITests.swift */; };
 		D278EF1B53288E8F6135E8C2 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 2AF92C9DB4E339329D7A3B2C /* Localizable.xcstrings */; };
 		D8255DDB420782F980A8446F /* VoiceWaveform.swift in Sources */ = {isa = PBXBuildFile; fileRef = 613D3241C382E5C7BCD846BA /* VoiceWaveform.swift */; };
@@ -117,6 +119,7 @@
 
 /* Begin PBXFileReference section */
 		04246D0E43DC937F21665C90 /* RodaAiApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RodaAiApp.swift; sourceTree = "<group>"; };
+		0692D2F88BE433E34A3CCED7 /* QuickActionHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickActionHandler.swift; sourceTree = "<group>"; };
 		0A84A551561F1F1262DE7DA1 /* OnboardingState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingState.swift; sourceTree = "<group>"; };
 		0ACF784BAC2C2314E7FDF9A5 /* AskRodaAiIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AskRodaAiIntent.swift; sourceTree = "<group>"; };
 		104DFDFFAB0551B06EF5D5C8 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -128,7 +131,7 @@
 		3397A7F06789822C08CF5399 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
 		36CCE30A4788EA64F2DD8960 /* DownloadProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadProgressView.swift; sourceTree = "<group>"; };
 		37184F91CDD8A04F52204B40 /* roda.ai */ = {isa = PBXFileReference; lastKnownFileType = folder; name = roda.ai; path = .; sourceTree = SOURCE_ROOT; };
-		3BFDE4809D6EFEC82009339A /* RodaAi-macOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "RodaAi-macOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		3BFDE4809D6EFEC82009339A /* RodaAi-macOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = "RodaAi-macOS.app"; path = RodaAi.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3CC27A512D84BCED76479201 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		3CEE7991393036EBE7EAF0DF /* InferenceServiceLocator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InferenceServiceLocator.swift; sourceTree = "<group>"; };
 		4286691DE40E8471C9BB6B71 /* VoiceModeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceModeView.swift; sourceTree = "<group>"; };
@@ -144,7 +147,7 @@
 		5A699CD94FECC97B9451A0E2 /* ChatFlowUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatFlowUITests.swift; sourceTree = "<group>"; };
 		5E87BC659BA9CCF07F5C2161 /* AttachmentFlowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttachmentFlowTests.swift; sourceTree = "<group>"; };
 		613D3241C382E5C7BCD846BA /* VoiceWaveform.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceWaveform.swift; sourceTree = "<group>"; };
-		72FCAEC9AED16AD17BE8BD2B /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
+		72FCAEC9AED16AD17BE8BD2B /* .gitkeep */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitkeep; sourceTree = "<group>"; };
 		755C36E608AF704768346350 /* AccessibilityLabelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityLabelTests.swift; sourceTree = "<group>"; };
 		85F9E5053C84328880BDB89D /* MessageBubble.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageBubble.swift; sourceTree = "<group>"; };
 		87516FD22E8FCD5FAEB2BDE9 /* MessageComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageComposer.swift; sourceTree = "<group>"; };
@@ -167,7 +170,7 @@
 		CCE98EBAB20170EE222DBDB6 /* PersonalizationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonalizationView.swift; sourceTree = "<group>"; };
 		CD90AA9970BFD37AD6D1AD10 /* Typography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Typography.swift; sourceTree = "<group>"; };
 		D1EFA6FF677CDFFDDF8F6EB8 /* ModelEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelEntity.swift; sourceTree = "<group>"; };
-		D5BF49898C7DF8D2BAE4E0CA /* RodaAi-iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "RodaAi-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D5BF49898C7DF8D2BAE4E0CA /* RodaAi.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RodaAi.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E79E652AB400213CEB0B6BEE /* AttachmentPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttachmentPicker.swift; sourceTree = "<group>"; };
 		F347277DA01AC93659F7A4FF /* ImageAttachmentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageAttachmentView.swift; sourceTree = "<group>"; };
 		FDCEF2B4686B590BB1B2D9D3 /* GlassCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassCard.swift; sourceTree = "<group>"; };
@@ -395,7 +398,7 @@
 		9D7B5D9FD6CE1E760AB6A15C /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				D5BF49898C7DF8D2BAE4E0CA /* RodaAi-iOS.app */,
+				D5BF49898C7DF8D2BAE4E0CA /* RodaAi.app */,
 				3BFDE4809D6EFEC82009339A /* RodaAi-macOS.app */,
 				B50D9AEC047B02F6B8A589E8 /* RodaAiTests-iOS.xctest */,
 				30B8D0E7CC9AE54A678D05CE /* RodaAiUITests-iOS.xctest */,
@@ -482,6 +485,7 @@
 			children = (
 				578C409EE51275EEB31F5A08 /* AppDependencies.swift */,
 				A7F4D4E0E75999D1C0B24A32 /* ContentView.swift */,
+				0692D2F88BE433E34A3CCED7 /* QuickActionHandler.swift */,
 				04246D0E43DC937F21665C90 /* RodaAiApp.swift */,
 			);
 			path = App;
@@ -554,7 +558,7 @@
 				030D35812574E0B676D2B807 /* Textual */,
 			);
 			productName = "RodaAi-iOS";
-			productReference = D5BF49898C7DF8D2BAE4E0CA /* RodaAi-iOS.app */;
+			productReference = D5BF49898C7DF8D2BAE4E0CA /* RodaAi.app */;
 			productType = "com.apple.product-type.application";
 		};
 		7179356B70BF00E31FCA8519 /* RodaAiTests-iOS */ = {
@@ -609,7 +613,6 @@
 						ProvisioningStyle = Automatic;
 					};
 					359CC9B513147A36BBAC080F = {
-						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
 					};
 					7179356B70BF00E31FCA8519 = {
@@ -711,6 +714,7 @@
 				B0067CDE24B7C5765613F795 /* OnboardingView.swift in Sources */,
 				625875B4B1707BD6B368A7B8 /* PersonalizationView.swift in Sources */,
 				8299788370A29E8F792B1621 /* ProgressRing.swift in Sources */,
+				CB457D3C5CA440739E2B739A /* QuickActionHandler.swift in Sources */,
 				1FB89984E3DB80EEAD58F442 /* RodaAiApp.swift in Sources */,
 				465A2856EE9AA7973D655833 /* RodaAiControlWidget.swift in Sources */,
 				5613B0D98E0F4F9FC1E78FB6 /* SettingsView.swift in Sources */,
@@ -752,6 +756,7 @@
 				C70F67B17A45741A888E6EF0 /* OnboardingView.swift in Sources */,
 				FE6ED47953A33A43B6AB9E6D /* PersonalizationView.swift in Sources */,
 				18D158E7A235EABFD5CD3532 /* ProgressRing.swift in Sources */,
+				8D95CBCE3356EFD1EB4F23C5 /* QuickActionHandler.swift in Sources */,
 				367B8504106F7AF0CD2E06E3 /* RodaAiApp.swift in Sources */,
 				137579CB117021CF3FFA4EE0 /* RodaAiControlWidget.swift in Sources */,
 				5EA81997748C5BE7F1324A25 /* SettingsView.swift in Sources */,
@@ -911,6 +916,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = "";
 				CODE_SIGN_ENTITLEMENTS = Sources/RodaAi/RodaAi.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = 8F4K6H352R;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
@@ -932,6 +938,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = "";
 				CODE_SIGN_ENTITLEMENTS = Sources/RodaAi/RodaAi.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = 8F4K6H352R;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;

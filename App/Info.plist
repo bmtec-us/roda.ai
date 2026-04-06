@@ -50,5 +50,28 @@
     <string>RodaAi usa a camera para analisar imagens com modelos de visao.</string>
     <key>NSPhotoLibraryUsageDescription</key>
     <string>RodaAi acessa fotos para analisar imagens com modelos de visao.</string>
+    <key>UIApplicationShortcutItems</key>
+    <array>
+        <dict>
+            <key>UIApplicationShortcutItemType</key>
+            <string>com.bmtec.rodaai.voice</string>
+            <key>UIApplicationShortcutItemTitle</key>
+            <string>Modo Voz</string>
+            <key>UIApplicationShortcutItemSubtitle</key>
+            <string>Conversar por voz com IA</string>
+            <key>UIApplicationShortcutItemIconType</key>
+            <string>UIApplicationShortcutIconTypeAudio</string>
+        </dict>
+        <dict>
+            <key>UIApplicationShortcutItemType</key>
+            <string>com.bmtec.rodaai.newchat</string>
+            <key>UIApplicationShortcutItemTitle</key>
+            <string>Nova Conversa</string>
+            <key>UIApplicationShortcutItemSubtitle</key>
+            <string>Iniciar uma nova conversa</string>
+            <key>UIApplicationShortcutItemIconType</key>
+            <string>UIApplicationShortcutIconTypeCompose</string>
+        </dict>
+    </array>
 </dict>
 </plist>

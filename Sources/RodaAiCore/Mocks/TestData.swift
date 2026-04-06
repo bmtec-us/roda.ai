@@ -47,4 +47,23 @@ public enum TestData {
             seed: nil
         )
     }
+
+    /// Factory de ConversationSummary para testes que nao querem inicializar
+    /// SwiftData. Ref: mock-strategy.md — Factory de Dados de Teste.
+    public static func makeConversation(
+        title: String = "Conversa de teste",
+        modelIdentifier: String = "test-model",
+        messageCount: Int = 3
+    ) -> ConversationSummary {
+        let now = Date()
+        return ConversationSummary(
+            id: UUID(),
+            title: title,
+            modelIdentifier: modelIdentifier,
+            createdAt: now,
+            updatedAt: now,
+            lastMessagePreview: messageCount > 0 ? "Mensagem de teste" : nil,
+            messageCount: messageCount
+        )
+    }
 }

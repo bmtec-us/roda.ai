@@ -34,7 +34,7 @@ public final class ChatViewModel {
     /// `stopGeneration()` cancela essa Task, que por sua vez faz com que o actor
     /// `InferenceProvider` detecte `Task.isCancelled` e finalize o stream com
     /// `.generationCancelled`, preservando os tokens ja recebidos.
-    public func send(_ text: String) async {
+    public func send(_ text: String, imageData: Data? = nil) async {
         // Auto-reset state se a conversa anterior terminou (.completed ou .error).
         // Sem isso, o segundo send falharia silenciosamente porque o state machine
         // nao aceita .completed -> .send (apenas .idle -> .send).
@@ -44,7 +44,27 @@ public final class ChatViewModel {
             try? chatState.transition(.reset)
         }
 
-        let userMessage = ChatMessage(role: .user, content: text)
+        // Se ha imageData, escreve em arquivo temporario e cria Attachment.
+        // VLM providers (VisionInferenceProvider) leem `attachments[].url`
+        // para passar ao MLX UserInput.
+        var attachments: [Attachment] = []
+        if let imageData {
+            let tempURL = FileManager.default.temporaryDirectory
+                .appendingPathComponent("\(UUID().uuidString).jpg")
+            do {
+                try imageData.write(to: tempURL)
+                attachments.append(Attachment(
+                    url: tempURL,
+                    mimeType: "image/jpeg",
+                    extractedText: nil
+                ))
+            } catch {
+                // Image write failed — log and continue without attachment
+                print("Failed to write image attachment: \(error)")
+            }
+        }
+
+        let userMessage = ChatMessage(role: .user, content: text, attachments: attachments)
         messages.append(userMessage)
 
         let assistantIndex = messages.count

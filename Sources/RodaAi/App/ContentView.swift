@@ -5,6 +5,7 @@ import RodaAiCore
 
 struct ContentView: View {
     @Environment(AppDependencies.self) private var deps
+    @Environment(QuickActionHandler.self) private var quickActions
     @Environment(\.modelContext) private var modelContext
 
     // Query para detectar se onboarding ja foi completado.
@@ -17,11 +18,30 @@ struct ContentView: View {
     }
 
     var body: some View {
-        if hasCompletedOnboarding {
-            mainAppView
-        } else {
-            OnboardingView()
+        Group {
+            if hasCompletedOnboarding {
+                mainAppView
+            } else {
+                OnboardingView()
+            }
         }
+        .onChange(of: quickActions.pendingAction) { _, action in
+            handleQuickAction(action)
+        }
+    }
+
+    /// Reage a Home Screen Quick Actions (iOS) navegando para a tab apropriada.
+    private func handleQuickAction(_ action: QuickActionType?) {
+        guard let action else { return }
+        #if os(iOS)
+        switch action {
+        case .voice:
+            selectedTab = 2  // Tab Voz
+        case .newChat:
+            selectedTab = 0  // Tab Conversas (e starta nova via state)
+        }
+        #endif
+        quickActions.clear()
     }
 
     // MARK: - Main App (post-onboarding)
@@ -121,7 +141,9 @@ private enum MacNavTarget: Hashable {
 struct ConversationsContainer: View {
     @Environment(AppDependencies.self) private var deps
     @State private var chatViewModel: ChatViewModel?
-    @State private var showingList: Bool = true
+    // Default false — sheet so abre quando usuario toca botao Historico.
+    // Antes (bug): default true abria sheet vazio em todo launch.
+    @State private var showingList: Bool = false
 
     var body: some View {
         VStack(spacing: 0) {
