@@ -25,14 +25,45 @@ final class DeviceCapabilityTests: XCTestCase {
         XCTAssertFalse(DeviceCapability.canLoadModel(requiringRAM: 1024))
     }
 
-    func testCanLoadModelUsesTotalRAMNotAvailableRAM() {
-        // Verifica que canLoadModel usa totalRAM (capacidade do device)
-        // e nao availableRAM (valor flutuante do momento).
-        // Um modelo que cabe na RAM total DEVE ser compativel.
-        let totalGB = Int(DeviceCapability.totalRAM / 1_073_741_824)
-        if totalGB > 0 {
-            XCTAssertTrue(DeviceCapability.canLoadModel(requiringRAM: totalGB))
+    func testModelMemoryBudgetIsLessThanTotalRAM() {
+        // Budget should be a fraction of total RAM (platform-dependent)
+        XCTAssertLessThan(DeviceCapability.modelMemoryBudget, DeviceCapability.totalRAM)
+        XCTAssertGreaterThan(DeviceCapability.modelMemoryBudget, 0)
+    }
+
+    func testModelMemoryBudgetGBIsConsistentWithBytes() {
+        let budgetGB = DeviceCapability.modelMemoryBudgetGB
+        let budgetBytes = DeviceCapability.modelMemoryBudget
+        // budgetGB should be the floor of budgetBytes / 1GB
+        XCTAssertEqual(budgetGB, Int(budgetBytes / 1_073_741_824))
+    }
+
+    func testCanLoadModelUsesMemoryBudget() {
+        // A model within the memory budget should be loadable
+        let budgetGB = DeviceCapability.modelMemoryBudgetGB
+        if budgetGB > 0 {
+            XCTAssertTrue(DeviceCapability.canLoadModel(requiringRAM: budgetGB))
         }
+        // A model exceeding total RAM should NOT be loadable
+        let totalGB = DeviceCapability.totalRAMGB
+        XCTAssertFalse(DeviceCapability.canLoadModel(requiringRAM: totalGB + 1))
+    }
+
+    func testRAMTierIsValid() {
+        let tier = DeviceCapability.ramTier
+        // On any test machine, tier should be at least .compact
+        XCTAssertTrue(RAMTier.allCases.contains(tier))
+    }
+
+    func testRAMTierComparable() {
+        XCTAssertLessThan(RAMTier.minimal, RAMTier.compact)
+        XCTAssertLessThan(RAMTier.compact, RAMTier.standard)
+        XCTAssertLessThan(RAMTier.standard, RAMTier.workstation)
+        XCTAssertLessThan(RAMTier.workstation, RAMTier.desktop)
+    }
+
+    func testTotalRAMGBIsPositive() {
+        XCTAssertGreaterThan(DeviceCapability.totalRAMGB, 0)
     }
 
     func testChipNameIsNotEmpty() {

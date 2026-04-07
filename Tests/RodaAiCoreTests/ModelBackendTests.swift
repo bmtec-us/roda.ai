@@ -4,16 +4,18 @@ import XCTest
 final class ModelBackendTests: XCTestCase {
 
     func testModelBackendCases() {
-        XCTAssertEqual(ModelBackend.allCases.count, 3)
+        XCTAssertEqual(ModelBackend.allCases.count, 4)
         XCTAssertTrue(ModelBackend.allCases.contains(.mlx))
         XCTAssertTrue(ModelBackend.allCases.contains(.gguf))
         XCTAssertTrue(ModelBackend.allCases.contains(.api))
+        XCTAssertTrue(ModelBackend.allCases.contains(.foundationModel))
     }
 
     func testModelBackendRawValues() {
         XCTAssertEqual(ModelBackend.mlx.rawValue, "mlx")
         XCTAssertEqual(ModelBackend.gguf.rawValue, "gguf")
         XCTAssertEqual(ModelBackend.api.rawValue, "api")
+        XCTAssertEqual(ModelBackend.foundationModel.rawValue, "foundationModel")
     }
 
     func testModelBackendCodable() throws {
@@ -82,6 +84,36 @@ final class ModelBackendTests: XCTestCase {
         let mlxLoadCount = await mlxProvider.loadModelCallCount
         XCTAssertEqual(ggufLoadCount, 1, "GGUF provider should be used for GGUF models")
         XCTAssertEqual(mlxLoadCount, 0, "MLX provider should NOT be used for GGUF models")
+    }
+
+    @MainActor
+    func testManagerRoutesFoundationModelToFMProvider() async throws {
+        let mockDownloader = MockModelDownloader()
+        let mlxProvider = MockInferenceProvider()
+        let fmProvider = MockInferenceProvider()
+
+        let tmpDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+        let manager = ModelManager(
+            downloader: mockDownloader,
+            inferenceProvider: mlxProvider,
+            foundationModelProvider: fmProvider,
+            modelsDirectoryOverride: tmpDir
+        )
+
+        manager.loadCatalog()
+        let fmEntry = manager.catalog.first { $0.identifier == "apple-fm" }
+        XCTAssertNotNil(fmEntry, "Production catalog must have apple-fm")
+        XCTAssertEqual(fmEntry?.backend, .foundationModel)
+        XCTAssertTrue(fmEntry!.isZeroDownload)
+
+        // Activate built-in model (no download needed)
+        try await manager.activateBuiltInModel(fmEntry!)
+
+        let fmLoadCount = await fmProvider.loadModelCallCount
+        let mlxLoadCount = await mlxProvider.loadModelCallCount
+        XCTAssertEqual(fmLoadCount, 1, "FM provider should be used for Foundation Models")
+        XCTAssertEqual(mlxLoadCount, 0, "MLX provider should NOT be used for FM")
     }
 
     @MainActor

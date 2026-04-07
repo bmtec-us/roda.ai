@@ -17,6 +17,16 @@ struct ModelCard: View {
     private var progress: Double? { modelManager.downloadProgress[entry.identifier] }
     private var downloadErrorMessage: String? { modelManager.downloadError[entry.identifier] }
 
+    private var incompatibleReason: LocalizedStringKey {
+        let budgetGB = DeviceCapability.modelMemoryBudgetGB
+        let needed = entry.minimumRAM
+        if DeviceCapability.isMac {
+            return "model.status.incompatible.mac \(needed) \(budgetGB)"
+        } else {
+            return "model.status.incompatible.ios \(needed) \(budgetGB)"
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             headerSection
@@ -100,12 +110,31 @@ struct ModelCard: View {
         HStack(spacing: 16) {
             Label(entry.parameterCount, systemImage: "cpu")
                 .font(.caption)
-            Label("\(entry.downloadSizeBytes / 1_000_000_000)GB", systemImage: "internaldrive")
+            Label(downloadSizeLabel, systemImage: "internaldrive")
                 .font(.caption)
             Label("\(entry.minimumRAM)GB RAM", systemImage: "memorychip")
                 .font(.caption)
                 .foregroundStyle(isCompatible ? ColorPalette.textSecondary : ColorPalette.warning)
+            if entry.isVisionCapable {
+                Label("model.badge.vision", systemImage: "eye")
+                    .font(.caption2)
+                    .foregroundStyle(ColorPalette.accent)
+            }
+            if entry.isReasoningCapable {
+                Label("model.badge.reasoning", systemImage: "brain")
+                    .font(.caption2)
+                    .foregroundStyle(ColorPalette.accent)
+            }
         }
+    }
+
+    private var downloadSizeLabel: String {
+        let gb = entry.downloadSizeBytes / 1_000_000_000
+        let mb = entry.downloadSizeBytes / 1_000_000
+        if gb > 0 {
+            return "\(gb).\(mb / 100 % 10)GB"
+        }
+        return "\(mb)MB"
     }
 
     // MARK: - Status
@@ -125,7 +154,7 @@ struct ModelCard: View {
                     .font(.caption)
                     .foregroundStyle(ColorPalette.accent)
             } else if !isCompatible {
-                Label("model.status.incompatible", systemImage: "exclamationmark.triangle")
+                Label(incompatibleReason, systemImage: "exclamationmark.triangle")
                     .font(.caption)
                     .foregroundStyle(ColorPalette.warning)
             } else {
@@ -141,8 +170,18 @@ struct ModelCard: View {
     @ViewBuilder
     private var actionButtons: some View {
         HStack(spacing: 8) {
-            if entry.isZeroDownload {
-                // Zero-download (Apple FM): nao mostra Baixar — built-in
+            if entry.isZeroDownload && !isActive {
+                // Zero-download (Apple FM): ativar diretamente, sem download
+                Button {
+                    performActivateBuiltIn()
+                } label: {
+                    Label("model.action.activate", systemImage: "play.circle")
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(isPerformingAction)
+                .accessibilityIdentifier("activate-builtin-\(entry.identifier)")
+            } else if entry.isZeroDownload && isActive {
+                // Ja ativo — nada a fazer (deactivate button abaixo cuida)
                 Label("model.status.builtin", systemImage: "checkmark.seal")
                     .font(.caption)
                     .foregroundStyle(ColorPalette.accent)
@@ -195,6 +234,19 @@ struct ModelCard: View {
     }
 
     // MARK: - Async actions
+    private func performActivateBuiltIn() {
+        isPerformingAction = true
+        actionError = nil
+        Task {
+            do {
+                try await modelManager.activateBuiltInModel(entry)
+            } catch {
+                actionError = error.localizedDescription
+            }
+            isPerformingAction = false
+        }
+    }
+
     private func performDownload() {
         isPerformingAction = true
         actionError = nil
