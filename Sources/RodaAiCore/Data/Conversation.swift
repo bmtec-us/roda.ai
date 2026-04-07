@@ -13,6 +13,11 @@ public final class Conversation {
     public var createdAt: Date
     public var updatedAt: Date
 
+    // Context memory persisted across sessions.
+    // Optional for lightweight migration from stores created before these fields existed.
+    public var compactSummary: String?
+    public var pinnedFactsBlob: String?
+
     @Relationship(deleteRule: .cascade)
     public var messages: [Message]
 
@@ -25,6 +30,8 @@ public final class Conversation {
         self.modelIdentifier = modelIdentifier
         self.createdAt = Date()
         self.updatedAt = Date()
+        self.compactSummary = ""
+        self.pinnedFactsBlob = ""
         self.messages = []
     }
 }

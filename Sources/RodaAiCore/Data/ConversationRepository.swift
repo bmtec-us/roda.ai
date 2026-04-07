@@ -157,6 +157,39 @@ public actor ConversationRepository {
 
     // MARK: - Update
 
+    public func fetchContextMemory(for conversationId: UUID) throws(PersistenceError) -> (summary: String, pinnedFacts: [String]) {
+        guard let conversation = try findConversation(by: conversationId) else {
+            throw PersistenceError.conversationNotFound(id: conversationId)
+        }
+        let factsBlob = conversation.pinnedFactsBlob ?? ""
+        let facts = factsBlob
+            .components(separatedBy: "\n")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        return (conversation.compactSummary ?? "", facts)
+    }
+
+    public func updateContextMemory(
+        for conversationId: UUID,
+        summary: String,
+        pinnedFacts: [String]
+    ) throws(PersistenceError) {
+        guard let conversation = try findConversation(by: conversationId) else {
+            throw PersistenceError.conversationNotFound(id: conversationId)
+        }
+        conversation.compactSummary = summary
+        conversation.pinnedFactsBlob = pinnedFacts
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: "\n")
+        conversation.updatedAt = Date()
+        do {
+            try modelContext.save()
+        } catch {
+            throw PersistenceError.saveFailed(reason: error.localizedDescription)
+        }
+    }
+
     /// Atualiza o titulo de uma conversa e persiste.
     public func updateTitle(id: UUID, title: String) throws(PersistenceError) {
         guard let conversation = try findConversation(by: id) else {

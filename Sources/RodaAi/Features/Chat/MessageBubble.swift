@@ -5,11 +5,17 @@ import RodaAiCore
 #if canImport(UIKit)
 import UIKit
 #endif
+#if canImport(AppKit)
+import AppKit
+#endif
 
 struct MessageBubble: View {
     let message: ChatMessage
     let chatFontScale: CGFloat
+    let responseLength: ResponseLengthPreference
+    let loadingText: String
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isExpanded = false
 
     private var isUser: Bool { message.role == .user }
 
@@ -51,7 +57,9 @@ struct MessageBubble: View {
                     SelectableMessageText(
                         text: message.content,
                         parseMarkdown: false,
-                        scaleFactor: chatFontScale
+                        scaleFactor: chatFontScale,
+                        lineSpacing: contentLineSpacing,
+                        paragraphSpacing: contentParagraphSpacing
                     )
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -61,25 +69,75 @@ struct MessageBubble: View {
             if message.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 HStack(spacing: 8) {
                     AnimatedDots(reduceMotion: reduceMotion, color: .secondary)
-                    Text("Pensando...")
+                    Text(loadingText)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             } else {
                 VStack(alignment: .leading, spacing: 10) {
-                    ForEach(assistantSegments.indices, id: \.self) { index in
-                        switch assistantSegments[index] {
-                        case .text(let text):
-                            SelectableMessageText(
-                                text: text,
-                                parseMarkdown: true,
-                                scaleFactor: chatFontScale
-                            )
-                        case .code(let code, let language):
-                            CodeBlockView(code: code, language: language)
+                    Group {
+                        VStack(alignment: .leading, spacing: 10) {
+                            ForEach(assistantSegments.indices, id: \.self) { index in
+                                switch assistantSegments[index] {
+                                case .text(let text):
+                                    SelectableMessageText(
+                                        text: text,
+                                        parseMarkdown: true,
+                                        scaleFactor: chatFontScale,
+                                        lineSpacing: contentLineSpacing,
+                                        paragraphSpacing: contentParagraphSpacing
+                                    )
+                                case .code(let code, let language):
+                                    CodeBlockView(code: code, language: language)
+                                }
+                            }
                         }
                     }
+                    .frame(maxHeight: shouldCollapseAssistantContent && !isExpanded ? collapsedMaxHeight : .infinity, alignment: .top)
+                    .clipped()
+                    .overlay(alignment: .bottom) {
+                        if shouldCollapseAssistantContent && !isExpanded {
+                            LinearGradient(
+                                colors: [Color.clear, Color.black.opacity(0.08)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                            .frame(height: 44)
+                            .allowsHitTesting(false)
+                        }
+                    }
+
+                    if shouldCollapseAssistantContent {
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.22)) {
+                                isExpanded.toggle()
+                            }
+                        } label: {
+                            Label(isExpanded ? "Ver menos" : "Ver mais", systemImage: isExpanded ? "chevron.up" : "chevron.down")
+                                .font(.caption)
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.secondary)
+                    }
+
+                    HStack(spacing: 10) {
+                        Button {
+                            copyAssistantText(message.content)
+                        } label: {
+                            Label("Copiar", systemImage: "doc.on.doc")
+                                .font(.caption2)
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.secondary)
+
+                        Spacer(minLength: 0)
+
+                        Text("~\(approximateTokenCount) tok")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(.top, 2)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -90,7 +148,65 @@ struct MessageBubble: View {
         parseAssistantSegments(from: message.content)
     }
 
+    private var approximateTokenCount: Int {
+        max(1, Int((Double(message.content.count) / 4.0).rounded(.up)))
+    }
+
+    private var contentLineSpacing: CGFloat {
+        switch responseLength {
+        case .compact: return 2
+        case .normal: return 4
+        case .detailed: return 5
+        }
+    }
+
+    private var contentParagraphSpacing: CGFloat {
+        switch responseLength {
+        case .compact: return 4
+        case .normal: return 6
+        case .detailed: return 8
+        }
+    }
+
+    private var collapseThresholdCharacters: Int {
+        switch responseLength {
+        case .compact: return 900
+        case .normal: return 1_200
+        case .detailed: return 1_700
+        }
+    }
+
+    private var collapsedMaxHeight: CGFloat {
+        switch responseLength {
+        case .compact: return 200
+        case .normal: return 240
+        case .detailed: return 320
+        }
+    }
+
+    private var shouldCollapseAssistantContent: Bool {
+        !isUser && message.content.count > collapseThresholdCharacters
+    }
+
+    private func copyAssistantText(_ text: String) {
+        #if canImport(UIKit)
+        UIPasteboard.general.string = text
+        #elseif canImport(AppKit)
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+        #endif
+    }
+
     private func parseAssistantSegments(from content: String) -> [AssistantSegment] {
+        // Avoid expensive regex parsing for very large generations; render as plain text.
+        if content.count > 18_000 {
+            return [.text(content)]
+        }
+
+        if !content.contains("```") {
+            return [.text(content)]
+        }
+
         let pattern = "```([a-zA-Z0-9_+\\-.]*)?\\n([\\s\\S]*?)```"
         guard let regex = try? NSRegularExpression(pattern: pattern) else {
             return [.text(content)]
@@ -191,11 +307,19 @@ private struct SelectableMessageText: View {
     let text: String
     let parseMarkdown: Bool
     let scaleFactor: CGFloat
+    let lineSpacing: CGFloat
+    let paragraphSpacing: CGFloat
 
     var body: some View {
         #if canImport(UIKit)
-        IOSSelectableTextView(text: text, parseMarkdown: parseMarkdown, scaleFactor: scaleFactor)
-            .frame(maxWidth: .infinity, alignment: .leading)
+        IOSSelectableTextView(
+            text: text,
+            parseMarkdown: parseMarkdown,
+            scaleFactor: scaleFactor,
+            lineSpacing: lineSpacing,
+            paragraphSpacing: paragraphSpacing
+        )
+        .frame(maxWidth: .infinity, alignment: .leading)
         #else
         if parseMarkdown,
            let markdown = try? AttributedString(
@@ -207,11 +331,13 @@ private struct SelectableMessageText: View {
            ) {
             Text(markdown)
                 .font(.system(size: 17 * scaleFactor))
+                .lineSpacing(lineSpacing)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .textSelection(.enabled)
         } else {
             Text(text)
                 .font(.system(size: 17 * scaleFactor))
+                .lineSpacing(lineSpacing)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .textSelection(.enabled)
         }
@@ -224,6 +350,8 @@ private struct IOSSelectableTextView: UIViewRepresentable {
     let text: String
     let parseMarkdown: Bool
     let scaleFactor: CGFloat
+    let lineSpacing: CGFloat
+    let paragraphSpacing: CGFloat
 
     func makeUIView(context: Context) -> UITextView {
         let view = UITextView()
@@ -268,6 +396,11 @@ private struct IOSSelectableTextView: UIViewRepresentable {
             let mutable = NSMutableAttributedString(attributedString: NSAttributedString(attributed))
             let fullRange = NSRange(location: 0, length: mutable.length)
 
+            let paragraphStyle = NSMutableParagraphStyle()
+            paragraphStyle.lineSpacing = lineSpacing
+            paragraphStyle.paragraphSpacing = paragraphSpacing
+            mutable.addAttribute(.paragraphStyle, value: paragraphStyle, range: fullRange)
+
             mutable.enumerateAttribute(.font, in: fullRange) { value, range, _ in
                 if let existing = value as? UIFont {
                     let traits = existing.fontDescriptor.symbolicTraits
@@ -283,11 +416,16 @@ private struct IOSSelectableTextView: UIViewRepresentable {
             return mutable
         }
 
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.lineSpacing = lineSpacing
+        paragraphStyle.paragraphSpacing = paragraphSpacing
+
         return NSAttributedString(
             string: text,
             attributes: [
                 .font: dynamicBaseFont,
-                .foregroundColor: UIColor.label
+                .foregroundColor: UIColor.label,
+                .paragraphStyle: paragraphStyle
             ]
         )
     }

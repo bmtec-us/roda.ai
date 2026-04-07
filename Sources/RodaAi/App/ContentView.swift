@@ -150,6 +150,7 @@ private enum MacNavTarget: Hashable {
 
 struct ConversationsContainer: View {
     @Environment(AppDependencies.self) private var deps
+    @Environment(\.modelContext) private var modelContext
     @Query private var preferences: [UserPreferences]
     @State private var chatViewModel: ChatViewModel?
     @State private var showingList: Bool = false
@@ -159,7 +160,10 @@ struct ConversationsContainer: View {
             if let vm = chatViewModel {
                 ChatView(
                     viewModel: vm,
-                    chatFontSize: preferences.first?.chatFontSize ?? .system
+                    chatFontSize: preferences.first?.chatFontSize ?? .system,
+                    onResponseLengthChange: { newLength in
+                        persistResponseLengthPreference(newLength)
+                    }
                 )
                     .toolbar {
                         ToolbarItem(placement: .primaryAction) {
@@ -191,7 +195,9 @@ struct ConversationsContainer: View {
                     inferenceProvider: deps.inferenceProvider,
                     repository: deps.conversationRepository,
                     responseStyle: preferences.first?.responseStyle ?? .natural,
-                    systemPrompt: preferences.first?.systemPrompt ?? ""
+                    responseLength: preferences.first?.responseLength ?? .normal,
+                    systemPrompt: preferences.first?.systemPrompt ?? "",
+                    maxResponseTokens: preferences.first?.maxTokens ?? 2048
                 )
             }
         }
@@ -199,8 +205,15 @@ struct ConversationsContainer: View {
             guard let newStyle else { return }
             chatViewModel?.responseStyle = newStyle
         }
+        .onChange(of: preferences.first?.responseLength) { _, newLength in
+            guard let newLength else { return }
+            chatViewModel?.responseLength = newLength
+        }
         .onChange(of: preferences.first?.systemPrompt) { _, newPrompt in
             chatViewModel?.systemPrompt = newPrompt ?? ""
+        }
+        .onChange(of: preferences.first?.maxTokens) { _, newMaxTokens in
+            chatViewModel?.maxResponseTokens = newMaxTokens ?? 2048
         }
     }
 
@@ -232,5 +245,24 @@ struct ConversationsContainer: View {
 
     private func startNew() {
         chatViewModel?.startNewConversation()
+    }
+
+    private func persistResponseLengthPreference(_ value: ResponseLengthPreference) {
+        do {
+            if let existing = preferences.first {
+                if existing.responseLength != value {
+                    existing.responseLength = value
+                    try modelContext.save()
+                }
+            } else {
+                let prefs = UserPreferences()
+                prefs.responseLength = value
+                modelContext.insert(prefs)
+                try modelContext.save()
+            }
+        } catch {
+            // Non-fatal: keep chat behavior even if persistence fails.
+            print("Failed to persist response length preference: \(error)")
+        }
     }
 }

@@ -2,6 +2,12 @@
 import Foundation
 import Observation
 
+public enum ContextPressureLevel: Sendable {
+    case normal
+    case warning
+    case critical
+}
+
 @MainActor
 @Observable
 public final class ChatViewModel {
@@ -16,6 +22,7 @@ public final class ChatViewModel {
     public private(set) var currentConversationId: UUID?
     private var generationTask: Task<Void, Never>?
     public var responseStyle: ResponseStyle = .natural
+    public var responseLength: ResponseLengthPreference = .normal
     public var systemPrompt: String = ""
     public var maxResponseTokens: Int = 2048
     public private(set) var isOptimizingContext: Bool = false
@@ -23,6 +30,9 @@ public final class ChatViewModel {
     public private(set) var estimatedPromptTokens: Int = 0
     public private(set) var estimatedTokenBudget: Int = 0
     public private(set) var compactedLastTurn: Bool = false
+    public private(set) var contextPressureLevel: ContextPressureLevel = .normal
+    public private(set) var didTrimInputThisTurn: Bool = false
+    public private(set) var lastInputTrimmedCharacters: Int = 0
     private var rollingCompactSummary: String = ""
     private var rollingPinnedFacts: [String] = []
 
@@ -31,12 +41,14 @@ public final class ChatViewModel {
         inferenceProvider: any InferenceProvider,
         repository: ConversationRepository? = nil,
         responseStyle: ResponseStyle = .natural,
+        responseLength: ResponseLengthPreference = .normal,
         systemPrompt: String = "",
         maxResponseTokens: Int = 2048
     ) {
         self.inferenceProvider = inferenceProvider
         self.repository = repository
         self.responseStyle = responseStyle
+        self.responseLength = responseLength
         self.systemPrompt = systemPrompt
         self.maxResponseTokens = maxResponseTokens
     }
@@ -63,6 +75,10 @@ public final class ChatViewModel {
         // Se ha imageData, escreve em arquivo temporario e cria Attachment.
         // VLM providers (VisionInferenceProvider) leem `attachments[].url`
         // para passar ao MLX UserInput.
+        let sanitizedInput = Self.sanitizeUserInput(text)
+        didTrimInputThisTurn = sanitizedInput.wasTrimmed
+        lastInputTrimmedCharacters = sanitizedInput.trimmedCharacters
+
         var attachments: [Attachment] = []
         if let imageData {
             let tempURL = FileManager.default.temporaryDirectory
@@ -80,7 +96,7 @@ public final class ChatViewModel {
             }
         }
 
-        let userMessage = ChatMessage(role: .user, content: text, attachments: attachments)
+        let userMessage = ChatMessage(role: .user, content: sanitizedInput.text, attachments: attachments)
         messages.append(userMessage)
 
         let assistantIndex = messages.count
@@ -98,10 +114,29 @@ public final class ChatViewModel {
         // Cria uma task cancelavel para a geracao. Armazena em `generationTask`
         // para que `stopGeneration()` possa cancela-la.
         let provider = inferenceProvider
-        let task = Task<Void, Never> { [weak self] in
+        let task = Task<Void, Never> { @MainActor [weak self] in
             guard let self else { return }
             let startTime = ContinuousClock.now
             var tokenCount = 0
+            var bufferedChunk = ""
+            var lastFlush = ContinuousClock.now
+
+            @MainActor
+            func flushBufferedChunkIfNeeded(force: Bool = false) throws {
+                guard !bufferedChunk.isEmpty else { return }
+                let elapsed = lastFlush.duration(to: .now)
+                let shouldFlush = force || elapsed >= .milliseconds(45)
+                guard shouldFlush else { return }
+
+                let currentContent = self.messages[assistantIndex].content
+                self.messages[assistantIndex] = ChatMessage(
+                    role: .assistant,
+                    content: currentContent + bufferedChunk
+                )
+                bufferedChunk.removeAll(keepingCapacity: true)
+                lastFlush = .now
+                try self.chatState.transition(.tokenReceived)
+            }
 
             do {
                 let inferenceMessages = await self.buildInferenceMessagesAsync(base: self.messages)
@@ -115,18 +150,17 @@ public final class ChatViewModel {
                     if tokenCount == 0 {
                         try self.chatState.transition(.firstToken)
                     }
-                    let currentContent = self.messages[assistantIndex].content
                     let normalizedToken = Self.normalizeStreamingBoundary(
-                        previousText: currentContent,
+                        previousText: self.messages[assistantIndex].content + bufferedChunk,
                         incomingChunk: token
                     )
-                    self.messages[assistantIndex] = ChatMessage(
-                        role: .assistant,
-                        content: currentContent + normalizedToken
-                    )
+                    bufferedChunk += normalizedToken
                     tokenCount += 1
-                    try self.chatState.transition(.tokenReceived)
+
+                    let shouldPrioritizeFlush = normalizedToken.contains("\n") || normalizedToken.contains(":")
+                    try flushBufferedChunkIfNeeded(force: shouldPrioritizeFlush)
                 }
+                try flushBufferedChunkIfNeeded(force: true)
 
                 if Task.isCancelled {
                     try? self.chatState.transition(.cancel)
@@ -181,11 +215,12 @@ public final class ChatViewModel {
         // Nota: roda fora do generationTask para garantir que mensagens sao
         // persistidas mesmo quando a geracao e cancelada (preservando parcial).
         await persistMessages(
-            userText: text,
+            userText: sanitizedInput.text,
             userAttachments: attachments,
             modelId: modelId,
             assistantIndex: assistantIndex
         )
+        await persistContextMemory()
     }
 
     private func persistMessages(
@@ -243,6 +278,19 @@ public final class ChatViewModel {
         }
     }
 
+    private func persistContextMemory() async {
+        guard let repository, let conversationId = currentConversationId else { return }
+        do {
+            try await repository.updateContextMemory(
+                for: conversationId,
+                summary: rollingCompactSummary,
+                pinnedFacts: rollingPinnedFacts
+            )
+        } catch {
+            print("Erro ao persistir memoria compactada: \(error)")
+        }
+    }
+
     /// Carrega historico de conversa existente
     /// Ref: data-flows.md secao 4
     public func loadConversation(id: UUID) async {
@@ -250,10 +298,14 @@ public final class ChatViewModel {
         currentConversationId = id
         do {
             let messageSummaries = try await repository.fetchMessages(for: id)
-            rollingCompactSummary = ""
-            rollingPinnedFacts = []
+            let memory = try await repository.fetchContextMemory(for: id)
+            rollingCompactSummary = memory.summary
+            rollingPinnedFacts = memory.pinnedFacts
             compactedLastTurn = false
             contextOptimizationTimedOut = false
+            contextPressureLevel = .normal
+            didTrimInputThisTurn = false
+            lastInputTrimmedCharacters = 0
             estimatedPromptTokens = 0
             estimatedTokenBudget = 0
             messages = messageSummaries.map { summary in
@@ -286,6 +338,9 @@ public final class ChatViewModel {
         rollingPinnedFacts = []
         compactedLastTurn = false
         contextOptimizationTimedOut = false
+        contextPressureLevel = .normal
+        didTrimInputThisTurn = false
+        lastInputTrimmedCharacters = 0
         estimatedPromptTokens = 0
         estimatedTokenBudget = 0
         errorMessage = nil
@@ -317,6 +372,23 @@ public final class ChatViewModel {
         return "Pensando..."
     }
 
+    public var contextWarningText: String? {
+        if didTrimInputThisTurn {
+            return "Mensagem longa reduzida para manter estabilidade."
+        }
+        if contextOptimizationTimedOut {
+            return "Contexto muito grande; usamos janela reduzida para evitar travamento."
+        }
+        switch contextPressureLevel {
+        case .normal:
+            return nil
+        case .warning:
+            return "Contexto alto: resposta pode vir mais compacta."
+        case .critical:
+            return "Contexto no limite: compactacao agressiva ativada."
+        }
+    }
+
     private static let defaultSystemStylePrompt = """
     Voce e o Roda, um assistente em portugues brasileiro.
     Responda de forma direta e util, sem metadiscursos (ex.: "como um modelo de linguagem").
@@ -328,17 +400,21 @@ public final class ChatViewModel {
 
     // Compactacao de contexto por turno: reserva espaco para resposta
     // e injeta resumo cumulativo para manter continuidade em janelas pequenas.
-    private static let contextWindowCharacterBudget = 4_200
-    private static let responseReserveCharacters = 1_400
-    private static let recentKeepCharacterBudget = 1_500
-    private static let minimumRecentMessages = 4
-    private static let compactSummaryMaxCharacters = 2_200
-    private static let compactSummaryItemMaxCharacters = 200
-    private static let compactSummaryItemLimit = 20
+    nonisolated private static let contextWindowCharacterBudget = 4_200
+    nonisolated private static let responseReserveCharacters = 1_400
+    nonisolated private static let recentKeepCharacterBudget = 1_500
+    nonisolated private static let minimumRecentMessages = 4
+    nonisolated private static let compactSummaryMaxCharacters = 2_200
+    nonisolated private static let compactSummaryItemMaxCharacters = 200
+    nonisolated private static let compactSummaryItemLimit = 20
+    nonisolated private static let maxUserInputCharacters = 12_000
 
     private static let naturalStylePrompt = "Responda de forma natural, clara e objetiva. Evite introducoes longas."
     private static let technicalStylePrompt = "Responda de forma tecnica, estruturada e precisa, com termos corretos, sem redundancia."
     private static let detailedStylePrompt = "Responda de forma detalhada, com contexto e exemplos quando fizer sentido, sem repetir pontos ja ditos."
+    private static let compactLengthPrompt = "Priorize respostas curtas: 1 a 3 frases na maioria dos casos, sem listas longas, sem repetir a pergunta."
+    private static let normalLengthPrompt = "Use tamanho medio: resposta direta primeiro e, se necessario, no maximo um bloco curto complementar."
+    private static let detailedLengthPrompt = "Quando pertinente, aprofunde com estrutura clara em paragrafos curtos, sem redundancias."
     private static let instructionPriorityPrompt = "Sempre priorize instrucoes explicitas de formato, tamanho e idioma dadas pelo usuario na mensagem atual, mesmo que conflitem com estilo de resposta."
     private static let visionStylePrompt = """
     Para perguntas sobre imagem:
@@ -348,11 +424,11 @@ public final class ChatViewModel {
     Use frases curtas e portugues natural.
     """
 
-    private func buildInferenceMessages(base: [ChatMessage]) -> [ChatMessage] {
+    private func buildInferenceMessagesAsync(base: [ChatMessage]) async -> [ChatMessage] {
         // Remove placeholder vazio do assistente antes de montar prompt de inferencia.
         let sanitized = base.filter { !($0.role == .assistant && $0.content.isEmpty) }
         let hasOriginalSystem = sanitized.contains { $0.role == .system }
-        var result: [ChatMessage] = compactMessagesForTurn(sanitized)
+        var result: [ChatMessage] = await compactMessagesForTurnAsync(sanitized)
         let hasImage = result.contains { !$0.attachments.filter { $0.mimeType.hasPrefix("image/") }.isEmpty }
 
         if !hasOriginalSystem {
@@ -373,15 +449,33 @@ public final class ChatViewModel {
                 }
             }
 
+            let lengthPrompt: String
+            if explicitConstraint != nil {
+                lengthPrompt = Self.normalLengthPrompt
+            } else {
+                switch responseLength {
+                case .compact:
+                    lengthPrompt = Self.compactLengthPrompt
+                case .normal:
+                    lengthPrompt = Self.normalLengthPrompt
+                case .detailed:
+                    lengthPrompt = Self.detailedLengthPrompt
+                }
+            }
+
             let customSystem = systemPrompt.trimmingCharacters(in: .whitespacesAndNewlines)
 
             var promptParts: [String] = [
                 Self.defaultSystemStylePrompt,
                 Self.instructionPriorityPrompt,
                 stylePrompt,
+                lengthPrompt,
             ]
             if !customSystem.isEmpty {
                 promptParts.append("Instrucoes personalizadas do usuario:\n\(customSystem)")
+            }
+            if !rollingPinnedFacts.isEmpty {
+                promptParts.append("Memoria fixa (fatos importantes):\n- " + rollingPinnedFacts.joined(separator: "\n- "))
             }
             if let explicitConstraint {
                 promptParts.append("Siga estritamente esta instrucao desta mensagem:\n\(explicitConstraint)")
@@ -402,15 +496,99 @@ public final class ChatViewModel {
         return result
     }
 
-    private func compactMessagesForTurn(_ base: [ChatMessage]) -> [ChatMessage] {
+    private func compactMessagesForTurnAsync(_ base: [ChatMessage]) async -> [ChatMessage] {
+        isOptimizingContext = true
+        contextOptimizationTimedOut = false
+
+        let existingSummary = rollingCompactSummary
+        let existingPinnedFacts = rollingPinnedFacts
+        let reserveTokens = max(256, maxResponseTokens)
+
+        let compactTask = Task.detached(priority: .utility) {
+            Self.computeCompaction(
+                base: base,
+                existingSummary: existingSummary,
+                existingPinnedFacts: existingPinnedFacts,
+                reserveResponseTokens: reserveTokens
+            )
+        }
+
+        let result: ContextCompactionResult
+        do {
+            result = try await withThrowingTaskGroup(of: ContextCompactionResult.self) { group in
+                group.addTask { await compactTask.value }
+                group.addTask {
+                    try await Task.sleep(for: .milliseconds(1500))
+                    throw ContextCompactionTimeout.timeout
+                }
+                let first = try await group.next()!
+                group.cancelAll()
+                return first
+            }
+        } catch {
+            compactTask.cancel()
+            contextOptimizationTimedOut = true
+            isOptimizingContext = false
+            let fallback = Self.fallbackCompaction(base: base)
+            compactedLastTurn = fallback.wasCompacted
+            estimatedPromptTokens = fallback.estimatedPromptTokens
+            estimatedTokenBudget = fallback.estimatedTokenBudget
+            contextPressureLevel = Self.evaluateContextPressure(
+                promptTokens: fallback.estimatedPromptTokens,
+                budgetTokens: fallback.estimatedTokenBudget
+            )
+            return fallback.messages
+        }
+
+        rollingCompactSummary = result.mergedSummary
+        rollingPinnedFacts = result.pinnedFacts
+        compactedLastTurn = result.wasCompacted
+        estimatedPromptTokens = result.estimatedPromptTokens
+        estimatedTokenBudget = result.estimatedTokenBudget
+        contextPressureLevel = Self.evaluateContextPressure(
+            promptTokens: result.estimatedPromptTokens,
+            budgetTokens: result.estimatedTokenBudget
+        )
+        isOptimizingContext = false
+        return result.messages
+    }
+
+    private struct ContextCompactionResult: Sendable {
+        let messages: [ChatMessage]
+        let mergedSummary: String
+        let pinnedFacts: [String]
+        let wasCompacted: Bool
+        let estimatedPromptTokens: Int
+        let estimatedTokenBudget: Int
+    }
+
+    private enum ContextCompactionTimeout: Error {
+        case timeout
+    }
+
+    nonisolated private static func computeCompaction(
+        base: [ChatMessage],
+        existingSummary: String,
+        existingPinnedFacts: [String],
+        reserveResponseTokens: Int
+    ) -> ContextCompactionResult {
         let systemMessages = base.filter { $0.role == .system }
         let conversational = base.filter { $0.role != .system }
-        guard !conversational.isEmpty else { return base }
+        guard !conversational.isEmpty else {
+            let estimated = estimateTokens(forCharacters: base.reduce(0) { $0 + $1.content.count })
+            return ContextCompactionResult(
+                messages: base,
+                mergedSummary: existingSummary,
+                pinnedFacts: existingPinnedFacts,
+                wasCompacted: false,
+                estimatedPromptTokens: estimated,
+                estimatedTokenBudget: max(1024, reserveResponseTokens * 2)
+            )
+        }
 
-        let inputBudget = max(
-            900,
-            Self.contextWindowCharacterBudget - Self.responseReserveCharacters
-        )
+        let estimatedContextWindow = max(1024, reserveResponseTokens * 2)
+        let inputBudgetTokens = max(800, estimatedContextWindow - reserveResponseTokens)
+        let inputBudgetChars = inputBudgetTokens * 4
 
         var keptReversed: [ChatMessage] = []
         var keptCharacters = 0
@@ -436,8 +614,8 @@ public final class ChatViewModel {
         let older = Array(conversational.prefix(max(0, conversational.count - keepCount)))
 
         let freshSummary = buildCompactSummary(from: older)
-        let mergedSummary = mergeCompactSummaries(existing: rollingCompactSummary, fresh: freshSummary)
-        rollingCompactSummary = mergedSummary
+        let mergedSummary = mergeCompactSummaries(existing: existingSummary, fresh: freshSummary)
+        let mergedPinned = mergePinnedFacts(existing: existingPinnedFacts, fresh: extractPinnedFacts(from: older))
 
         var compacted = systemMessages
         if !mergedSummary.isEmpty {
@@ -451,7 +629,7 @@ public final class ChatViewModel {
         compacted.append(contentsOf: keptRecent)
 
         var total = compacted.reduce(0) { $0 + $1.content.count }
-        while total > inputBudget, compacted.count > max(2, systemMessages.count + 1) {
+        while total > inputBudgetChars, compacted.count > max(2, systemMessages.count + 1) {
             let removeIndex = systemMessages.count + (mergedSummary.isEmpty ? 0 : 1)
             if compacted.indices.contains(removeIndex) {
                 compacted.remove(at: removeIndex)
@@ -461,10 +639,34 @@ public final class ChatViewModel {
             }
         }
 
-        return compacted
+        let estimatedPromptTokens = estimateTokens(forCharacters: total)
+        return ContextCompactionResult(
+            messages: compacted,
+            mergedSummary: mergedSummary,
+            pinnedFacts: mergedPinned,
+            wasCompacted: !older.isEmpty,
+            estimatedPromptTokens: estimatedPromptTokens,
+            estimatedTokenBudget: inputBudgetTokens
+        )
     }
 
-    private func mergeCompactSummaries(existing: String, fresh: String) -> String {
+    nonisolated private static func fallbackCompaction(base: [ChatMessage]) -> ContextCompactionResult {
+        let systemMessages = base.filter { $0.role == .system }
+        let conversational = base.filter { $0.role != .system }
+        let recent = Array(conversational.suffix(max(Self.minimumRecentMessages, 6)))
+        let compacted = systemMessages + recent
+        let chars = compacted.reduce(0) { $0 + $1.content.count }
+        return ContextCompactionResult(
+            messages: compacted,
+            mergedSummary: "",
+            pinnedFacts: [],
+            wasCompacted: conversational.count > recent.count,
+            estimatedPromptTokens: estimateTokens(forCharacters: chars),
+            estimatedTokenBudget: max(1024, Self.minimumRecentMessages * 200)
+        )
+    }
+
+    nonisolated private static func mergeCompactSummaries(existing: String, fresh: String) -> String {
         if existing.isEmpty { return fresh }
         if fresh.isEmpty { return existing }
 
@@ -476,7 +678,7 @@ public final class ChatViewModel {
         return String(merged.suffix(Self.compactSummaryMaxCharacters))
     }
 
-    private func buildCompactSummary(from messages: [ChatMessage]) -> String {
+    nonisolated private static func buildCompactSummary(from messages: [ChatMessage]) -> String {
         var lines: [String] = []
 
         for message in messages.reversed() where message.role != .system {
@@ -505,7 +707,41 @@ public final class ChatViewModel {
         return String(summary.prefix(Self.compactSummaryMaxCharacters)) + "..."
     }
 
-    private func shouldDropAsNoise(_ text: String) -> Bool {
+    nonisolated private static func extractPinnedFacts(from messages: [ChatMessage]) -> [String] {
+        var facts: [String] = []
+        let patterns = [
+            "meu nome e",
+            "me chamo",
+            "prefiro",
+            "sempre",
+            "nao gosto",
+            "não gosto",
+            "trabalho com"
+        ]
+
+        for message in messages where message.role == .user {
+            let normalized = normalizeSingleLine(message.content)
+            let lowered = normalized.lowercased()
+            if patterns.contains(where: { lowered.contains($0) }) {
+                let clipped = normalized.count > 160 ? String(normalized.prefix(160)) + "..." : normalized
+                facts.append(clipped)
+            }
+        }
+        return facts
+    }
+
+    nonisolated private static func mergePinnedFacts(existing: [String], fresh: [String]) -> [String] {
+        var merged = existing
+        for item in fresh where !item.isEmpty {
+            if !merged.contains(item) {
+                merged.append(item)
+            }
+        }
+        if merged.count <= 12 { return merged }
+        return Array(merged.suffix(12))
+    }
+
+    nonisolated private static func shouldDropAsNoise(_ text: String) -> Bool {
         if text.count < 8 { return true }
         let lowered = text.lowercased()
         return lowered == "ok"
@@ -516,12 +752,227 @@ public final class ChatViewModel {
             || lowered == "blz"
     }
 
-    private func normalizeSingleLine(_ text: String) -> String {
+    nonisolated private static func normalizeSingleLine(_ text: String) -> String {
         text
             .components(separatedBy: .whitespacesAndNewlines)
             .filter { !$0.isEmpty }
             .joined(separator: " ")
             .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    nonisolated private static func estimateTokens(forCharacters count: Int) -> Int {
+        max(1, Int((Double(count) / 4.0).rounded(.up)))
+    }
+
+    private func formatAssistantOutputForDisplay(_ text: String) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return text }
+
+        // Preserva blocos de codigo e normaliza apenas texto comum.
+        let codePattern = "```[\\s\\S]*?```"
+        let nsText = trimmed as NSString
+        let fullRange = NSRange(location: 0, length: nsText.length)
+
+        guard let regex = try? NSRegularExpression(pattern: codePattern) else {
+            return formatPlainAssistantText(trimmed)
+        }
+
+        let matches = regex.matches(in: trimmed, options: [], range: fullRange)
+        if matches.isEmpty {
+            return formatPlainAssistantText(trimmed)
+        }
+
+        var result = ""
+        var cursor = 0
+        for match in matches {
+            if match.range.location > cursor {
+                let plainRange = NSRange(location: cursor, length: match.range.location - cursor)
+                let plain = nsText.substring(with: plainRange)
+                result += formatPlainAssistantText(plain)
+                if !result.hasSuffix("\n\n") { result += "\n\n" }
+            }
+
+            result += nsText.substring(with: match.range)
+            result += "\n\n"
+            cursor = match.range.location + match.range.length
+        }
+
+        if cursor < nsText.length {
+            let trailing = nsText.substring(with: NSRange(location: cursor, length: nsText.length - cursor))
+            result += formatPlainAssistantText(trailing)
+        }
+
+        return result.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func formatPlainAssistantText(_ text: String) -> String {
+        let sanitizedMarkdown = normalizeBrokenInlineMarkdownMarkers(in: text)
+        let withSentenceSpaces = insertMissingSentenceSpaces(in: sanitizedMarkdown)
+        let withMarkdownHeadingBreaks = breakMarkdownHeadingRuns(in: withSentenceSpaces)
+        let paragraphReady = injectParagraphBreaksForLongSingleBlock(withMarkdownHeadingBreaks)
+        let lines = paragraphReady
+            .components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+
+        var rebuilt: [String] = []
+        var paragraph = ""
+        var sentenceCount = 0
+
+        func flushParagraph() {
+            let p = paragraph.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !p.isEmpty { rebuilt.append(p) }
+            paragraph = ""
+            sentenceCount = 0
+        }
+
+        for line in lines {
+            if line.isEmpty {
+                flushParagraph()
+                continue
+            }
+
+            let isListLike = line.hasPrefix("- ")
+                || line.hasPrefix("* ")
+                || line.range(of: "^[0-9]+\\.\\s", options: .regularExpression) != nil
+            let isShortHeading = line.hasSuffix(":") && line.count <= 80
+
+            if isListLike || isShortHeading {
+                flushParagraph()
+                rebuilt.append(line)
+                continue
+            }
+
+            if paragraph.isEmpty {
+                paragraph = line
+            } else {
+                paragraph += " " + line
+            }
+
+            sentenceCount += line.filter { $0 == "." || $0 == "!" || $0 == "?" }.count
+
+            let shouldBreakForSize = paragraph.count > 220
+            let shouldBreakForRhythm = sentenceCount >= 3 && paragraph.count > 120
+            if shouldBreakForSize || shouldBreakForRhythm {
+                flushParagraph()
+            }
+        }
+
+        flushParagraph()
+        return rebuilt.joined(separator: "\n\n")
+    }
+
+    private func insertMissingSentenceSpaces(in text: String) -> String {
+        var normalized = text
+            .replacingOccurrences(of: "\r\n", with: "\n")
+            .replacingOccurrences(of: "\r", with: "\n")
+
+        // Preserva parágrafos: normaliza apenas espaços/tabs, não quebras de linha.
+        normalized = normalized.replacingOccurrences(of: "[\\t ]+", with: " ", options: .regularExpression)
+        normalized = normalized.replacingOccurrences(of: "\\n{3,}", with: "\n\n", options: .regularExpression)
+
+        // Pontuacao seguida diretamente de nova sentenca.
+        normalized = normalized.replacingOccurrences(
+            of: "([\\.!\\?:;])([A-ZÀ-Ý0-9])",
+            with: "$1 $2",
+            options: .regularExpression
+        )
+
+        // Pontuacao colada com markdown inline (ex.: ".**Texto", "?__Texto", ":`Texto").
+        normalized = normalized.replacingOccurrences(
+            of: "([\\.!\\?:;])(\\*{1,2}|_{1,2}|`)([A-ZÀ-Ý0-9])",
+            with: "$1 $2$3",
+            options: .regularExpression
+        )
+
+        // Fecha markdown inline e garante espaco antes da proxima sentenca (ex.: "**texto**Pergunta").
+        normalized = normalized.replacingOccurrences(
+            of: "(\\*{1,2}|_{1,2}|`)([A-ZÀ-Ý0-9])",
+            with: "$1 $2",
+            options: .regularExpression
+        )
+
+        // Garante quebra para listas que vieram coladas ao texto anterior.
+        normalized = normalized.replacingOccurrences(
+            of: "\\s(?=(?:- |\\* |[0-9]+\\.\\s))",
+            with: "\n",
+            options: .regularExpression
+        )
+
+        return normalized.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func injectParagraphBreaksForLongSingleBlock(_ text: String) -> String {
+        let hasExplicitParagraphs = text.contains("\n")
+        guard !hasExplicitParagraphs, text.count > 220 else { return text }
+
+        // For long single-block outputs, split on sentence boundaries to improve readability.
+        return text.replacingOccurrences(
+            of: "([\\.!\\?])\\s+(?=[A-ZÀ-Ý0-9])",
+            with: "$1\n",
+            options: .regularExpression
+        )
+    }
+
+    private func breakMarkdownHeadingRuns(in text: String) -> String {
+        var normalized = text
+
+        // Example handled:
+        // "... para você:** Onda de Sol**No mar..."
+        // -> "... para você:\n**Onda de Sol**\nNo mar..."
+        normalized = normalized.replacingOccurrences(
+            of: "([\\.!\\?:;])\\s*(\\*\\*[^*\\n]{2,80}\\*\\*)(?=[A-ZÀ-Ý0-9])",
+            with: "$1\n$2\n",
+            options: .regularExpression
+        )
+
+        // Also separate when bold closes and next sentence starts immediately.
+        normalized = normalized.replacingOccurrences(
+            of: "(\\*\\*[^*\\n]{2,80}\\*\\*)(?=[A-ZÀ-Ý0-9])",
+            with: "$1\n",
+            options: .regularExpression
+        )
+
+        return normalized
+    }
+
+    private func normalizeBrokenInlineMarkdownMarkers(in text: String) -> String {
+        var normalized = text
+
+        // Preserve valid markdown pairs and remove only orphan markers.
+        normalized = balancePairedToken("**", in: normalized)
+        normalized = balancePairedToken("__", in: normalized)
+        normalized = balancePairedToken("`", in: normalized)
+
+        // For single '*' and '_', keep list bullet prefix, strip obvious orphan emphasis markers.
+        normalized = normalized
+            .components(separatedBy: .newlines)
+            .map { line in
+                if line.hasPrefix("* ") {
+                    let remainder = String(line.dropFirst(2))
+                        .replacingOccurrences(of: "(?<!\\*)\\*(?!\\*)", with: "", options: .regularExpression)
+                        .replacingOccurrences(of: "(?<!_)_(?!_)", with: "", options: .regularExpression)
+                    return "* " + remainder
+                }
+                return line
+                    .replacingOccurrences(of: "(?<!\\*)\\*(?!\\*)", with: "", options: .regularExpression)
+                    .replacingOccurrences(of: "(?<!_)_(?!_)", with: "", options: .regularExpression)
+            }
+            .joined(separator: "\n")
+
+        return normalized
+    }
+
+    private func balancePairedToken(_ token: String, in text: String) -> String {
+        let count = text.components(separatedBy: token).count - 1
+        guard count % 2 != 0 else { return text }
+
+        // Remove only the last unmatched token, keep previous valid pairs.
+        if let range = text.range(of: token, options: .backwards) {
+            var fixed = text
+            fixed.removeSubrange(range)
+            return fixed
+        }
+        return text
     }
 
     private func explicitResponseConstraint(from userText: String) -> String? {
@@ -548,6 +999,35 @@ public final class ChatViewModel {
         }
 
         return nil
+    }
+
+    private struct SanitizedInput {
+        let text: String
+        let wasTrimmed: Bool
+        let trimmedCharacters: Int
+    }
+
+    nonisolated private static func sanitizeUserInput(_ text: String) -> SanitizedInput {
+        let normalized = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard normalized.count > Self.maxUserInputCharacters else {
+            return SanitizedInput(text: normalized, wasTrimmed: false, trimmedCharacters: 0)
+        }
+
+        let clipped = String(normalized.prefix(Self.maxUserInputCharacters))
+        let suffix = "\n\n[Conteudo reduzido automaticamente para manter estabilidade.]"
+        return SanitizedInput(
+            text: clipped + suffix,
+            wasTrimmed: true,
+            trimmedCharacters: normalized.count - Self.maxUserInputCharacters
+        )
+    }
+
+    nonisolated private static func evaluateContextPressure(promptTokens: Int, budgetTokens: Int) -> ContextPressureLevel {
+        guard budgetTokens > 0 else { return .normal }
+        let ratio = Double(promptTokens) / Double(budgetTokens)
+        if ratio >= 0.95 { return .critical }
+        if ratio >= 0.82 { return .warning }
+        return .normal
     }
 
     private static func normalizeStreamingBoundary(

@@ -29,6 +29,12 @@ public enum ChatFontSizePreference: String, Codable, Sendable, CaseIterable {
     }
 }
 
+public enum ResponseLengthPreference: String, Codable, Sendable, CaseIterable {
+    case compact
+    case normal
+    case detailed
+}
+
 @Model
 public final class UserPreferences {
     // MARK: - Model
@@ -46,6 +52,9 @@ public final class UserPreferences {
 
     /// Persisted as raw string to avoid enum-cast crashes with older stores.
     public var chatFontSizeRaw: String = ChatFontSizePreference.system.rawValue
+
+    /// Persisted as raw string to avoid enum-cast crashes with older stores.
+    public var responseLengthRaw: String = ResponseLengthPreference.normal.rawValue
 
     // MARK: - Voice
     public var voiceEnabled: Bool = true
@@ -65,6 +74,11 @@ public final class UserPreferences {
     public var chatFontSize: ChatFontSizePreference {
         get { ChatFontSizePreference(rawValue: chatFontSizeRaw) ?? .system }
         set { chatFontSizeRaw = newValue.rawValue }
+    }
+
+    public var responseLength: ResponseLengthPreference {
+        get { ResponseLengthPreference(rawValue: responseLengthRaw) ?? .normal }
+        set { responseLengthRaw = newValue.rawValue }
     }
 
     public var clampedTemperature: Float {

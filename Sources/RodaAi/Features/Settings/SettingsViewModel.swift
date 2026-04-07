@@ -13,6 +13,7 @@ final class SettingsViewModel {
     var maxTokens: Int = 2048
     var repetitionPenalty: Float = 1.1
     var responseStyle: ResponseStyle = .natural
+    var responseLength: ResponseLengthPreference = .normal
     var systemPrompt: String = ""
 
     // MARK: - App
@@ -120,6 +121,7 @@ final class SettingsViewModel {
         maxTokens = prefs.maxTokens
         repetitionPenalty = prefs.repetitionPenalty
         responseStyle = prefs.responseStyle
+        responseLength = prefs.responseLength
         systemPrompt = prefs.systemPrompt
         voiceEnabled = prefs.voiceEnabled
         appearanceMode = prefs.appearanceMode
@@ -136,6 +138,7 @@ final class SettingsViewModel {
         prefs.maxTokens = maxTokens
         prefs.repetitionPenalty = repetitionPenalty
         prefs.responseStyle = responseStyle
+        prefs.responseLength = responseLength
         prefs.systemPrompt = systemPrompt
         prefs.voiceEnabled = voiceEnabled
         prefs.appearanceMode = appearanceMode
@@ -150,5 +153,6 @@ final class SettingsViewModel {
         topP = 0.95
         maxTokens = 2048
         repetitionPenalty = 1.1
+        responseLength = .normal
     }
 }

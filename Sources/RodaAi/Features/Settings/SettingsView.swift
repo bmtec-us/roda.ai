@@ -38,6 +38,7 @@ struct SettingsView: View {
             .onDisappear { try? viewModel.savePreferences() }
             .onChange(of: viewModel.appearanceMode) { _, _ in persistPreferencesNow() }
             .onChange(of: viewModel.responseStyle) { _, _ in persistPreferencesNow() }
+            .onChange(of: viewModel.responseLength) { _, _ in persistPreferencesNow() }
             .onChange(of: viewModel.chatFontSize) { _, _ in persistPreferencesNow() }
             .alert(
                 "settings.storage.deleteConfirm.title",
@@ -177,6 +178,12 @@ struct SettingsView: View {
                 Text("settings.responseStyle.natural").tag(ResponseStyle.natural)
                 Text("settings.responseStyle.technical").tag(ResponseStyle.technical)
                 Text("settings.responseStyle.detailed").tag(ResponseStyle.detailed)
+            }
+
+            Picker("Comprimento da resposta", selection: $viewModel.responseLength) {
+                Text("Curta").tag(ResponseLengthPreference.compact)
+                Text("Normal").tag(ResponseLengthPreference.normal)
+                Text("Detalhada").tag(ResponseLengthPreference.detailed)
             }
 
             // Reset

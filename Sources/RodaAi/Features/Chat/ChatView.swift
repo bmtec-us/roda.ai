@@ -5,6 +5,7 @@ import RodaAiCore
 struct ChatView: View {
     @State var viewModel: ChatViewModel
     let chatFontSize: ChatFontSizePreference
+    var onResponseLengthChange: (ResponseLengthPreference) -> Void = { _ in }
     @Environment(AppDependencies.self) private var deps
 
     var fileProcessor: any FileTextExtractor = FileProcessor()
@@ -22,7 +23,9 @@ struct ChatView: View {
                             ForEach(Array(viewModel.messages.enumerated()), id: \.offset) { index, message in
                                 MessageBubble(
                                     message: message,
-                                    chatFontScale: chatFontSize.scaleFactor
+                                    chatFontScale: chatFontSize.scaleFactor,
+                                    responseLength: viewModel.responseLength,
+                                    loadingText: viewModel.loadingIndicatorText
                                 )
                                     .id(index)
                             }
@@ -56,6 +59,11 @@ struct ChatView: View {
                 .padding(.vertical, 6)
             }
 
+            if viewModel.isOptimizingContext || viewModel.contextOptimizationTimedOut || viewModel.contextWarningText != nil {
+                contextStatusChip
+                    .padding(.bottom, 6)
+            }
+
             // Composer
             MessageComposer(
                 isStreaming: viewModel.chatState.isStreaming,
@@ -85,6 +93,12 @@ struct ChatView: View {
             ToolbarItem(placement: .principal) {
                 modelSwitcherMenu
             }
+            ToolbarItem(placement: .topBarTrailing) {
+                responseLengthMenu
+            }
+        }
+        .onChange(of: viewModel.responseLength) { _, newValue in
+            onResponseLengthChange(newValue)
         }
     }
 
@@ -124,21 +138,54 @@ struct ChatView: View {
                     .foregroundStyle(.tint)
                 Text(active.displayName)
                     .font(.caption.weight(.medium))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
             } else {
                 Image(systemName: "cpu")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Text("settings.defaultModel.empty")
+                Text("Modelo")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
             Image(systemName: "chevron.down")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }
-        .padding(.horizontal, 10)
+        .frame(maxWidth: 150)
+        .padding(.horizontal, 8)
         .padding(.vertical, 5)
         .modifier(GlassCapsuleModifier())
+    }
+
+    private var responseLengthMenu: some View {
+        Menu {
+            ForEach(ResponseLengthPreference.allCases, id: \.rawValue) { option in
+                Button {
+                    viewModel.responseLength = option
+                } label: {
+                    HStack {
+                        Text(responseLengthTitle(option))
+                        if viewModel.responseLength == option {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+        } label: {
+            Label(responseLengthTitle(viewModel.responseLength), systemImage: "textformat.size")
+                .font(.caption)
+        }
+        .accessibilityLabel("Comprimento da resposta")
+    }
+
+    private func responseLengthTitle(_ option: ResponseLengthPreference) -> String {
+        switch option {
+        case .compact: return "Curta"
+        case .normal: return "Normal"
+        case .detailed: return "Detalhada"
+        }
     }
 
     // MARK: - Empty State
@@ -159,6 +206,61 @@ struct ChatView: View {
                 .foregroundStyle(.tertiary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
+        }
+    }
+
+    private var contextStatusChip: some View {
+        HStack(spacing: 8) {
+            if viewModel.isOptimizingContext {
+                ProgressView()
+                    .controlSize(.mini)
+            } else {
+                Image(systemName: contextStatusIcon)
+                    .font(.caption)
+                    .foregroundStyle(contextStatusColor)
+            }
+
+            Text(viewModel.contextWarningText ?? viewModel.loadingIndicatorText)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Spacer(minLength: 0)
+
+            if viewModel.estimatedPromptTokens > 0 {
+                Text("~\(viewModel.estimatedPromptTokens)/\(viewModel.estimatedTokenBudget) tok")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(ColorPalette.surfaceElevated)
+        .clipShape(Capsule())
+        .padding(.horizontal, 12)
+    }
+
+    private var contextStatusIcon: String {
+        if viewModel.didTrimInputThisTurn { return "scissors" }
+        if viewModel.contextOptimizationTimedOut { return "exclamationmark.triangle" }
+        switch viewModel.contextPressureLevel {
+        case .normal:
+            return "checkmark.circle"
+        case .warning:
+            return "exclamationmark.circle"
+        case .critical:
+            return "exclamationmark.triangle"
+        }
+    }
+
+    private var contextStatusColor: Color {
+        if viewModel.didTrimInputThisTurn { return .orange }
+        switch viewModel.contextPressureLevel {
+        case .normal:
+            return .secondary
+        case .warning:
+            return .orange
+        case .critical:
+            return .red
         }
     }
 
