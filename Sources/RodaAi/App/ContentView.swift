@@ -8,9 +8,6 @@ struct ContentView: View {
     @Environment(QuickActionHandler.self) private var quickActions
     @Environment(\.modelContext) private var modelContext
 
-    // Query para detectar se onboarding ja foi completado.
-    // Usa `contains` em vez de `first?` — defensivo contra multiplas rows
-    // que podem existir de versoes anteriores buggadas do OnboardingView.
     @Query private var preferences: [UserPreferences]
 
     private var hasCompletedOnboarding: Bool {
@@ -25,26 +22,26 @@ struct ContentView: View {
                 OnboardingView()
             }
         }
+        .tint(ColorPalette.accent) // Propagates into glass tab bar highlights
         .onChange(of: quickActions.pendingAction) { _, action in
             handleQuickAction(action)
         }
     }
 
-    /// Reage a Home Screen Quick Actions (iOS) navegando para a tab apropriada.
     private func handleQuickAction(_ action: QuickActionType?) {
         guard let action else { return }
         #if os(iOS)
         switch action {
         case .voice:
-            selectedTab = 2  // Tab Voz
+            selectedTab = 2
         case .newChat:
-            selectedTab = 0  // Tab Conversas (e starta nova via state)
+            selectedTab = 0
         }
         #endif
         quickActions.clear()
     }
 
-    // MARK: - Main App (post-onboarding)
+    // MARK: - Main App
 
     @ViewBuilder
     private var mainAppView: some View {
@@ -54,6 +51,8 @@ struct ContentView: View {
         macOSSplitView
         #endif
     }
+
+    // MARK: - iOS (Glass Tab Bar auto-applied by iOS 26)
 
     #if os(iOS)
     @State private var selectedTab: Int = 0
@@ -76,6 +75,8 @@ struct ContentView: View {
                 SettingsView(modelContext: deps.modelContainer.mainContext)
             }
         }
+        // iOS 26: TabView automatically gets glass floating pill tab bar.
+        // No extra code needed — the system handles glass rendering.
     }
 
     private var conversationsTab: some View {
@@ -85,6 +86,8 @@ struct ContentView: View {
         }
     }
     #endif
+
+    // MARK: - macOS (Glass Sidebar auto-applied by macOS 26)
 
     #if os(macOS)
     @State private var macNavTarget: MacNavTarget? = .conversations
@@ -133,16 +136,10 @@ private enum MacNavTarget: Hashable {
 #endif
 
 // MARK: - Conversations Container
-//
-// Container que combina ConversationListView (master) + ChatView (detail),
-// mantendo um unico ChatViewModel reutilizado ao trocar de conversa.
-// Wrapa a logica de "criar nova" / "abrir existente" para ambos os layouts.
 
 struct ConversationsContainer: View {
     @Environment(AppDependencies.self) private var deps
     @State private var chatViewModel: ChatViewModel?
-    // Default false — sheet so abre quando usuario toca botao Historico.
-    // Antes (bug): default true abria sheet vazio em todo launch.
     @State private var showingList: Bool = false
 
     var body: some View {

@@ -6,41 +6,39 @@ struct ChatView: View {
     @State var viewModel: ChatViewModel
     @Environment(AppDependencies.self) private var deps
 
-    /// File processor injetado para anexos (pode usar FileProcessor real ou mock).
     var fileProcessor: any FileTextExtractor = FileProcessor()
 
     var body: some View {
         VStack(spacing: 0) {
-            // Mensagens
+            // Messages
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVStack(spacing: 12) {
+                    LazyVStack(spacing: 14) {
                         if viewModel.messages.isEmpty {
                             emptyStateView
-                                .padding(.top, 60)
+                                .padding(.top, 80)
                         } else {
                             ForEach(Array(viewModel.messages.enumerated()), id: \.offset) { index, message in
                                 MessageBubble(message: message)
                                     .id(index)
                             }
-                            // Typing indicator durante .loading (entre send e primeiro token)
                             if case .loading = viewModel.chatState {
                                 TypingIndicator()
                                     .id("typingIndicator")
-                                    .transition(.opacity)
+                                    .transition(.blurReplace)
                             }
                         }
                     }
                     .padding()
                 }
                 .onChange(of: viewModel.messages.count) { _, newCount in
-                    withAnimation {
+                    withAnimation(.spring(duration: 0.3)) {
                         proxy.scrollTo(newCount - 1, anchor: .bottom)
                     }
                 }
             }
 
-            // Erro (ref: data-flows.md "Fluxo de Erro")
+            // Error
             if let errorMessage = viewModel.errorMessage {
                 ErrorBanner(
                     message: errorMessage,
@@ -50,9 +48,7 @@ struct ChatView: View {
                 .padding(.vertical, 6)
             }
 
-            Divider()
-
-            // Compositor (com anexos de arquivo + imagem)
+            // Composer
             MessageComposer(
                 isStreaming: viewModel.chatState.isStreaming,
                 onSend: { text, attachedText, imageData in
@@ -83,11 +79,8 @@ struct ChatView: View {
         }
     }
 
-    // MARK: - Model Switcher Menu
+    // MARK: - Model Switcher (Glass Capsule)
 
-    /// Menu no toolbar mostrando modelo ativo + lista para troca rapida.
-    /// Tap abre Menu com lista de downloadedModels. Selecionar carrega o modelo
-    /// via ModelManager.loadModel().
     private var modelSwitcherMenu: some View {
         Menu {
             if deps.modelManager.downloadedModels.isEmpty {
@@ -96,9 +89,7 @@ struct ChatView: View {
             } else {
                 ForEach(deps.modelManager.downloadedModels, id: \.identifier) { model in
                     Button {
-                        Task {
-                            try? await deps.modelManager.loadModel(model)
-                        }
+                        Task { try? await deps.modelManager.loadModel(model) }
                     } label: {
                         HStack {
                             Text(model.displayName)
@@ -110,54 +101,74 @@ struct ChatView: View {
                 }
             }
         } label: {
-            HStack(spacing: 4) {
-                if let active = deps.modelManager.activeModel {
-                    Image(systemName: "cpu.fill")
-                        .font(.caption)
-                        .foregroundStyle(ColorPalette.accent)
-                    Text(active.displayName)
-                        .font(.caption.weight(.medium))
-                } else {
-                    Image(systemName: "cpu")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Text("settings.defaultModel.empty")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Image(systemName: "chevron.down")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
-            .background(.ultraThinMaterial)
-            .clipShape(Capsule())
+            modelSwitcherLabel
         }
         .accessibilityLabel("model.action.activate")
+    }
+
+    @ViewBuilder
+    private var modelSwitcherLabel: some View {
+        HStack(spacing: 4) {
+            if let active = deps.modelManager.activeModel {
+                Image(systemName: "cpu.fill")
+                    .font(.caption)
+                    .foregroundStyle(.tint)
+                Text(active.displayName)
+                    .font(.caption.weight(.medium))
+            } else {
+                Image(systemName: "cpu")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text("settings.defaultModel.empty")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Image(systemName: "chevron.down")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .modifier(GlassCapsuleModifier())
     }
 
     // MARK: - Empty State
 
     private var emptyStateView: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 16) {
             Image(systemName: hasActiveModel ? "message" : "cpu")
                 .font(.system(size: 48))
-                .foregroundStyle(ColorPalette.textTertiary)
+                .foregroundStyle(.tertiary)
+                .symbolEffect(.pulse, options: .repeating.speed(0.5))
 
             Text(hasActiveModel ? "chat.empty.title" : "settings.defaultModel.empty")
-                .font(.rodaHeadline)
-                .foregroundStyle(ColorPalette.textSecondary)
+                .font(.headline)
+                .foregroundStyle(.secondary)
 
             Text("chat.empty.subtitle")
-                .font(.rodaCaption)
-                .foregroundStyle(ColorPalette.textTertiary)
+                .font(.subheadline)
+                .foregroundStyle(.tertiary)
                 .multilineTextAlignment(.center)
-                .padding(.horizontal)
+                .padding(.horizontal, 40)
         }
     }
 
     private var hasActiveModel: Bool {
         deps.modelManager.activeModel != nil
+    }
+}
+
+// MARK: - Glass Capsule Modifier
+
+private struct GlassCapsuleModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26, macOS 26, *) {
+            content
+                .glassEffect(in: .capsule)
+        } else {
+            content
+                .background(.ultraThinMaterial)
+                .clipShape(Capsule())
+        }
     }
 }
