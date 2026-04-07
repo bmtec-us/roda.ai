@@ -8,6 +8,12 @@ public enum AppearanceMode: String, Codable, Sendable {
     case dark
 }
 
+public enum ResponseStyle: String, Codable, Sendable, CaseIterable {
+    case natural
+    case technical
+    case detailed
+}
+
 @Model
 public final class UserPreferences {
     // MARK: - Model
@@ -20,6 +26,9 @@ public final class UserPreferences {
     public var maxTokens: Int = 2048
     public var repetitionPenalty: Float = 1.1
 
+    /// Persisted as raw string to avoid enum-cast crashes with older stores.
+    public var responseStyleRaw: String = ResponseStyle.natural.rawValue
+
     // MARK: - Voice
     public var voiceEnabled: Bool = true
 
@@ -30,6 +39,11 @@ public final class UserPreferences {
     public var hasCompletedOnboarding: Bool = false
 
     // MARK: - Computed
+    public var responseStyle: ResponseStyle {
+        get { ResponseStyle(rawValue: responseStyleRaw) ?? .natural }
+        set { responseStyleRaw = newValue.rawValue }
+    }
+
     public var clampedTemperature: Float {
         min(max(defaultTemperature, 0.0), 2.0)
     }
