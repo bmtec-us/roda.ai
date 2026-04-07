@@ -12,10 +12,10 @@ struct ProgressRing: View {
     var body: some View {
         ZStack {
             Circle()
-                .stroke(ColorPalette.surfaceSecondary, lineWidth: lineWidth)
+                .stroke(.quaternary, lineWidth: lineWidth)
             Circle()
                 .trim(from: 0, to: clampedProgress)
-                .stroke(ColorPalette.accent, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
+                .stroke(Color.accentColor, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
                 .rotationEffect(.degrees(-90))
                 .animation(.easeInOut(duration: 0.3), value: clampedProgress)
         }

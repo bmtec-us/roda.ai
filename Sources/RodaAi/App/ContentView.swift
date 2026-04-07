@@ -14,6 +14,15 @@ struct ContentView: View {
         preferences.contains { $0.hasCompletedOnboarding }
     }
 
+    private var colorScheme: ColorScheme? {
+        guard let pref = preferences.first else { return nil }
+        switch pref.appearanceMode {
+        case .light: return .light
+        case .dark: return .dark
+        case .system: return nil
+        }
+    }
+
     var body: some View {
         Group {
             if hasCompletedOnboarding {
@@ -22,7 +31,8 @@ struct ContentView: View {
                 OnboardingView()
             }
         }
-        .tint(ColorPalette.accent) // Propagates into glass tab bar highlights
+        .tint(ColorPalette.accent)
+        .preferredColorScheme(colorScheme)
         .onChange(of: quickActions.pendingAction) { _, action in
             handleQuickAction(action)
         }

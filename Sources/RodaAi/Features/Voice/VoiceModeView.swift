@@ -26,7 +26,7 @@ struct VoiceModeView: View {
             microphoneButton
                 .padding(.bottom, 40)
         }
-        .background(ColorPalette.surface)
+        // No opaque background — allows glass tab bar to show through
     }
 
     // MARK: - State Indicator
@@ -37,23 +37,23 @@ struct VoiceModeView: View {
         case .idle:
             Text("voice.state.idle")
                 .font(.rodaHeadline)
-                .foregroundStyle(ColorPalette.textSecondary)
+                .foregroundStyle(.secondary)
         case .listening:
             Text("voice.state.listening")
                 .font(.rodaHeadline)
-                .foregroundStyle(ColorPalette.accent)
+                .foregroundStyle(.tint)
         case .processing:
             Text("voice.state.processing")
                 .font(.rodaHeadline)
-                .foregroundStyle(ColorPalette.accent)
+                .foregroundStyle(.tint)
         case .speaking:
             Text("voice.state.speaking")
                 .font(.rodaHeadline)
-                .foregroundStyle(ColorPalette.accent)
+                .foregroundStyle(.tint)
         case .error(let error):
             Text(error.errorDescription ?? String(localized: "voice.state.error"))
                 .font(.rodaBody)
-                .foregroundStyle(ColorPalette.error)
+                .foregroundStyle(.red)
         }
     }
 
@@ -65,14 +65,14 @@ struct VoiceModeView: View {
             if !voiceService.transcript.isEmpty {
                 Text(voiceService.transcript)
                     .font(.rodaBody)
-                    .foregroundStyle(ColorPalette.textPrimary)
+                    .foregroundStyle(.primary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
             }
             if !voiceService.response.isEmpty {
                 Text(voiceService.response)
                     .font(.rodaBody)
-                    .foregroundStyle(ColorPalette.textSecondary)
+                    .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
             }

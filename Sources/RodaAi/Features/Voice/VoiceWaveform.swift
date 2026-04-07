@@ -12,7 +12,7 @@ struct VoiceWaveform: View {
             HStack(spacing: 3) {
                 ForEach(0..<20, id: \.self) { i in
                     RoundedRectangle(cornerRadius: 2)
-                        .fill(isActive ? ColorPalette.accent : ColorPalette.surfaceSecondary)
+                        .fill(isActive ? Color.accentColor : Color.secondary.opacity(0.3))
                         .frame(width: 3, height: isActive ? CGFloat.random(in: 8...30) : 8)
                 }
             }
@@ -41,7 +41,7 @@ struct VoiceWaveform: View {
                             height: height
                         )
                         let path = Path(roundedRect: rect, cornerRadius: 1.5)
-                        context.fill(path, with: .color(ColorPalette.accent))
+                        context.fill(path, with: .color(Color.accentColor))
                     }
                 }
             }
