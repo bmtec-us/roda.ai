@@ -6,7 +6,6 @@ import RodaAiCore
 struct SettingsView: View {
     @Environment(AppDependencies.self) private var deps
     @State private var viewModel: SettingsViewModel
-    @State private var showPersonalization = false
     @State private var modelToDelete: LocalModel?
 
     init(modelContext: ModelContext) {
@@ -17,12 +16,13 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 modelSection
-                temperatureSection
                 systemPromptSection
+                generationSection
                 voiceSection
                 appearanceSection
                 storageSection
-                infoSection
+                deviceInfoSection
+                aboutSection
             }
             .navigationTitle("tab.settings")
             .onAppear {
@@ -49,56 +49,147 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Sections
+    // MARK: - Model
 
     private var modelSection: some View {
-        Section("settings.defaultModel") {
-            if let model = viewModel.defaultModelIdentifier {
-                Text(model)
+        Section {
+            if let active = deps.modelManager.activeModel {
+                HStack {
+                    Label(active.displayName, systemImage: "cpu.fill")
+                        .foregroundStyle(.tint)
+                    Spacer()
+                    Text("model.status.active")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             } else {
-                Text("settings.defaultModel.empty")
-                    .foregroundStyle(ColorPalette.textTertiary)
+                Label("settings.defaultModel.empty", systemImage: "cpu")
+                    .foregroundStyle(.secondary)
             }
+        } header: {
+            Text("settings.defaultModel")
+        } footer: {
+            Text("settings.defaultModel.footer")
         }
     }
 
-    private var temperatureSection: some View {
-        Section("settings.temperature") {
-            VStack(alignment: .leading) {
-                Text(String(format: "%.1f", viewModel.clampedTemperature))
-                    .font(.rodaCaption)
-                    .foregroundStyle(ColorPalette.textSecondary)
+    // MARK: - System Prompt
+
+    private var systemPromptSection: some View {
+        Section {
+            NavigationLink {
+                PersonalizationView(viewModel: viewModel)
+            } label: {
+                HStack {
+                    Label {
+                        if viewModel.systemPrompt.isEmpty {
+                            Text("settings.systemPrompt.placeholder")
+                                .foregroundStyle(.tertiary)
+                        } else {
+                            Text(viewModel.systemPrompt)
+                                .lineLimit(2)
+                                .foregroundStyle(.primary)
+                        }
+                    } icon: {
+                        Image(systemName: "text.bubble")
+                            .foregroundStyle(.tint)
+                    }
+                }
+            }
+        } header: {
+            Text("settings.systemPrompt")
+        } footer: {
+            Text("settings.systemPrompt.footer")
+        }
+    }
+
+    // MARK: - Generation Parameters
+
+    private var generationSection: some View {
+        Section {
+            // Temperature
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text("settings.temperature")
+                    Spacer()
+                    Text(String(format: "%.1f", viewModel.clampedTemperature))
+                        .font(.body.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
                 Slider(value: Binding(
                     get: { Double(viewModel.temperature) },
                     set: { viewModel.temperature = Float($0) }
                 ), in: 0...2, step: 0.1)
+                Text("settings.temperature.description")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
             }
+
+            // Top P
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text("settings.topP")
+                    Spacer()
+                    Text(String(format: "%.2f", viewModel.topP))
+                        .font(.body.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+                Slider(value: Binding(
+                    get: { Double(viewModel.topP) },
+                    set: { viewModel.topP = Float($0) }
+                ), in: 0...1, step: 0.05)
+            }
+
+            // Max Tokens
+            Picker("settings.maxTokens", selection: $viewModel.maxTokens) {
+                ForEach(SettingsViewModel.maxTokensOptions, id: \.value) { option in
+                    Text(option.label).tag(option.value)
+                }
+            }
+
+            // Repetition Penalty
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text("settings.repetitionPenalty")
+                    Spacer()
+                    Text(String(format: "%.1f", viewModel.repetitionPenalty))
+                        .font(.body.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+                Slider(value: Binding(
+                    get: { Double(viewModel.repetitionPenalty) },
+                    set: { viewModel.repetitionPenalty = Float($0) }
+                ), in: 1.0...2.0, step: 0.1)
+            }
+
+            // Reset
+            Button {
+                withAnimation { viewModel.resetGenerationDefaults() }
+            } label: {
+                Label("settings.generation.reset", systemImage: "arrow.counterclockwise")
+            }
+        } header: {
+            Text("settings.generation")
+        } footer: {
+            Text("settings.generation.footer")
         }
     }
 
-    private var systemPromptSection: some View {
-        Section("settings.systemPrompt") {
-            NavigationLink {
-                PersonalizationView(viewModel: viewModel)
-            } label: {
-                if viewModel.systemPrompt.isEmpty {
-                    Text("settings.systemPrompt.placeholder")
-                        .lineLimit(2)
-                        .foregroundStyle(ColorPalette.textTertiary)
-                } else {
-                    Text(viewModel.systemPrompt)
-                        .lineLimit(2)
-                        .foregroundStyle(ColorPalette.textPrimary)
-                }
-            }
-        }
-    }
+    // MARK: - Voice
 
     private var voiceSection: some View {
         Section {
-            Toggle("settings.voiceEnabled", isOn: $viewModel.voiceEnabled)
+            Toggle(isOn: $viewModel.voiceEnabled) {
+                Label("settings.voiceEnabled", systemImage: "mic.fill")
+            }
+        } header: {
+            Text("settings.voice")
+        } footer: {
+            Text("settings.voice.footer")
         }
     }
+
+    // MARK: - Appearance
 
     private var appearanceSection: some View {
         Section("settings.appearance") {
@@ -111,68 +202,64 @@ struct SettingsView: View {
         }
     }
 
-    /// Storage section — inline em SettingsView (decisions-vs-intro.md).
-    /// Mostra uso total de disco + lista de modelos baixados com swipe-to-delete.
+    // MARK: - Storage
+
     @ViewBuilder
     private var storageSection: some View {
         Section {
-            // Header com uso total
             HStack {
-                Image(systemName: "internaldrive")
-                    .foregroundStyle(ColorPalette.accent)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("settings.storage.label")
-                        .font(.rodaBody)
-                    Text(storageSummary)
-                        .font(.rodaCaption)
-                        .foregroundStyle(ColorPalette.textSecondary)
+                Label {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("settings.storage.label")
+                        Text(storageSummary)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                } icon: {
+                    Image(systemName: "internaldrive")
+                        .foregroundStyle(.tint)
                 }
             }
 
-            // Lista de modelos baixados
             if deps.modelManager.downloadedModels.isEmpty {
                 Text("settings.storage.empty")
-                    .font(.rodaCaption)
-                    .foregroundStyle(ColorPalette.textTertiary)
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
             } else {
                 ForEach(deps.modelManager.downloadedModels, id: \.identifier) { model in
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(model.displayName)
-                                .font(.rodaBody)
                             Text(formatBytes(model.sizeOnDisk))
-                                .font(.rodaCaption)
-                                .foregroundStyle(ColorPalette.textTertiary)
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
                         }
                         Spacer()
                         if deps.modelManager.activeModel?.identifier == model.identifier {
-                            Label("model.status.active", systemImage: "checkmark.circle.fill")
-                                .labelStyle(.iconOnly)
-                                .foregroundStyle(ColorPalette.accent)
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(.tint)
                         }
                         Button(role: .destructive) {
                             modelToDelete = model
                         } label: {
                             Image(systemName: "trash")
-                                .foregroundStyle(ColorPalette.error)
+                                .foregroundStyle(.red)
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel(Text("model.action.delete"))
                     }
                 }
             }
 
-            // Aviso de downloads parciais
             if !deps.modelManager.partialDownloads.isEmpty {
                 HStack {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(ColorPalette.warning)
+                        .foregroundStyle(.orange)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(partialDownloadsTitle)
-                            .font(.rodaCaption)
+                            .font(.caption)
                         Text("settings.storage.partial.subtitle")
-                            .font(.rodaCaption)
-                            .foregroundStyle(ColorPalette.textTertiary)
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
                     }
                 }
             }
@@ -181,13 +268,64 @@ struct SettingsView: View {
         }
     }
 
-    private var infoSection: some View {
+    // MARK: - Device Info
+
+    private var deviceInfoSection: some View {
+        Section {
+            HStack {
+                Label("settings.device.chip", systemImage: "cpu")
+                Spacer()
+                Text(DeviceCapability.chipName)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            HStack {
+                Label("settings.device.ram", systemImage: "memorychip")
+                Spacer()
+                Text("\(DeviceCapability.totalRAMGB)GB")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            HStack {
+                Label("settings.device.budget", systemImage: "gauge.with.dots.needle.33percent")
+                Spacer()
+                Text("\(DeviceCapability.modelMemoryBudgetGB)GB")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            HStack {
+                Label("settings.device.tier", systemImage: "star")
+                Spacer()
+                Text(tierLabel)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        } header: {
+            Text("settings.device")
+        } footer: {
+            Text("settings.device.footer")
+        }
+    }
+
+    private var tierLabel: String {
+        switch DeviceCapability.ramTier {
+        case .minimal: return "Minimal"
+        case .compact: return "Compact"
+        case .standard: return "Standard"
+        case .workstation: return "Workstation"
+        case .desktop: return "Desktop"
+        }
+    }
+
+    // MARK: - About
+
+    private var aboutSection: some View {
         Section {
             HStack {
                 Text("settings.version")
                 Spacer()
                 Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0")
-                    .foregroundStyle(ColorPalette.textTertiary)
+                    .foregroundStyle(.tertiary)
             }
         }
     }
@@ -201,18 +339,11 @@ struct SettingsView: View {
         return formatter.string(fromByteCount: bytes)
     }
 
-    /// Mensagem de confirmacao de delete usando String(localized:) com placeholders.
-    /// O xcstrings tem chave "settings.storage.deleteConfirm.message" com format
-    /// `%1$@ (%2$@) ...`. Usamos String(format:) para interpolar os args.
     private func deleteConfirmMessage(for model: LocalModel) -> String {
-        let format = NSLocalizedString(
-            "settings.storage.deleteConfirm.message",
-            comment: ""
-        )
+        let format = NSLocalizedString("settings.storage.deleteConfirm.message", comment: "")
         return String(format: format, model.displayName, formatBytes(model.sizeOnDisk))
     }
 
-    /// Resumo do storage: "N modelos · X GB usados"
     private var storageSummary: String {
         let format = NSLocalizedString("settings.storage.summary", comment: "")
         return String(
@@ -222,7 +353,6 @@ struct SettingsView: View {
         )
     }
 
-    /// Titulo de downloads parciais: "N download(s) incompleto(s)"
     private var partialDownloadsTitle: String {
         let format = NSLocalizedString("settings.storage.partial.title", comment: "")
         return String(format: format, deps.modelManager.partialDownloads.count)
