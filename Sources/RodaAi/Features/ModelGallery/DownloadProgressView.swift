@@ -12,6 +12,7 @@ struct DownloadProgressView: View {
         VStack(spacing: 8) {
             ProgressView(value: progress)
                 .tint(.accentColor)
+                .animation(.linear(duration: 0.25), value: progress)
 
             HStack {
                 Text("\(Int(progress * 100))%")

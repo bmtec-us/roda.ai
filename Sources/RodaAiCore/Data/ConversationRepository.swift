@@ -91,16 +91,20 @@ public actor ConversationRepository {
         to conversationId: UUID,
         role: MessageRole,
         content: String,
-        modelIdentifier: String?
+        modelIdentifier: String?,
+        attachments: [Attachment] = []
     ) throws(PersistenceError) {
         guard let conversation = try findConversation(by: conversationId) else {
             throw PersistenceError.conversationNotFound(id: conversationId)
         }
 
+        let imageAttachment = attachments.first { $0.mimeType.hasPrefix("image/") }
         let message = Message(
             role: role,
             content: content,
-            modelIdentifier: modelIdentifier
+            modelIdentifier: modelIdentifier,
+            attachmentURL: imageAttachment?.url.path,
+            attachmentMimeType: imageAttachment?.mimeType
         )
         conversation.messages.append(message)
         conversation.updatedAt = Date()
@@ -126,7 +130,9 @@ public actor ConversationRepository {
                     role: message.role,
                     content: message.content,
                     modelIdentifier: message.modelIdentifier,
-                    timestamp: message.timestamp
+                    timestamp: message.timestamp,
+                    attachmentURL: message.attachmentURL.map(URL.init(fileURLWithPath:)),
+                    attachmentMimeType: message.attachmentMimeType
                 )
             }
     }

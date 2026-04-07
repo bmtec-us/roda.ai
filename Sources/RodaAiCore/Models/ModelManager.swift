@@ -1,6 +1,9 @@
 // Sources/RodaAiCore/Models/ModelManager.swift
 import Foundation
 import Observation
+#if canImport(FoundationModels)
+import FoundationModels
+#endif
 
 /// Gerencia lifecycle completo de modelos.
 /// Ref: state-machines.md secao 4 (ModelLifecycleState)
@@ -12,6 +15,10 @@ public final class ModelManager {
     public private(set) var downloadedModels: [LocalModel] = []
     public private(set) var activeModel: LocalModel?
     public private(set) var downloadProgress: [String: Double] = [:]
+    public private(set) var downloadBytes: [String: Int64] = [:]
+    public private(set) var downloadTotalBytes: [String: Int64] = [:]
+    public private(set) var downloadETA: [String: TimeInterval] = [:]
+    public private(set) var downloadCurrentFile: [String: String] = [:]
     public private(set) var downloadError: [String: String] = [:]
     public private(set) var catalog: [CatalogEntry] = []
     /// Diretorios que existem em disco mas falharam validacao minima.
@@ -25,6 +32,7 @@ public final class ModelManager {
     private let ggufInferenceProvider: (any InferenceProvider)?
     private let apiInferenceProvider: (any InferenceProvider)?
     private let foundationModelProvider: (any InferenceProvider)?
+    private let activeInferenceProvider: ActiveInferenceProvider?
     private let storageManager: StorageManager
     private let validator: ModelValidator
     private let modelsDirectoryOverride: URL?
@@ -50,6 +58,7 @@ public final class ModelManager {
         ggufInferenceProvider: (any InferenceProvider)? = nil,
         apiInferenceProvider: (any InferenceProvider)? = nil,
         foundationModelProvider: (any InferenceProvider)? = nil,
+        activeInferenceProvider: ActiveInferenceProvider? = nil,
         storageManager: StorageManager = StorageManager(),
         validator: ModelValidator = ModelValidator(),
         modelsDirectoryOverride: URL? = nil
@@ -60,6 +69,7 @@ public final class ModelManager {
         self.ggufInferenceProvider = ggufInferenceProvider
         self.apiInferenceProvider = apiInferenceProvider
         self.foundationModelProvider = foundationModelProvider
+        self.activeInferenceProvider = activeInferenceProvider
         self.storageManager = storageManager
         self.validator = validator
         self.modelsDirectoryOverride = modelsDirectoryOverride
@@ -172,6 +182,17 @@ public final class ModelManager {
         let destination = modelsDirectory.appendingPathComponent(entry.identifier)
         downloadError[entry.identifier] = nil
         downloadProgress[entry.identifier] = 0
+        downloadBytes[entry.identifier] = 0
+        downloadTotalBytes[entry.identifier] = 0
+        downloadETA[entry.identifier] = nil
+        downloadCurrentFile[entry.identifier] = nil
+
+        let progressTask = Task { [weak self] in
+            while !Task.isCancelled {
+                self?.syncDownloadTelemetry(for: entry.identifier)
+                try? await Task.sleep(for: .milliseconds(250))
+            }
+        }
 
         do {
             // 1+2. Download (downloader verifica espaco internamente)
@@ -189,6 +210,8 @@ public final class ModelManager {
                     to: destination
                 )
             }
+            progressTask.cancel()
+            syncDownloadTelemetry(for: entry.identifier)
 
             // 3. VALIDAR (antes faltando — ref: audit gap #16)
             RodaLog.model.debug("Validating downloaded model at \(destination.path, privacy: .public)")
@@ -211,16 +234,30 @@ public final class ModelManager {
             downloadedModels.removeAll { $0.identifier == entry.identifier }
             downloadedModels.append(model)
             downloadProgress[entry.identifier] = 1.0
+            downloadBytes[entry.identifier] = validation.sizeOnDisk
+            downloadTotalBytes[entry.identifier] = validation.sizeOnDisk
+            downloadETA[entry.identifier] = nil
+            downloadCurrentFile[entry.identifier] = nil
             RodaLog.model.info("Model registered: \(entry.identifier, privacy: .public) (\(validation.sizeOnDisk) bytes)")
         } catch let error as DownloadError {
+            progressTask.cancel()
             RodaLog.model.error("Download failed: \(error.localizedDescription, privacy: .public)")
             downloadError[entry.identifier] = error.errorDescription ?? "\(error)"
             downloadProgress[entry.identifier] = nil
+            downloadBytes[entry.identifier] = nil
+            downloadTotalBytes[entry.identifier] = nil
+            downloadETA[entry.identifier] = nil
+            downloadCurrentFile[entry.identifier] = nil
             throw error
         } catch {
+            progressTask.cancel()
             RodaLog.model.error("Download unexpected error: \(error.localizedDescription, privacy: .public)")
             downloadError[entry.identifier] = error.localizedDescription
             downloadProgress[entry.identifier] = nil
+            downloadBytes[entry.identifier] = nil
+            downloadTotalBytes[entry.identifier] = nil
+            downloadETA[entry.identifier] = nil
+            downloadCurrentFile[entry.identifier] = nil
             throw DownloadError.serverError(statusCode: -1)
         }
     }
@@ -244,6 +281,7 @@ public final class ModelManager {
 
         RodaLog.model.info("Activating model: \(model.identifier, privacy: .public)")
         try await prov.loadModel(identifier: loadIdentifier)
+        await activeInferenceProvider?.setActiveProvider(prov, identifier: model.identifier)
         activeModel = model
         RodaLog.model.info("Model activated: \(model.identifier, privacy: .public)")
     }
@@ -252,6 +290,9 @@ public final class ModelManager {
     /// sem precisar de download previo.
     public func activateBuiltInModel(_ entry: CatalogEntry) async throws {
         guard entry.isZeroDownload else { return }
+        guard isCompatible(entry) else {
+            throw InferenceError.unsupportedArchitecture(identifier: entry.identifier)
+        }
         let model = LocalModel(
             identifier: entry.identifier,
             displayName: entry.displayName,
@@ -266,6 +307,7 @@ public final class ModelManager {
         if let prov = provider(for: active.identifier) {
             await prov.unloadModel()
         }
+        await activeInferenceProvider?.clearActiveProvider()
         activeModel = nil
     }
 
@@ -278,10 +320,24 @@ public final class ModelManager {
         }
         downloadedModels.removeAll { $0.identifier == model.identifier }
         downloadProgress.removeValue(forKey: model.identifier)
+        downloadBytes.removeValue(forKey: model.identifier)
+        downloadTotalBytes.removeValue(forKey: model.identifier)
+        downloadETA.removeValue(forKey: model.identifier)
+        downloadCurrentFile.removeValue(forKey: model.identifier)
         downloadError.removeValue(forKey: model.identifier)
         if activeModel?.identifier == model.identifier {
             activeModel = nil
         }
+    }
+
+    public func cancelDownload(identifier: String) {
+        downloader.cancelDownload()
+        downloadError[identifier] = DownloadError.downloadCancelled.errorDescription
+        downloadProgress[identifier] = nil
+        downloadBytes[identifier] = nil
+        downloadTotalBytes[identifier] = nil
+        downloadETA[identifier] = nil
+        downloadCurrentFile[identifier] = nil
     }
 
     // MARK: - Helpers
@@ -291,6 +347,30 @@ public final class ModelManager {
     }
 
     public func isCompatible(_ entry: CatalogEntry) -> Bool {
-        DeviceCapability.canLoadModel(requiringRAM: entry.minimumRAM)
+        if entry.backend == .foundationModel {
+            return foundationModelIsAvailable()
+        }
+        return DeviceCapability.canLoadModel(requiringRAM: entry.minimumRAM)
+    }
+
+    private func foundationModelIsAvailable() -> Bool {
+        #if canImport(FoundationModels)
+        if #available(iOS 26, macOS 26, *) {
+            if case .available = SystemLanguageModel.default.availability {
+                return true
+            }
+        }
+        #endif
+        return false
+    }
+
+    private func syncDownloadTelemetry(for identifier: String) {
+        downloadProgress[identifier] = downloader.progress
+        downloadBytes[identifier] = downloader.downloadedBytes
+        downloadTotalBytes[identifier] = downloader.totalBytes
+        if let eta = downloader.estimatedTimeRemaining {
+            downloadETA[identifier] = eta
+        }
+        downloadCurrentFile[identifier] = downloader.currentFileName
     }
 }

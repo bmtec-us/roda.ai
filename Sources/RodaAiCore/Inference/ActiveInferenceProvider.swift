@@ -41,7 +41,23 @@ public actor ActiveInferenceProvider: InferenceProvider {
                 continuation.finish(throwing: InferenceError.modelNotLoaded)
             }
         }
-        return provider.generate(messages: messages, config: config)
+        return AsyncThrowingStream<String, any Error> { continuation in
+            Task {
+                let stream = await provider.generate(messages: messages, config: config)
+                do {
+                    for try await token in stream {
+                        if Task.isCancelled {
+                            continuation.finish(throwing: InferenceError.generationCancelled)
+                            return
+                        }
+                        continuation.yield(token)
+                    }
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+        }
     }
 
     public func unloadModel() async {

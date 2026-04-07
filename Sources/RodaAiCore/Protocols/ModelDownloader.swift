@@ -15,6 +15,12 @@ public protocol ModelDownloader: AnyObject {
     /// Bytes ja baixados.
     var downloadedBytes: Int64 { get }
 
+    /// Nome do arquivo atual sendo baixado (quando aplicavel).
+    var currentFileName: String? { get }
+
+    /// Tempo estimado restante (segundos), quando calculavel.
+    var estimatedTimeRemaining: TimeInterval? { get }
+
     /// Baixa modelo do repositorio HuggingFace para o destino local.
     /// - Throws: DownloadError (typed throws — `.networkUnavailable`, `.serverError`,
     ///           `.insufficientStorage`, `.checksumMismatch`, `.downloadCancelled`,
@@ -34,6 +40,9 @@ public protocol ModelDownloader: AnyObject {
 }
 
 extension ModelDownloader {
+    public var currentFileName: String? { nil }
+    public var estimatedTimeRemaining: TimeInterval? { nil }
+
     public func downloadFile(
         repoId: String,
         fileName: String,

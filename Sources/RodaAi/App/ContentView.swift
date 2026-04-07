@@ -31,6 +31,7 @@ struct ContentView: View {
                 OnboardingView()
             }
         }
+        .background(ColorPalette.surface.ignoresSafeArea())
         .tint(ColorPalette.accent)
         .preferredColorScheme(colorScheme)
         .onChange(of: quickActions.pendingAction) { _, action in
@@ -149,13 +150,17 @@ private enum MacNavTarget: Hashable {
 
 struct ConversationsContainer: View {
     @Environment(AppDependencies.self) private var deps
+    @Query private var preferences: [UserPreferences]
     @State private var chatViewModel: ChatViewModel?
     @State private var showingList: Bool = false
 
     var body: some View {
         VStack(spacing: 0) {
             if let vm = chatViewModel {
-                ChatView(viewModel: vm)
+                ChatView(
+                    viewModel: vm,
+                    chatFontSize: preferences.first?.chatFontSize ?? .system
+                )
                     .toolbar {
                         ToolbarItem(placement: .primaryAction) {
                             Button {
@@ -184,9 +189,18 @@ struct ConversationsContainer: View {
             if chatViewModel == nil {
                 chatViewModel = ChatViewModel(
                     inferenceProvider: deps.inferenceProvider,
-                    repository: deps.conversationRepository
+                    repository: deps.conversationRepository,
+                    responseStyle: preferences.first?.responseStyle ?? .natural,
+                    systemPrompt: preferences.first?.systemPrompt ?? ""
                 )
             }
+        }
+        .onChange(of: preferences.first?.responseStyle) { _, newStyle in
+            guard let newStyle else { return }
+            chatViewModel?.responseStyle = newStyle
+        }
+        .onChange(of: preferences.first?.systemPrompt) { _, newPrompt in
+            chatViewModel?.systemPrompt = newPrompt ?? ""
         }
     }
 

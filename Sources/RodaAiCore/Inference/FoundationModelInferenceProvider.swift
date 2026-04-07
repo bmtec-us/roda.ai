@@ -19,9 +19,16 @@ public actor FoundationModelInferenceProvider: InferenceProvider {
     public var loadedModelIdentifier: String?
 
     private var _isLoaded = false
+    private var lastSentMessageCount = 0
 
     #if canImport(FoundationModels)
     private var session: LanguageModelSession?
+
+    fileprivate static let systemInstructions = """
+        Voce e um assistente de IA prestativo chamado Roda. Responda de forma clara,
+        concisa e util. Quando o usuario escrever em portugues, responda em portugues.
+        Quando escrever em outro idioma, responda no mesmo idioma.
+        """
     #endif
 
     public init() {}
@@ -49,18 +56,33 @@ public actor FoundationModelInferenceProvider: InferenceProvider {
         switch model.availability {
         case .available:
             session = LanguageModelSession {
-                """
-                Voce e um assistente de IA prestativo chamado Roda. Responda de forma clara,
-                concisa e util. Quando o usuario escrever em portugues, responda em portugues.
-                Quando escrever em outro idioma, responda no mesmo idioma.
-                """
+                Self.systemInstructions
             }
+            lastSentMessageCount = 0
             _isLoaded = true
             loadedModelIdentifier = identifier
             RodaLog.inference.info("Foundation Model loaded successfully")
 
-        default:
-            RodaLog.inference.error("Foundation Model not available on this device")
+        case .unavailable(let reason):
+            let detail: String
+            switch reason {
+            case .deviceNotEligible:
+                detail = "device not eligible (needs iPhone 15 Pro+, iPad/Mac with M1+)"
+            case .appleIntelligenceNotEnabled:
+                detail = "Apple Intelligence not enabled in Settings (or region/download not ready)"
+            case .modelNotReady:
+                detail = "model still downloading or not ready"
+            @unknown default:
+                detail = "unknown reason (\(String(describing: reason)))"
+            }
+            let locale = Locale.current.identifier
+            let region = Locale.current.region?.identifier ?? "?"
+            let supports = model.supportsLocale(Locale.current)
+            RodaLog.inference.error("""
+                Foundation Model unavailable: \(detail, privacy: .public) \
+                | locale=\(locale, privacy: .public) region=\(region, privacy: .public) \
+                supportsLocale=\(supports, privacy: .public)
+                """)
             throw InferenceError.unsupportedArchitecture(identifier: identifier)
         }
         #else
@@ -79,26 +101,52 @@ public actor FoundationModelInferenceProvider: InferenceProvider {
         }
 
         #if canImport(FoundationModels)
-        guard let session else {
+        // The LanguageModelSession owns its own transcript and accumulates
+        // history across `respond`/`streamResponse` calls. We must NOT replay
+        // the full history on every turn — only the latest user prompt.
+        //
+        // If the caller's message count went backwards (new conversation,
+        // history truncation, etc.), reset the session so we don't carry over
+        // stale context.
+        if messages.count <= lastSentMessageCount {
+            session = LanguageModelSession {
+                Self.systemInstructions
+            }
+        }
+        lastSentMessageCount = messages.count
+
+        guard let session, let lastUser = messages.last(where: { $0.role == .user }) else {
             return AsyncThrowingStream { $0.finish(throwing: InferenceError.modelNotLoaded) }
         }
 
-        let prompt = formatPrompt(messages)
         let capturedSession = session
+        let prompt = lastUser.content
+        let options = GenerationOptions(
+            temperature: Double(config.temperature)
+        )
 
         return AsyncThrowingStream<String, any Error> { continuation in
             Task {
                 do {
-                    let stream = capturedSession.streamResponse {
-                        prompt
-                    }
+                    var lastEmittedLength = 0
+                    let stream = capturedSession.streamResponse(
+                        to: prompt,
+                        options: options
+                    )
 
-                    for try await chunk in stream {
+                    for try await snapshot in stream {
                         if Task.isCancelled {
                             continuation.finish(throwing: InferenceError.generationCancelled)
                             return
                         }
-                        continuation.yield(chunk.content)
+                        // Snapshots are cumulative — yield only the new delta
+                        // so downstream consumers (ChatViewModel) can append.
+                        let full = snapshot.content
+                        if full.count > lastEmittedLength {
+                            let startIdx = full.index(full.startIndex, offsetBy: lastEmittedLength)
+                            continuation.yield(String(full[startIdx...]))
+                            lastEmittedLength = full.count
+                        }
                     }
                     continuation.finish()
                 } catch {
@@ -130,23 +178,6 @@ public actor FoundationModelInferenceProvider: InferenceProvider {
         #endif
         _isLoaded = false
         loadedModelIdentifier = nil
-    }
-
-    // MARK: - Helpers
-
-    /// Formata mensagens de chat em prompt para o Foundation Model.
-    private func formatPrompt(_ messages: [ChatMessage]) -> String {
-        var parts: [String] = []
-        for msg in messages {
-            switch msg.role {
-            case .system:
-                continue // System prompt set in session init
-            case .user:
-                parts.append("User: \(msg.content)")
-            case .assistant:
-                parts.append("Assistant: \(msg.content)")
-            }
-        }
-        return parts.joined(separator: "\n\n")
+        lastSentMessageCount = 0
     }
 }

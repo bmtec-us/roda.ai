@@ -31,6 +31,7 @@ struct CodeBlockView: View {
                     .font(.system(.body, design: .monospaced))
                     .foregroundStyle(.primary)
                     .padding(12)
+                    .textSelection(.enabled)
             }
         }
         .background(.tertiary.opacity(0.3))

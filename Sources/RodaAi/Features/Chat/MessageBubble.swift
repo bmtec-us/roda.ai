@@ -8,6 +8,7 @@ import UIKit
 
 struct MessageBubble: View {
     let message: ChatMessage
+    let chatFontScale: CGFloat
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var isUser: Bool { message.role == .user }
@@ -47,7 +48,11 @@ struct MessageBubble: View {
                 }
 
                 if !message.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    SelectableMessageText(text: message.content, parseMarkdown: false)
+                    SelectableMessageText(
+                        text: message.content,
+                        parseMarkdown: false,
+                        scaleFactor: chatFontScale
+                    )
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
@@ -66,7 +71,11 @@ struct MessageBubble: View {
                     ForEach(assistantSegments.indices, id: \.self) { index in
                         switch assistantSegments[index] {
                         case .text(let text):
-                            SelectableMessageText(text: text, parseMarkdown: true)
+                            SelectableMessageText(
+                                text: text,
+                                parseMarkdown: true,
+                                scaleFactor: chatFontScale
+                            )
                         case .code(let code, let language):
                             CodeBlockView(code: code, language: language)
                         }
@@ -181,10 +190,11 @@ private struct AttachmentImageView: View {
 private struct SelectableMessageText: View {
     let text: String
     let parseMarkdown: Bool
+    let scaleFactor: CGFloat
 
     var body: some View {
         #if canImport(UIKit)
-        IOSSelectableTextView(text: text, parseMarkdown: parseMarkdown)
+        IOSSelectableTextView(text: text, parseMarkdown: parseMarkdown, scaleFactor: scaleFactor)
             .frame(maxWidth: .infinity, alignment: .leading)
         #else
         if parseMarkdown,
@@ -196,10 +206,12 @@ private struct SelectableMessageText: View {
             )
            ) {
             Text(markdown)
+                .font(.system(size: 17 * scaleFactor))
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .textSelection(.enabled)
         } else {
             Text(text)
+                .font(.system(size: 17 * scaleFactor))
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .textSelection(.enabled)
         }
@@ -211,12 +223,14 @@ private struct SelectableMessageText: View {
 private struct IOSSelectableTextView: UIViewRepresentable {
     let text: String
     let parseMarkdown: Bool
+    let scaleFactor: CGFloat
 
     func makeUIView(context: Context) -> UITextView {
         let view = UITextView()
         view.backgroundColor = .clear
         view.isEditable = false
         view.isSelectable = true
+        view.isUserInteractionEnabled = true
         view.isScrollEnabled = false
         view.textContainerInset = .zero
         view.textContainer.lineFragmentPadding = 0
@@ -230,12 +244,19 @@ private struct IOSSelectableTextView: UIViewRepresentable {
     }
 
     func sizeThatFits(_ proposal: ProposedViewSize, uiView: UITextView, context: Context) -> CGSize? {
-        let width = proposal.width ?? UIScreen.main.bounds.width
+        // Prefer layout-provided width and avoid deprecated UIScreen.main access.
+        let width = proposal.width ?? (uiView.bounds.width > 0 ? uiView.bounds.width : 320)
         let fitting = uiView.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
         return CGSize(width: width, height: fitting.height)
     }
 
     private func makeAttributedText() -> NSAttributedString {
+        let bodyStyle: UIFont.TextStyle = .body
+        let preferredBodyPointSize = UIFontDescriptor.preferredFontDescriptor(withTextStyle: bodyStyle).pointSize
+        let adjustedBasePointSize = preferredBodyPointSize * scaleFactor
+        let dynamicBaseFont = UIFontMetrics(forTextStyle: bodyStyle)
+            .scaledFont(for: UIFont.systemFont(ofSize: adjustedBasePointSize))
+
         if parseMarkdown,
            let attributed = try? AttributedString(
             markdown: text,
@@ -244,17 +265,33 @@ private struct IOSSelectableTextView: UIViewRepresentable {
                 failurePolicy: .returnPartiallyParsedIfPossible
             )
            ) {
-            return NSAttributedString(attributed)
+            let mutable = NSMutableAttributedString(attributedString: NSAttributedString(attributed))
+            let fullRange = NSRange(location: 0, length: mutable.length)
+
+            mutable.enumerateAttribute(.font, in: fullRange) { value, range, _ in
+                if let existing = value as? UIFont {
+                    let traits = existing.fontDescriptor.symbolicTraits
+                    let descriptor = dynamicBaseFont.fontDescriptor.withSymbolicTraits(traits) ?? dynamicBaseFont.fontDescriptor
+                    let normalized = UIFont(descriptor: descriptor, size: dynamicBaseFont.pointSize)
+                    mutable.addAttribute(.font, value: normalized, range: range)
+                } else {
+                    mutable.addAttribute(.font, value: dynamicBaseFont, range: range)
+                }
+            }
+
+            mutable.addAttribute(.foregroundColor, value: UIColor.label, range: fullRange)
+            return mutable
         }
 
         return NSAttributedString(
             string: text,
             attributes: [
-                .font: UIFont.preferredFont(forTextStyle: .body),
+                .font: dynamicBaseFont,
                 .foregroundColor: UIColor.label
             ]
         )
     }
+
 }
 #endif
 

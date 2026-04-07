@@ -2,11 +2,15 @@
 import SwiftUI
 import SwiftData
 import RodaAiCore
+#if canImport(FoundationModels)
+import FoundationModels
+#endif
 
 struct SettingsView: View {
     @Environment(AppDependencies.self) private var deps
     @State private var viewModel: SettingsViewModel
     @State private var modelToDelete: LocalModel?
+    @State private var foundationModelDiagnostics = FoundationModelDiagnostics.capture()
 
     init(modelContext: ModelContext) {
         _viewModel = State(initialValue: SettingsViewModel(modelContext: modelContext))
@@ -22,14 +26,19 @@ struct SettingsView: View {
                 appearanceSection
                 storageSection
                 deviceInfoSection
+                appleIntelligenceSection
                 aboutSection
             }
             .navigationTitle("tab.settings")
             .onAppear {
                 viewModel.loadPreferences()
                 deps.modelManager.scanDownloadedModels()
+                foundationModelDiagnostics = FoundationModelDiagnostics.capture()
             }
             .onDisappear { try? viewModel.savePreferences() }
+            .onChange(of: viewModel.appearanceMode) { _, _ in persistPreferencesNow() }
+            .onChange(of: viewModel.responseStyle) { _, _ in persistPreferencesNow() }
+            .onChange(of: viewModel.chatFontSize) { _, _ in persistPreferencesNow() }
             .alert(
                 "settings.storage.deleteConfirm.title",
                 isPresented: Binding(
@@ -78,7 +87,9 @@ struct SettingsView: View {
     private var systemPromptSection: some View {
         Section {
             NavigationLink {
-                PersonalizationView(viewModel: viewModel)
+                PersonalizationView(viewModel: viewModel) {
+                    try? viewModel.savePreferences()
+                }
             } label: {
                 HStack {
                     Label {
@@ -162,6 +173,12 @@ struct SettingsView: View {
                 ), in: 1.0...2.0, step: 0.1)
             }
 
+            Picker("settings.responseStyle", selection: $viewModel.responseStyle) {
+                Text("settings.responseStyle.natural").tag(ResponseStyle.natural)
+                Text("settings.responseStyle.technical").tag(ResponseStyle.technical)
+                Text("settings.responseStyle.detailed").tag(ResponseStyle.detailed)
+            }
+
             // Reset
             Button {
                 withAnimation { viewModel.resetGenerationDefaults() }
@@ -199,6 +216,12 @@ struct SettingsView: View {
                 Text("settings.appearance.dark").tag(AppearanceMode.dark)
             }
             .pickerStyle(.segmented)
+
+            Picker("Tamanho do texto do chat", selection: $viewModel.chatFontSize) {
+                Text("Sistema").tag(ChatFontSizePreference.system)
+                Text("Menor").tag(ChatFontSizePreference.smaller)
+                Text("Maior").tag(ChatFontSizePreference.larger)
+            }
         }
     }
 
@@ -261,6 +284,14 @@ struct SettingsView: View {
                             .font(.caption)
                             .foregroundStyle(.tertiary)
                     }
+                }
+                Button {
+                    for identifier in deps.modelManager.partialDownloads {
+                        try? deps.modelManager.cleanPartialDownload(identifier: identifier)
+                    }
+                    deps.modelManager.scanDownloadedModels()
+                } label: {
+                    Label("Clean partial downloads", systemImage: "trash")
                 }
             }
         } header: {
@@ -330,6 +361,46 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - Apple Intelligence Diagnostics
+
+    @ViewBuilder
+    private var appleIntelligenceSection: some View {
+        Section {
+            diagnosticsRow("OS", foundationModelDiagnostics.osVersion)
+            diagnosticsRow("Locale", foundationModelDiagnostics.localeIdentifier)
+            diagnosticsRow("Region", foundationModelDiagnostics.regionIdentifier)
+            diagnosticsRow("Model Availability", foundationModelDiagnostics.availability)
+            if let reason = foundationModelDiagnostics.unavailableReason {
+                diagnosticsRow("Unavailable Reason", reason)
+            }
+            if let supports = foundationModelDiagnostics.supportsCurrentLocale {
+                diagnosticsRow("Supports Locale", supports ? "true" : "false")
+            }
+            if let isAvailable = foundationModelDiagnostics.isAvailable {
+                diagnosticsRow("isAvailable", isAvailable ? "true" : "false")
+            }
+            Button("Refresh Diagnostics") {
+                foundationModelDiagnostics = FoundationModelDiagnostics.capture()
+            }
+        } header: {
+            Text("Apple Intelligence Diagnostics")
+        } footer: {
+            Text("Use this section to verify runtime Foundation Models status on-device.")
+        }
+    }
+
+    @ViewBuilder
+    private func diagnosticsRow(_ label: String, _ value: String) -> some View {
+        HStack {
+            Text(label)
+            Spacer()
+            Text(value)
+                .font(.caption.monospaced())
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.trailing)
+        }
+    }
+
     // MARK: - Helpers
 
     private func formatBytes(_ bytes: Int64) -> String {
@@ -357,4 +428,80 @@ struct SettingsView: View {
         let format = NSLocalizedString("settings.storage.partial.title", comment: "")
         return String(format: format, deps.modelManager.partialDownloads.count)
     }
+
+    private func persistPreferencesNow() {
+        try? viewModel.savePreferences()
+    }
+}
+
+private struct FoundationModelDiagnostics {
+    let osVersion: String
+    let localeIdentifier: String
+    let regionIdentifier: String
+    let availability: String
+    let unavailableReason: String?
+    let supportsCurrentLocale: Bool?
+    let isAvailable: Bool?
+
+    static func capture() -> FoundationModelDiagnostics {
+        let locale = Locale.current.identifier
+        let region = Locale.current.region?.identifier ?? "?"
+        let version = ProcessInfo.processInfo.operatingSystemVersion
+        let osVersion = "\(version.majorVersion).\(version.minorVersion).\(version.patchVersion)"
+
+        #if canImport(FoundationModels)
+        if #available(iOS 26, macOS 26, *) {
+            let model = SystemLanguageModel.default
+            let supports = model.supportsLocale(Locale.current)
+            switch model.availability {
+            case .available:
+                return FoundationModelDiagnostics(
+                    osVersion: osVersion,
+                    localeIdentifier: locale,
+                    regionIdentifier: region,
+                    availability: "available",
+                    unavailableReason: nil,
+                    supportsCurrentLocale: supports,
+                    isAvailable: model.isAvailable
+                )
+            case .unavailable(let reason):
+                return FoundationModelDiagnostics(
+                    osVersion: osVersion,
+                    localeIdentifier: locale,
+                    regionIdentifier: region,
+                    availability: "unavailable",
+                    unavailableReason: reasonLabel(reason),
+                    supportsCurrentLocale: supports,
+                    isAvailable: model.isAvailable
+                )
+            }
+        }
+        #endif
+
+        return FoundationModelDiagnostics(
+            osVersion: osVersion,
+            localeIdentifier: locale,
+            regionIdentifier: region,
+            availability: "framework-or-os-unavailable",
+            unavailableReason: nil,
+            supportsCurrentLocale: nil,
+            isAvailable: nil
+        )
+    }
+
+    #if canImport(FoundationModels)
+    @available(iOS 26, macOS 26, *)
+    private static func reasonLabel(_ reason: SystemLanguageModel.Availability.UnavailableReason) -> String {
+        switch reason {
+        case .deviceNotEligible:
+            return "deviceNotEligible"
+        case .appleIntelligenceNotEnabled:
+            return "appleIntelligenceNotEnabled"
+        case .modelNotReady:
+            return "modelNotReady"
+        @unknown default:
+            return "unknown"
+        }
+    }
+    #endif
 }

@@ -2,6 +2,11 @@
 import SwiftUI
 import PhotosUI
 import RodaAiCore
+#if canImport(UIKit)
+import UIKit
+import AVFoundation
+import UniformTypeIdentifiers
+#endif
 
 struct MessageComposer: View {
     let isStreaming: Bool
@@ -21,6 +26,9 @@ struct MessageComposer: View {
     // Image attachment (PhotosPicker)
     @State private var photoPickerItem: PhotosPickerItem?
     @State private var attachedImageData: Data?
+    @State private var isCameraPresented = false
+    @State private var showCameraUnavailableAlert = false
+    @State private var cameraUnavailableMessage = "Camera indisponivel neste dispositivo."
     @FocusState private var isFocused: Bool
 
     var body: some View {
@@ -58,10 +66,20 @@ struct MessageComposer: View {
                 .onChange(of: photoPickerItem) { _, newItem in
                     Task {
                         if let data = try? await newItem?.loadTransferable(type: Data.self) {
-                            attachedImageData = data
+                            setImageAttachment(data: data)
                         }
                     }
                 }
+
+                #if os(iOS)
+                Button {
+                    Task { await presentCameraIfAvailable() }
+                } label: {
+                    Image(systemName: "camera")
+                }
+                .disabled(isStreaming)
+                .accessibilityLabel("Abrir camera")
+                #endif
 
                 TextField("chat.message.placeholder", text: $text, axis: .vertical)
                     .textFieldStyle(.plain)
@@ -71,6 +89,19 @@ struct MessageComposer: View {
                     .onSubmit {
                         sendIfValid()
                     }
+
+                #if os(iOS)
+                if isFocused {
+                    Button {
+                        isFocused = false
+                    } label: {
+                        Image(systemName: "keyboard.chevron.compact.down")
+                            .font(.title3)
+                            .foregroundStyle(.secondary)
+                    }
+                    .accessibilityLabel("Hide keyboard")
+                }
+                #endif
 
                 if isStreaming {
                     Button(action: onStop) {
@@ -96,6 +127,18 @@ struct MessageComposer: View {
             .padding(.vertical, 10)
             .modifier(ComposerBackgroundModifier())
         }
+        #if os(iOS)
+        .sheet(isPresented: $isCameraPresented) {
+            CameraCaptureView { data in
+                setImageAttachment(data: data)
+            }
+        }
+        .alert("Camera", isPresented: $showCameraUnavailableAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(cameraUnavailableMessage)
+        }
+        #endif
     }
 
     private func fileAttachmentBanner(for url: URL) -> some View {
@@ -126,12 +169,13 @@ struct MessageComposer: View {
         HStack(spacing: 8) {
             Image(systemName: "photo.fill")
                 .foregroundStyle(ColorPalette.accent)
-            Text("chat.attachment.image")
-                .font(.caption)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("chat.attachment.image")
+                    .font(.caption)
+            }
             Spacer()
             Button {
-                attachedImageData = nil
-                photoPickerItem = nil
+                resetImageAttachment()
             } label: {
                 Image(systemName: "xmark.circle.fill")
                     .foregroundStyle(ColorPalette.textTertiary)
@@ -163,12 +207,97 @@ struct MessageComposer: View {
     private func sendIfValid() {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
+
         onSend(trimmed, attachedFileText, attachedImageData)
+        isFocused = false
         text = ""
         attachedFileURL = nil
         attachedFileText = nil
         attachmentError = nil
+        resetImageAttachment()
+    }
+
+    private func setImageAttachment(data: Data) {
+        attachedImageData = data
+    }
+
+    private func resetImageAttachment() {
         attachedImageData = nil
         photoPickerItem = nil
     }
+
+    #if os(iOS)
+    @MainActor
+    private func presentCameraIfAvailable() async {
+        guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
+            cameraUnavailableMessage = "Camera indisponivel neste dispositivo."
+            showCameraUnavailableAlert = true
+            return
+        }
+
+        let permission = AVCaptureDevice.authorizationStatus(for: .video)
+        switch permission {
+        case .authorized:
+            isCameraPresented = true
+        case .notDetermined:
+            let granted = await AVCaptureDevice.requestAccess(for: .video)
+            if granted {
+                isCameraPresented = true
+            } else {
+                cameraUnavailableMessage = "Permita acesso a camera nos Ajustes para capturar fotos."
+                showCameraUnavailableAlert = true
+            }
+        case .denied, .restricted:
+            cameraUnavailableMessage = "Permita acesso a camera nos Ajustes para capturar fotos."
+            showCameraUnavailableAlert = true
+        @unknown default:
+            cameraUnavailableMessage = "Nao foi possivel abrir a camera agora."
+            showCameraUnavailableAlert = true
+        }
+    }
+    #endif
 }
+
+#if os(iOS)
+private struct CameraCaptureView: UIViewControllerRepresentable {
+    let onCapture: (Data) -> Void
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = .camera
+        picker.mediaTypes = [UTType.image.identifier]
+        picker.modalPresentationStyle = .fullScreen
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onCapture: onCapture)
+    }
+
+    final class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
+        let onCapture: (Data) -> Void
+
+        init(onCapture: @escaping (Data) -> Void) {
+            self.onCapture = onCapture
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            picker.dismiss(animated: true)
+        }
+
+        func imagePickerController(
+            _ picker: UIImagePickerController,
+            didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]
+        ) {
+            defer { picker.dismiss(animated: true) }
+            guard let image = info[.originalImage] as? UIImage,
+                  let data = image.jpegData(compressionQuality: 0.95) else { return }
+            onCapture(data)
+        }
+    }
+}
+
+#endif

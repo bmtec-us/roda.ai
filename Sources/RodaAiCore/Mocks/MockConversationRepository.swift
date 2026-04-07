@@ -81,7 +81,8 @@ public final class MockConversationRepository {
         to conversationId: UUID,
         role: MessageRole,
         content: String,
-        modelIdentifier: String?
+        modelIdentifier: String?,
+        attachments: [Attachment] = []
     ) throws(PersistenceError) {
         addMessageCallCount += 1
         if let error = shouldThrow { throw error }
@@ -90,12 +91,15 @@ public final class MockConversationRepository {
             throw PersistenceError.conversationNotFound(id: conversationId)
         }
 
+        let imageAttachment = attachments.first { $0.mimeType.hasPrefix("image/") }
         let message = MessageSummary(
             id: UUID(),
             role: role,
             content: content,
             modelIdentifier: modelIdentifier,
-            timestamp: Date()
+            timestamp: Date(),
+            attachmentURL: imageAttachment?.url,
+            attachmentMimeType: imageAttachment?.mimeType
         )
         messagesByConversation[conversationId, default: []].append(message)
 

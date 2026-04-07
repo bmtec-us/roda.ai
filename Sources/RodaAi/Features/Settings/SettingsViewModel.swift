@@ -12,11 +12,13 @@ final class SettingsViewModel {
     var topP: Float = 0.95
     var maxTokens: Int = 2048
     var repetitionPenalty: Float = 1.1
+    var responseStyle: ResponseStyle = .natural
     var systemPrompt: String = ""
 
     // MARK: - App
     var voiceEnabled: Bool = true
     var appearanceMode: AppearanceMode = .system
+    var chatFontSize: ChatFontSizePreference = .system
     var defaultModelIdentifier: String?
 
     // MARK: - Computed
@@ -117,9 +119,11 @@ final class SettingsViewModel {
         topP = prefs.topP
         maxTokens = prefs.maxTokens
         repetitionPenalty = prefs.repetitionPenalty
+        responseStyle = prefs.responseStyle
         systemPrompt = prefs.systemPrompt
         voiceEnabled = prefs.voiceEnabled
         appearanceMode = prefs.appearanceMode
+        chatFontSize = prefs.chatFontSize
         defaultModelIdentifier = prefs.defaultModelIdentifier
     }
 
@@ -131,9 +135,11 @@ final class SettingsViewModel {
         prefs.topP = topP
         prefs.maxTokens = maxTokens
         prefs.repetitionPenalty = repetitionPenalty
+        prefs.responseStyle = responseStyle
         prefs.systemPrompt = systemPrompt
         prefs.voiceEnabled = voiceEnabled
         prefs.appearanceMode = appearanceMode
+        prefs.chatFontSize = chatFontSize
         prefs.defaultModelIdentifier = defaultModelIdentifier
         if existing == nil { modelContext.insert(prefs) }
         try modelContext.save()

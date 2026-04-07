@@ -32,7 +32,7 @@ struct AnalyzeImageIntent: AppIntent {
         // Escreve a imagem recebida em um arquivo temporario para que possa ser
         // referenciada via URL no ChatMessage.Attachment.
         let tempURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString + "-" + (image.filename ?? "image.png"))
+            .appendingPathComponent(UUID().uuidString + "-" + image.filename)
         try image.data.write(to: tempURL)
         defer { try? FileManager.default.removeItem(at: tempURL) }
 

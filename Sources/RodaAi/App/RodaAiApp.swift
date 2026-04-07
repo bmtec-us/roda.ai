@@ -46,14 +46,14 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
 
     func application(
         _ application: UIApplication,
-        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
-    ) -> Bool {
-        // Captura shortcut de launch (se app estava fechado)
-        if let shortcut = launchOptions?[.shortcutItem] as? UIApplicationShortcutItem {
+        configurationForConnecting connectingSceneSession: UISceneSession,
+        options: UIScene.ConnectionOptions
+    ) -> UISceneConfiguration {
+        // Captura shortcut de launch (se app estava fechado).
+        if let shortcut = options.shortcutItem {
             Self.launchShortcut = shortcut
-            return false  // Indica que ja consumimos
         }
-        return true
+        return UISceneConfiguration(name: nil, sessionRole: connectingSceneSession.role)
     }
 
     func application(

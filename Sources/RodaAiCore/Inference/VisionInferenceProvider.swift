@@ -36,6 +36,15 @@ public actor VisionInferenceProvider: InferenceProvider {
         // Registra Gemma 4 no VLMTypeRegistry (idempotente)
         await Gemma4Registration.register()
 
+        if MLXInferenceProvider.isLocalPath(identifier) {
+            let url = identifier.hasPrefix("file://")
+                ? URL(string: identifier)!
+                : URL(fileURLWithPath: identifier)
+            if let ropeDiagnostics = MLXInferenceProvider.ropeDiagnosticsSummary(at: url) {
+                RodaLog.inference.info("RoPE diagnostics (vision): \(ropeDiagnostics, privacy: .public)")
+            }
+        }
+
         // Reusa a logica de makeConfiguration do MLXInferenceProvider
         let configuration = MLXInferenceProvider.makeConfiguration(for: identifier)
         do {
@@ -63,6 +72,7 @@ public actor VisionInferenceProvider: InferenceProvider {
         let maxTokens = config.maxTokens
         let temperature = config.temperature
         let capturedMessages = messages
+        let capturedModelIdentifier = loadedModelIdentifier
 
         return AsyncThrowingStream<String, any Error> { continuation in
             Task {
@@ -87,6 +97,11 @@ public actor VisionInferenceProvider: InferenceProvider {
                         let input = try await context.processor.prepare(input: userInput)
                         var tokenCount = 0
 
+                        let isGemma = (capturedModelIdentifier?.lowercased().contains("gemma") == true)
+                        var gemmaInsideTag = false
+                        var gemmaControlWindow = ""
+                        var previousEmittedCharacter: Character?
+
                         for try await output in try MLXLMCommon.generate(
                             input: input,
                             parameters: .init(temperature: temperature),
@@ -102,7 +117,47 @@ public actor VisionInferenceProvider: InferenceProvider {
                                 return
                             }
                             if let chunk = output.chunk {
-                                continuation.yield(chunk)
+                                if isGemma {
+                                    gemmaControlWindow.append(chunk)
+                                    if gemmaControlWindow.count > 256 {
+                                        gemmaControlWindow = String(gemmaControlWindow.suffix(256))
+                                    }
+
+                                    if gemmaControlWindow.contains("<end_of_turn>") || gemmaControlWindow.contains("<start_of_turn>") {
+                                        continuation.finish()
+                                        return
+                                    }
+
+                                    var visible = ""
+                                    for char in chunk {
+                                        if char == "<" {
+                                            gemmaInsideTag = true
+                                            continue
+                                        }
+                                        if char == ">" {
+                                            gemmaInsideTag = false
+                                            continue
+                                        }
+                                        if !gemmaInsideTag {
+                                            visible.append(char)
+                                        }
+                                    }
+
+                                    if !visible.isEmpty {
+                                        let normalized = Self.normalizeGemmaChunkSpacing(
+                                            visible,
+                                            previousCharacter: previousEmittedCharacter,
+                                            isGemma: isGemma
+                                        )
+                                        if !normalized.isEmpty {
+                                            continuation.yield(normalized)
+                                            previousEmittedCharacter = normalized.last
+                                        }
+                                    }
+                                } else {
+                                    continuation.yield(chunk)
+                                    previousEmittedCharacter = chunk.last
+                                }
                             }
                         }
                         continuation.finish()
@@ -120,10 +175,37 @@ public actor VisionInferenceProvider: InferenceProvider {
         }
     }
 
+    private static func normalizeGemmaChunkSpacing(
+        _ text: String,
+        previousCharacter: Character?,
+        isGemma: Bool
+    ) -> String {
+        guard isGemma,
+              let previousCharacter,
+              let firstCharacter = text.first else {
+            return text
+        }
+
+        if previousCharacter.isWhitespace || firstCharacter.isWhitespace {
+            return text
+        }
+
+        if [":", ";", "!", "?", ")", "]", "}"].contains(previousCharacter),
+           firstCharacter.isLetter || firstCharacter.isNumber {
+            return " " + text
+        }
+
+        if previousCharacter == ".", firstCharacter.isUppercase {
+            return " " + text
+        }
+
+        return text
+    }
+
     /// Descarrega modelo VLM da memoria.
     public func unloadModel() async {
         modelContainer = nil
         loadedModelIdentifier = nil
-        MLX.GPU.clearCache()
+        MLX.Memory.clearCache()
     }
 }

@@ -6,7 +6,7 @@ import RodaAiCore
 /// - Carrega `modelManager.catalog` do bundle
 /// - Filtra por "Todos / Baixados / Compativeis"
 /// - Busca por nome
-/// - Cada card permite Baixar / Ativar / Descarregar / Excluir
+/// - Cada card permite Baixar / Ativar / Desativar / Excluir
 struct ModelGalleryView: View {
     @State var modelManager: ModelManager
     @State private var searchText = ""
@@ -80,6 +80,7 @@ struct ModelGalleryView: View {
                     }
                 }
             }
+            .background(ColorPalette.surface)
             .navigationTitle("tab.models")
             .searchable(text: $searchText, prompt: Text("model.search.placeholder"))
             .task {

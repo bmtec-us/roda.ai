@@ -30,6 +30,7 @@ public final class HuggingFaceDownloader: ModelDownloader {
     public private(set) var estimatedTimeRemaining: TimeInterval?
     public private(set) var downloadedBytes: Int64 = 0
     public private(set) var totalBytes: Int64 = 0
+    public private(set) var currentFileName: String?
 
     // MARK: - Test observability
     public var downloadCallCount = 0
@@ -55,6 +56,9 @@ public final class HuggingFaceDownloader: ModelDownloader {
         "vocab.json",
         "merges.txt",
         "preprocessor_config.json",
+        "processor_config.json",
+        "chat_template.json",
+        "chat_template.jinja",
     ]
 
     public init(
@@ -74,6 +78,7 @@ public final class HuggingFaceDownloader: ModelDownloader {
         progress = 0
         downloadedBytes = 0
         totalBytes = 0
+        currentFileName = nil
 
         // 1. Criar diretorio de destino
         do {
@@ -112,11 +117,12 @@ public final class HuggingFaceDownloader: ModelDownloader {
         RodaLog.download.info("Will download \(required.count) files totaling \(total) bytes")
 
         // 5. Baixar cada arquivo
-        for entry in required {
+        for (index, entry) in required.enumerated() {
             if Task.isCancelled {
                 RodaLog.download.info("Download cancelled by user")
                 throw DownloadError.downloadCancelled
             }
+            currentFileName = "[\(index + 1)/\(required.count)] \(entry.path)"
             RodaLog.download.debug("Downloading file: \(entry.path, privacy: .public)")
             try await downloadFile(
                 repoId: repoId,
@@ -125,6 +131,7 @@ public final class HuggingFaceDownloader: ModelDownloader {
                 to: destination.appendingPathComponent(entry.path)
             )
         }
+        currentFileName = nil
         RodaLog.download.info("Download complete: \(repoId, privacy: .public)")
     }
 
@@ -142,6 +149,7 @@ public final class HuggingFaceDownloader: ModelDownloader {
         downloadStartTime = Date()
         progress = 0
         downloadedBytes = 0
+        currentFileName = fileName
 
         // Criar diretorio
         do {
@@ -182,6 +190,7 @@ public final class HuggingFaceDownloader: ModelDownloader {
         }
 
         RodaLog.download.info("Single file download complete: \(fileName, privacy: .public)")
+        currentFileName = nil
     }
 
     public func cancelDownload() {

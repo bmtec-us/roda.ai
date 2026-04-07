@@ -44,6 +44,15 @@ public actor MLXInferenceProvider: InferenceProvider {
             await unloadModel()
         }
 
+        if Self.isLocalPath(identifier) {
+            let url = identifier.hasPrefix("file://")
+                ? URL(string: identifier)!
+                : URL(fileURLWithPath: identifier)
+            if let ropeDiagnostics = Self.ropeDiagnosticsSummary(at: url) {
+                RodaLog.inference.info("RoPE diagnostics: \(ropeDiagnostics, privacy: .public)")
+            }
+        }
+
         let configuration = Self.makeConfiguration(for: identifier)
         do {
             let container = try await LLMModelFactory.shared.loadContainer(
@@ -101,6 +110,36 @@ public actor MLXInferenceProvider: InferenceProvider {
         identifier.hasPrefix("/") || identifier.hasPrefix("file://")
     }
 
+    internal static func ropeDiagnosticsSummary(at modelDirectory: URL) -> String? {
+        let configURL = modelDirectory.appendingPathComponent("config.json")
+        guard let data = try? Data(contentsOf: configURL) else { return nil }
+        guard let json = try? JSONSerialization.jsonObject(with: data),
+              let root = json as? [String: Any],
+              let text = root["text_config"] as? [String: Any] else { return nil }
+
+        let modelType = (root["model_type"] as? String) ?? "unknown"
+        let headDim = (text["head_dim"] as? Int) ?? -1
+        let layerTypes = (text["layer_types"] as? [String]) ?? []
+        let fullCount = layerTypes.filter { $0 == "full_attention" }.count
+        let slidingCount = layerTypes.filter { $0 == "sliding_attention" }.count
+
+        if let ropeParams = text["rope_parameters"] as? [String: Any] {
+            let full = ropeParams["full_attention"] as? [String: Any]
+            let sliding = ropeParams["sliding_attention"] as? [String: Any]
+            let fullType = (full?["rope_type"] as? String) ?? "default"
+            let slidingType = (sliding?["rope_type"] as? String) ?? "default"
+            let partial = (full?["partial_rotary_factor"] as? Double) ?? 1.0
+            let effectiveFullDims = max(2, Int(Double(max(headDim, 2)) * partial) & ~1)
+            let effectiveSlidingDims = max(headDim, 2)
+            return """
+                model=\(modelType) headDim=\(headDim) layers(full=\(fullCount),sliding=\(slidingCount)) \
+                rope(fullType=\(fullType),partial=\(partial),effectiveFullDims=\(effectiveFullDims), \
+                slidingType=\(slidingType),effectiveSlidingDims=\(effectiveSlidingDims))
+                """
+        }
+        return "model=\(modelType) headDim=\(headDim) layers(full=\(fullCount),sliding=\(slidingCount)) rope(parameters missing)"
+    }
+
     /// Gera tokens em streaming.
     /// Ref: data-flows.md Secao 1 — para cada token, ChatViewModel atualiza UI.
     /// Ref: data-flows.md Secao 1 (Cancelamento) — Task.isCancelled verificado a cada token.
@@ -122,6 +161,7 @@ public actor MLXInferenceProvider: InferenceProvider {
         let maxTokens = config.maxTokens
         let repetitionPenalty = config.repetitionPenalty
         let capturedMessages = messages
+        let capturedModelIdentifier = loadedModelIdentifier
 
         return AsyncThrowingStream<String, any Error> { continuation in
             Task {
@@ -148,6 +188,7 @@ public actor MLXInferenceProvider: InferenceProvider {
                             topP: topP,
                             repetitionPenalty: repetitionPenalty
                         )
+                        var previousEmittedCharacter: Character?
 
                         for try await output in try MLXLMCommon.generate(
                             input: input,
@@ -166,7 +207,25 @@ public actor MLXInferenceProvider: InferenceProvider {
                             }
 
                             if let chunk = output.chunk {
-                                continuation.yield(chunk)
+                                let filtered = Self.filterControlTokens(
+                                    in: chunk,
+                                    modelIdentifier: capturedModelIdentifier
+                                )
+                                if let text = filtered.text, !text.isEmpty {
+                                    let normalized = Self.normalizeGemmaChunkSpacing(
+                                        text,
+                                        previousCharacter: previousEmittedCharacter,
+                                        modelIdentifier: capturedModelIdentifier
+                                    )
+                                    if !normalized.isEmpty {
+                                        continuation.yield(normalized)
+                                        previousEmittedCharacter = normalized.last
+                                    }
+                                }
+                                if filtered.shouldStop {
+                                    continuation.finish()
+                                    return
+                                }
                             }
                         }
 
@@ -185,6 +244,65 @@ public actor MLXInferenceProvider: InferenceProvider {
         }
     }
 
+    private static func filterControlTokens(
+        in chunk: String,
+        modelIdentifier: String?
+    ) -> (text: String?, shouldStop: Bool) {
+        guard let modelIdentifier,
+              modelIdentifier.lowercased().contains("gemma") else {
+            return (chunk, false)
+        }
+
+        let shouldStop = chunk.contains("<end_of_turn>") || chunk.contains("<start_of_turn>")
+
+        var cleaned = chunk
+        let markers = [
+            "<start_of_turn>",
+            "<end_of_turn>",
+            "<start_of_turn>model",
+            "<start_of_turn>user",
+            "<start_of_turn>system",
+            "<start_of_turn>tool",
+            "<start_of_image>",
+            "<end_of_image>",
+            "<bos>",
+            "<eos>",
+        ]
+        for marker in markers {
+            cleaned = cleaned.replacingOccurrences(of: marker, with: "")
+        }
+
+        return (cleaned.isEmpty ? nil : cleaned, shouldStop)
+    }
+
+    private static func normalizeGemmaChunkSpacing(
+        _ text: String,
+        previousCharacter: Character?,
+        modelIdentifier: String?
+    ) -> String {
+        guard let modelIdentifier,
+              modelIdentifier.lowercased().contains("gemma"),
+              let previousCharacter,
+              let firstCharacter = text.first else {
+            return text
+        }
+
+        if previousCharacter.isWhitespace || firstCharacter.isWhitespace {
+            return text
+        }
+
+        if [":", ";", "!", "?", ")", "]", "}"].contains(previousCharacter),
+           firstCharacter.isLetter || firstCharacter.isNumber {
+            return " " + text
+        }
+
+        if previousCharacter == ".", firstCharacter.isUppercase {
+            return " " + text
+        }
+
+        return text
+    }
+
     /// Descarrega modelo da memoria.
     /// Ref: Intro.md Secao 3.3 — importante para devices com RAM limitada.
     public func unloadModel() async {
@@ -194,6 +312,6 @@ public actor MLXInferenceProvider: InferenceProvider {
         modelContainer = nil
         loadedModelIdentifier = nil
         // Forca garbage collection do MLX
-        MLX.GPU.clearCache()
+        MLX.Memory.clearCache()
     }
 }

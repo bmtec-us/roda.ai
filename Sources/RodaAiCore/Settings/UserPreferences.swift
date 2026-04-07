@@ -1,6 +1,7 @@
 // Sources/RodaAiCore/Settings/UserPreferences.swift
 import Foundation
 import SwiftData
+import CoreGraphics
 
 public enum AppearanceMode: String, Codable, Sendable {
     case system
@@ -12,6 +13,20 @@ public enum ResponseStyle: String, Codable, Sendable, CaseIterable {
     case natural
     case technical
     case detailed
+}
+
+public enum ChatFontSizePreference: String, Codable, Sendable, CaseIterable {
+    case system
+    case smaller
+    case larger
+
+    public var scaleFactor: CGFloat {
+        switch self {
+        case .system: return 1.0
+        case .smaller: return 0.9
+        case .larger: return 1.12
+        }
+    }
 }
 
 @Model
@@ -29,6 +44,9 @@ public final class UserPreferences {
     /// Persisted as raw string to avoid enum-cast crashes with older stores.
     public var responseStyleRaw: String = ResponseStyle.natural.rawValue
 
+    /// Persisted as raw string to avoid enum-cast crashes with older stores.
+    public var chatFontSizeRaw: String = ChatFontSizePreference.system.rawValue
+
     // MARK: - Voice
     public var voiceEnabled: Bool = true
 
@@ -42,6 +60,11 @@ public final class UserPreferences {
     public var responseStyle: ResponseStyle {
         get { ResponseStyle(rawValue: responseStyleRaw) ?? .natural }
         set { responseStyleRaw = newValue.rawValue }
+    }
+
+    public var chatFontSize: ChatFontSizePreference {
+        get { ChatFontSizePreference(rawValue: chatFontSizeRaw) ?? .system }
+        set { chatFontSizeRaw = newValue.rawValue }
     }
 
     public var clampedTemperature: Float {

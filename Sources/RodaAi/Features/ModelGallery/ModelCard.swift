@@ -1,30 +1,31 @@
 // Sources/RodaAi/Features/ModelGallery/ModelCard.swift
 import SwiftUI
+import Network
 import RodaAiCore
 
 /// Card de um modelo no catalogo.
 /// Exibe metadados, compatibilidade, rating pt-BR, status (disponivel/baixando/baixado/ativo)
-/// e acoes (Baixar, Carregar, Descarregar, Excluir).
+/// e acoes (Baixar, Ativar, Desativar, Excluir).
 struct ModelCard: View {
     let entry: CatalogEntry
     let modelManager: ModelManager
+    @StateObject private var networkMonitor = ConnectionTypeMonitor()
     @State private var isPerformingAction = false
     @State private var actionError: String?
+    @State private var showCellularDownloadAlert = false
 
     private var isDownloaded: Bool { modelManager.isDownloaded(entry) }
     private var isActive: Bool { modelManager.activeModel?.identifier == entry.identifier }
     private var isCompatible: Bool { modelManager.isCompatible(entry) }
     private var progress: Double? { modelManager.downloadProgress[entry.identifier] }
+    private var downloadedBytes: Int64 { modelManager.downloadBytes[entry.identifier] ?? 0 }
+    private var totalBytes: Int64 { modelManager.downloadTotalBytes[entry.identifier] ?? entry.downloadSizeBytes }
+    private var eta: TimeInterval? { modelManager.downloadETA[entry.identifier] }
+    private var currentFile: String? { modelManager.downloadCurrentFile[entry.identifier] }
     private var downloadErrorMessage: String? { modelManager.downloadError[entry.identifier] }
 
     private var incompatibleReason: LocalizedStringKey {
-        let budgetGB = DeviceCapability.modelMemoryBudgetGB
-        let needed = entry.minimumRAM
-        if DeviceCapability.isMac {
-            return "model.status.incompatible.mac \(needed) \(budgetGB)"
-        } else {
-            return "model.status.incompatible.ios \(needed) \(budgetGB)"
-        }
+        "model.status.incompatible"
     }
 
     var body: some View {
@@ -34,8 +35,23 @@ struct ModelCard: View {
             statusRow
 
             if let progress, progress < 1.0 {
-                ProgressView(value: progress)
-                    .tint(ColorPalette.accent)
+                DownloadProgressView(
+                    progress: progress,
+                    downloadedBytes: downloadedBytes,
+                    totalBytes: totalBytes,
+                    onCancel: { modelManager.cancelDownload(identifier: entry.identifier) }
+                )
+                if let currentFile {
+                    Text("Downloading: \(currentFile)")
+                        .font(.caption2)
+                        .foregroundStyle(ColorPalette.textSecondary)
+                        .lineLimit(1)
+                }
+                if let eta {
+                    Text("ETA: \(formatETA(eta))")
+                        .font(.caption2)
+                        .foregroundStyle(ColorPalette.textSecondary)
+                }
             }
 
             if let errorMessage = actionError ?? downloadErrorMessage {
@@ -51,6 +67,17 @@ struct ModelCard: View {
         .modifier(ModelCardBackgroundModifier(isActive: isActive))
         .accessibilityIdentifier("modelCard")
         .accessibilityLabel("\(entry.displayName), \(entry.provider), \(entry.parameterCount)")
+        .alert(
+            "Download on cellular data?",
+            isPresented: $showCellularDownloadAlert
+        ) {
+            Button("Cancel", role: .cancel) {}
+            Button("Download") {
+                performDownload()
+            }
+        } message: {
+            Text("This model is about \(downloadSizeLabel). Continue using mobile data?")
+        }
     }
 
     // MARK: - Header
@@ -102,23 +129,40 @@ struct ModelCard: View {
 
     // MARK: - Metadata
     private var metadataRow: some View {
-        HStack(spacing: 16) {
-            Label(entry.parameterCount, systemImage: "cpu")
-                .font(.caption)
-            Label(downloadSizeLabel, systemImage: "internaldrive")
-                .font(.caption)
-            Label("\(entry.minimumRAM)GB RAM", systemImage: "memorychip")
-                .font(.caption)
-                .foregroundStyle(isCompatible ? ColorPalette.textSecondary : ColorPalette.warning)
-            if entry.isVisionCapable {
-                Label("model.badge.vision", systemImage: "eye")
-                    .font(.caption2)
-                    .foregroundStyle(ColorPalette.accent)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 14) {
+                Label(entry.parameterCount, systemImage: "cpu")
+                    .font(.caption)
+                    .foregroundStyle(ColorPalette.textSecondary)
+                Label(downloadSizeLabel, systemImage: "internaldrive")
+                    .font(.caption)
+                    .foregroundStyle(ColorPalette.textSecondary)
+                Label("\(entry.minimumRAM)GB RAM", systemImage: "memorychip")
+                    .font(.caption)
+                    .foregroundStyle(isCompatible ? ColorPalette.textSecondary : ColorPalette.warning)
             }
-            if entry.isReasoningCapable {
-                Label("model.badge.reasoning", systemImage: "brain")
-                    .font(.caption2)
-                    .foregroundStyle(ColorPalette.accent)
+
+            if entry.isVisionCapable || entry.isReasoningCapable {
+                HStack(spacing: 8) {
+                    if entry.isVisionCapable {
+                        Label("Vision", systemImage: "eye")
+                            .font(.caption2)
+                            .foregroundStyle(ColorPalette.accent)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(ColorPalette.accent.opacity(0.12))
+                            .clipShape(Capsule())
+                    }
+                    if entry.isReasoningCapable {
+                        Label("Reasoning", systemImage: "brain")
+                            .font(.caption2)
+                            .foregroundStyle(.blue)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.blue.opacity(0.12))
+                            .clipShape(Capsule())
+                    }
+                }
             }
         }
     }
@@ -173,7 +217,7 @@ struct ModelCard: View {
                     Label("model.action.activate", systemImage: "play.circle")
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(isPerformingAction)
+                .disabled(isPerformingAction || !isCompatible)
                 .accessibilityIdentifier("activate-builtin-\(entry.identifier)")
             } else if entry.isZeroDownload && isActive {
                 // Ja ativo — nada a fazer (deactivate button abaixo cuida)
@@ -182,7 +226,7 @@ struct ModelCard: View {
                     .foregroundStyle(ColorPalette.accent)
             } else if !isDownloaded && progress == nil {
                 Button {
-                    performDownload()
+                    requestDownload()
                 } label: {
                     Label("model.action.download", systemImage: "arrow.down.circle")
                 }
@@ -255,6 +299,14 @@ struct ModelCard: View {
         }
     }
 
+    private func requestDownload() {
+        if networkMonitor.isCellularConnection {
+            showCellularDownloadAlert = true
+        } else {
+            performDownload()
+        }
+    }
+
     private func performLoad() {
         guard let localModel = modelManager.downloadedModels.first(where: { $0.identifier == entry.identifier }) else {
             return
@@ -292,6 +344,13 @@ struct ModelCard: View {
         }
         isPerformingAction = false
     }
+
+    private func formatETA(_ seconds: TimeInterval) -> String {
+        let total = max(0, Int(seconds))
+        let minutes = total / 60
+        let secs = total % 60
+        return String(format: "%02d:%02d", minutes, secs)
+    }
 }
 
 // MARK: - Glass Background
@@ -316,5 +375,26 @@ private struct ModelCardBackgroundModifier: ViewModifier {
                         .strokeBorder(isActive ? Color.accentColor : .clear, lineWidth: 2)
                 )
         }
+    }
+}
+
+@MainActor
+private final class ConnectionTypeMonitor: ObservableObject {
+    @Published var isCellularConnection = false
+
+    private let monitor = NWPathMonitor()
+    private let queue = DispatchQueue(label: "RodaAi.ConnectionTypeMonitor")
+
+    init() {
+        monitor.pathUpdateHandler = { [weak self] path in
+            Task { @MainActor in
+                self?.isCellularConnection = path.usesInterfaceType(.cellular)
+            }
+        }
+        monitor.start(queue: queue)
+    }
+
+    deinit {
+        monitor.cancel()
     }
 }

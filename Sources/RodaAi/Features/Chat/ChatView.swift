@@ -4,6 +4,7 @@ import RodaAiCore
 
 struct ChatView: View {
     @State var viewModel: ChatViewModel
+    let chatFontSize: ChatFontSizePreference
     @Environment(AppDependencies.self) private var deps
 
     var fileProcessor: any FileTextExtractor = FileProcessor()
@@ -19,21 +20,28 @@ struct ChatView: View {
                                 .padding(.top, 80)
                         } else {
                             ForEach(Array(viewModel.messages.enumerated()), id: \.offset) { index, message in
-                                MessageBubble(message: message)
+                                MessageBubble(
+                                    message: message,
+                                    chatFontScale: chatFontSize.scaleFactor
+                                )
                                     .id(index)
                             }
-                            if case .loading = viewModel.chatState {
-                                TypingIndicator()
-                                    .id("typingIndicator")
-                                    .transition(.blurReplace)
-                            }
                         }
+                        Color.clear
+                            .frame(height: 1)
+                            .id("chatBottomAnchor")
                     }
                     .padding()
                 }
                 .onChange(of: viewModel.messages.count) { _, newCount in
+                    guard newCount > 0 else { return }
                     withAnimation(.spring(duration: 0.3)) {
-                        proxy.scrollTo(newCount - 1, anchor: .bottom)
+                        proxy.scrollTo("chatBottomAnchor", anchor: .bottom)
+                    }
+                }
+                .onChange(of: viewModel.messages.last?.content ?? "") { _, _ in
+                    withAnimation(.linear(duration: 0.15)) {
+                        proxy.scrollTo("chatBottomAnchor", anchor: .bottom)
                     }
                 }
             }
@@ -68,6 +76,7 @@ struct ChatView: View {
                 fileProcessor: fileProcessor
             )
         }
+        .background(ColorPalette.surface)
         .navigationTitle("chat.title")
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)

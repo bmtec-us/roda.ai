@@ -32,7 +32,9 @@ public enum ChatState: Equatable, Sendable {
             self = .streaming(tokensReceived: count + 1)
         case (.streaming(let count), .finished(let duration)):
             self = .completed(totalTokens: count, durationMs: duration)
-        case (.streaming, .cancel):
+        case (.loading, .finished(let duration)):
+            self = .completed(totalTokens: 0, durationMs: duration)
+        case (.streaming, .cancel), (.loading, .cancel):
             self = .idle
         case (.loading, .error(let e)), (.streaming, .error(let e)):
             self = .error(e)

@@ -609,10 +609,30 @@ private final class Gemma4TextAttention: Module {
         self._vNorm.wrappedValue = Gemma4RMSNormNoScale(eps: config.rmsNormEps)
 
         let ropeKey = isSliding ? "sliding_attention" : "full_attention"
-        let ropeConfig = config.ropeParameters[ropeKey]
+        var ropeConfig = config.ropeParameters[ropeKey]
         let ropeTheta = ropeConfig?["rope_theta"]?.asFloat() ?? (isSliding ? 10_000 : 1_000_000)
+        var ropeDimensions = headDim
+
+        // Gemma 4 uses `rope_type: proportional` on full-attention layers.
+        // MLXLMCommon.initializeRope does not support this rope type directly yet.
+        // Emulate expected behavior by:
+        // 1) mapping rope_type to default,
+        // 2) applying rotary only to a fraction of head dims via partial_rotary_factor.
+        if case .string("proportional") = ropeConfig?["rope_type"] {
+            let partial = ropeConfig?["partial_rotary_factor"]?.asFloat() ?? 0.25
+            let clamped = min(max(partial, 0.0), 1.0)
+            let rawDims = Int(Float(headDim) * clamped)
+            // RoPE dimensions should be even and at least 2.
+            let evenDims = max(2, rawDims - (rawDims % 2))
+            ropeDimensions = min(headDim, evenDims)
+            if var configMap = ropeConfig {
+                configMap["rope_type"] = .string("default")
+                ropeConfig = configMap
+            }
+        }
+
         self._rope.wrappedValue = initializeRope(
-            dims: headDim,
+            dims: ropeDimensions,
             base: ropeTheta,
             traditional: config.ropeTraditional,
             scalingConfig: ropeConfig,
@@ -1716,9 +1736,26 @@ public struct Gemma4Processor: UserInputProcessor {
     public func prepare(input: UserInput) async throws -> LMInput {
         let messages = Qwen2VLMessageGenerator().generate(from: input)
 
-        var promptTokens = try tokenizer.applyChatTemplate(
-            messages: messages, tools: input.tools,
-            additionalContext: input.additionalContext)
+        let promptTokensFromTemplate: [Int]
+        if tokenizer.hasChatTemplate {
+            promptTokensFromTemplate = try tokenizer.applyChatTemplate(
+                messages: messages, tools: input.tools,
+                additionalContext: input.additionalContext)
+        } else {
+            do {
+                let normalizedMessages = Self.normalizeMessagesForGemmaTemplate(messages)
+                promptTokensFromTemplate = try tokenizer.applyChatTemplate(
+                    messages: normalizedMessages,
+                    chatTemplate: Self.gemmaFallbackChatTemplate
+                )
+                print("[Gemma4][prepare] tokenizer without chat_template, using built-in multimodal chat template")
+            } catch {
+                let fallbackPrompt = Self.buildGemmaFallbackPrompt(from: messages)
+                promptTokensFromTemplate = tokenizer.encode(text: fallbackPrompt, addSpecialTokens: true)
+                print("[Gemma4][prepare] fallback chat template failed, using plain text formatter")
+            }
+        }
+        var promptTokens = promptTokensFromTemplate
 
         var processedImage: LMInput.ProcessedImage?
         if !input.images.isEmpty {
@@ -1765,6 +1802,112 @@ public struct Gemma4Processor: UserInputProcessor {
         let promptArray = MLXArray(promptTokens).expandedDimensions(axis: 0)
         let mask = ones(like: promptArray).asType(.int8)
         return LMInput(text: .init(tokens: promptArray, mask: mask), image: processedImage)
+    }
+
+    private static let gemmaFallbackChatTemplate = #"""
+{%- for message in messages %}
+{%- if message['role'] == 'assistant' %}
+<start_of_turn>model
+{%- elif message['role'] == 'system' %}
+<start_of_turn>system
+{%- else %}
+<start_of_turn>user
+{%- endif %}
+{%- for part in message['content'] %}
+{%- if part['type'] == 'text' %}
+{{ part['text'] }}
+{%- elif part['type'] == 'image' %}
+<start_of_image>
+{%- elif part['type'] == 'video' %}
+<video>
+{%- elif part['type'] == 'audio' %}
+<audio>
+{%- endif %}
+{%- endfor %}
+<end_of_turn>
+{%- endfor %}
+<start_of_turn>model
+"""#
+
+    private static func normalizeMessagesForGemmaTemplate(_ messages: [MLXLMCommon.Message]) -> [MLXLMCommon.Message] {
+        messages.map { rawMessage in
+            let role = (rawMessage["role"] as? String) ?? "user"
+
+            var normalizedContent: [[String: any Sendable]] = []
+            if let content = rawMessage["content"] as? String {
+                normalizedContent = [["type": "text", "text": content]]
+            } else if let content = rawMessage["content"] as? [[String: any Sendable]] {
+                normalizedContent = content.compactMap { item in
+                    guard let type = item["type"] as? String else { return nil }
+                    switch type {
+                    case "text":
+                        let text = (item["text"] as? String) ?? ""
+                        return ["type": "text", "text": text]
+                    case "image", "video", "audio":
+                        return ["type": type]
+                    default:
+                        return nil
+                    }
+                }
+            }
+
+            if normalizedContent.isEmpty {
+                normalizedContent = [["type": "text", "text": ""]]
+            }
+
+            return [
+                "role": role,
+                "content": normalizedContent,
+            ]
+        }
+    }
+
+    private static func buildGemmaFallbackPrompt(from messages: [MLXLMCommon.Message]) -> String {
+        // Ultimo fallback se o Jinja falhar por qualquer incompatibilidade.
+        var lines: [String] = []
+
+        for rawMessage in messages {
+            let rawRole = (rawMessage["role"] as? String) ?? "user"
+            let roleLabel: String
+            switch rawRole {
+            case "assistant": roleLabel = "Assistant"
+            case "system": roleLabel = "System"
+            default: roleLabel = "User"
+            }
+
+            var contentParts: [String] = []
+            if let content = rawMessage["content"] as? String {
+                contentParts.append(content)
+            } else if let content = rawMessage["content"] as? [[String: any Sendable]] {
+                for part in content {
+                    guard let partType = part["type"] as? String else { continue }
+                    switch partType {
+                    case "text":
+                        if let text = part["text"] as? String, !text.isEmpty {
+                            contentParts.append(text)
+                        }
+                    case "image":
+                        contentParts.append("<image>")
+                    case "video":
+                        contentParts.append("<video>")
+                    case "audio":
+                        contentParts.append("<audio>")
+                    default:
+                        break
+                    }
+                }
+            }
+
+            let content = contentParts.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+            if content.isEmpty {
+                lines.append("\(roleLabel):")
+            } else {
+                lines.append("\(roleLabel): \(content)")
+            }
+        }
+
+        lines.append("Assistant:")
+        return lines.joined(separator: "\n")
     }
 }
 

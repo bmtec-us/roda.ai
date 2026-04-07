@@ -62,8 +62,9 @@ final class AppDependencies {
         // 2. Inference — MLXInferenceProvider em producao, override em testes.
         //    Quando nenhum modelo esta carregado, generate() lanca .modelNotLoaded,
         //    que o ChatViewModel trata mostrando banner de erro amigavel.
-        let inference: any InferenceProvider = inferenceOverride ?? MLXInferenceProvider()
-        self.inferenceProvider = inference
+        let defaultInference: any InferenceProvider = inferenceOverride ?? MLXInferenceProvider()
+        let activeInference = ActiveInferenceProvider()
+        self.inferenceProvider = activeInference
 
         // 3. Downloader real (HuggingFace Hub via URLSession)
         let downloader = HuggingFaceDownloader()
@@ -84,11 +85,12 @@ final class AppDependencies {
         // 5. ModelManager coordena download/load/unload/validate
         let manager = ModelManager(
             downloader: downloader,
-            inferenceProvider: inference,
+            inferenceProvider: defaultInference,
             visionInferenceProvider: vision,
             ggufInferenceProvider: ggufProvider,
             apiInferenceProvider: nil,
-            foundationModelProvider: fmProvider
+            foundationModelProvider: fmProvider,
+            activeInferenceProvider: activeInference
         )
         manager.loadCatalog()
         manager.scanDownloadedModels()
@@ -103,10 +105,10 @@ final class AppDependencies {
         self.voiceService = VoiceService(
             speechRecognizer: recognizer,
             textToSpeech: tts,
-            inferenceProvider: inference
+            inferenceProvider: activeInference
         )
 
         // 7. App Intents service locator — para Siri shortcuts acessarem o provider real
-        InferenceServiceLocator.shared.currentProvider = inference
+        InferenceServiceLocator.shared.currentProvider = activeInference
     }
 }

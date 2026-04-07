@@ -107,8 +107,9 @@ final class ModelBackendTests: XCTestCase {
         XCTAssertEqual(fmEntry?.backend, .foundationModel)
         XCTAssertTrue(fmEntry!.isZeroDownload)
 
-        // Activate built-in model (no download needed)
-        try await manager.activateBuiltInModel(fmEntry!)
+        // Route check only: load directly to avoid host-dependent FM availability gating.
+        let builtIn = LocalModel(identifier: fmEntry!.identifier, displayName: fmEntry!.displayName, sizeOnDisk: 0)
+        try await manager.loadModel(builtIn)
 
         let fmLoadCount = await fmProvider.loadModelCallCount
         let mlxLoadCount = await mlxProvider.loadModelCallCount

@@ -3,6 +3,7 @@ import SwiftUI
 
 struct PersonalizationView: View {
     @Bindable var viewModel: SettingsViewModel
+    let onSave: () -> Void
     @State private var showingPresets = true
 
     var body: some View {
@@ -17,6 +18,16 @@ struct PersonalizationView: View {
             .padding()
         }
         .navigationTitle("settings.systemPrompt")
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Save") {
+                    onSave()
+                }
+            }
+        }
+        .onDisappear {
+            onSave()
+        }
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -88,7 +99,7 @@ struct PersonalizationView: View {
                 .frame(minHeight: 180)
                 .scrollContentBackground(.hidden)
                 .padding(12)
-                .background(Color(.secondarySystemBackground))
+                .background(ColorPalette.surfaceElevated)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
 
             HStack {
@@ -125,7 +136,7 @@ private struct PresetCard: View {
             VStack(alignment: .leading, spacing: 8) {
                 Image(systemName: preset.icon)
                     .font(.title2)
-                    .foregroundStyle(isSelected ? Color.white : Color.accentColor)
+                    .foregroundStyle(isSelected ? Color.white : ColorPalette.accent)
 
                 Text(preset.title)
                     .font(.subheadline.weight(.semibold))
@@ -138,11 +149,11 @@ private struct PresetCard: View {
             }
             .frame(width: 140, alignment: .leading)
             .padding(14)
-            .background(isSelected ? Color.accentColor : Color(.secondarySystemBackground))
+            .background(isSelected ? ColorPalette.accent : ColorPalette.surfaceElevated)
             .clipShape(RoundedRectangle(cornerRadius: 16))
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
-                    .strokeBorder(isSelected ? Color.accentColor : .clear, lineWidth: 2)
+                    .strokeBorder(isSelected ? ColorPalette.accent : .clear, lineWidth: 2)
             )
         }
         .buttonStyle(.plain)
