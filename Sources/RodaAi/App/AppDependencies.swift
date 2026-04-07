@@ -31,6 +31,7 @@ final class AppDependencies {
     let modelManager: ModelManager
     let conversationRepository: ConversationRepository
     let voiceService: VoiceService
+    let textToSpeechService: TextToSpeechService?
 
     // MARK: - SwiftData
     let modelContainer: ModelContainer
@@ -101,7 +102,9 @@ final class AppDependencies {
 
         // 6. Voice services — reais por padrao, mocks em testes/previews
         let recognizer: any SpeechRecognizing = speechRecognizerOverride ?? SpeechRecognizer()
-        let tts: any TextToSpeaking = textToSpeechOverride ?? TextToSpeechService()
+        let defaultTTS = TextToSpeechService()
+        let tts: any TextToSpeaking = textToSpeechOverride ?? defaultTTS
+        self.textToSpeechService = tts as? TextToSpeechService
         self.voiceService = VoiceService(
             speechRecognizer: recognizer,
             textToSpeech: tts,

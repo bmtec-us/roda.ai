@@ -15,7 +15,16 @@ import MLX
 /// 2. AVSpeechSynthesizer (fallback, qualidade basica)
 @MainActor
 public class TextToSpeechService: ObservableObject, TextToSpeaking {
+    public enum NeuralVoiceModelState: Equatable {
+        case unavailable
+        case notDownloaded
+        case downloading
+        case available
+        case failed(String)
+    }
+
     @Published public var isSpeaking: Bool = false
+    @Published public private(set) var neuralVoiceModelState: NeuralVoiceModelState
     public private(set) var isUsingFallback: Bool
 
     #if canImport(AVFoundation)
@@ -34,6 +43,7 @@ public class TextToSpeechService: ObservableObject, TextToSpeaking {
 
     public init(mlxAvailable: Bool = true) {
         self.isUsingFallback = !mlxAvailable
+        self.neuralVoiceModelState = mlxAvailable ? .notDownloaded : .unavailable
     }
 
     public func speak(_ text: String) async throws(VoiceError) {
@@ -53,6 +63,34 @@ public class TextToSpeechService: ObservableObject, TextToSpeaking {
         audioEngine?.stop()
         #endif
         isSpeaking = false
+    }
+
+    public func downloadNeuralVoiceModel() async {
+        #if canImport(MLXAudioTTS)
+        guard neuralVoiceModelState != .downloading else {
+            RodaLog.voice.info("Kokoro download ignored: already downloading")
+            return
+        }
+
+        RodaLog.voice.info("Kokoro download requested repo=\(self.ttsModelRepo, privacy: .public)")
+        neuralVoiceModelState = .downloading
+        do {
+            _ = try await loadModelIfNeeded()
+            neuralVoiceModelState = .available
+            isUsingFallback = false
+            RodaLog.voice.info("Kokoro download/load completed successfully")
+        } catch {
+            let nsError = error as NSError
+            let message = error.localizedDescription
+            let details = Self.describeNSError(nsError)
+            RodaLog.voice.error("Kokoro download/load failed domain=\(nsError.domain, privacy: .public) code=\(nsError.code) message=\(message, privacy: .public) details=\(details, privacy: .public)")
+            neuralVoiceModelState = .failed(message)
+            isUsingFallback = true
+        }
+        #else
+        RodaLog.voice.warning("Kokoro unavailable: MLXAudioTTS module not present")
+        neuralVoiceModelState = .unavailable
+        #endif
     }
 
     // MARK: - AVSpeech fallback
@@ -79,23 +117,62 @@ public class TextToSpeechService: ObservableObject, TextToSpeaking {
 
     // MARK: - MLX-Audio TTS (Kokoro)
 
+    #if canImport(MLXAudioTTS)
+    private func loadModelIfNeeded() async throws -> SpeechGenerationModel {
+        if modelLoaded, let cached = ttsModel {
+            neuralVoiceModelState = .available
+            RodaLog.voice.debug("Kokoro model already loaded in memory")
+            return cached
+        }
+
+        RodaLog.voice.info("Loading TTS model: \(self.ttsModelRepo, privacy: .public)")
+        neuralVoiceModelState = .downloading
+        do {
+            let loaded = try await TTS.loadModel(modelRepo: ttsModelRepo)
+            ttsModel = loaded
+            modelLoaded = true
+            neuralVoiceModelState = .available
+            isUsingFallback = false
+            RodaLog.voice.info("TTS model loaded successfully")
+            return loaded
+        } catch {
+            let nsError = error as NSError
+            let details = Self.describeNSError(nsError)
+            RodaLog.voice.error("TTS model load failed domain=\(nsError.domain, privacy: .public) code=\(nsError.code) message=\(error.localizedDescription, privacy: .public) details=\(details, privacy: .public)")
+            throw error
+        }
+    }
+    #endif
+
+    private static func describeNSError(_ error: NSError) -> String {
+        var pairs: [String] = []
+
+        if let failingURL = error.userInfo[NSURLErrorFailingURLErrorKey] {
+            pairs.append("failingURL=\(failingURL)")
+        }
+        if let failingURLString = error.userInfo[NSURLErrorFailingURLStringErrorKey] {
+            pairs.append("failingURLString=\(failingURLString)")
+        }
+        if let statusCode = error.userInfo["statusCode"] {
+            pairs.append("statusCode=\(statusCode)")
+        }
+        if let responseBody = error.userInfo["responseBody"] {
+            pairs.append("responseBody=\(responseBody)")
+        }
+        if let underlying = error.userInfo[NSUnderlyingErrorKey] as? NSError {
+            pairs.append("underlying={domain=\(underlying.domain), code=\(underlying.code), message=\(underlying.localizedDescription)}")
+        }
+
+        if pairs.isEmpty {
+            return "userInfo=\(error.userInfo)"
+        }
+        return pairs.joined(separator: ", ")
+    }
+
     private func speakWithMLXAudio(_ text: String) async throws(VoiceError) {
         #if canImport(MLXAudioTTS) && canImport(AVFoundation)
         do {
-            // Lazy-load the TTS model on first use
-            if !modelLoaded {
-                RodaLog.voice.info("Loading TTS model: \(self.ttsModelRepo, privacy: .public)")
-                ttsModel = try await TTS.loadModel(modelRepo: ttsModelRepo)
-                modelLoaded = true
-                RodaLog.voice.info("TTS model loaded successfully")
-            }
-
-            guard let model = ttsModel else {
-                RodaLog.voice.warning("TTS model nil after load — falling back to AVSpeech")
-                isUsingFallback = true
-                try await speakWithAVSpeech(text)
-                return
-            }
+            let model = try await loadModelIfNeeded()
 
             isSpeaking = true
 
@@ -128,18 +205,19 @@ public class TextToSpeechService: ObservableObject, TextToSpeaking {
                 language: "pt"
             )
 
+            var didScheduleAudio = false
             for try await buffer in stream {
                 if Task.isCancelled { break }
+                guard buffer.frameLength > 0 else { continue }
                 await player.scheduleBuffer(buffer)
+                didScheduleAudio = true
             }
 
-            // Wait for playback to finish
-            await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
-                player.scheduleBuffer(
-                    AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 0)!,
-                    completionCallbackType: .dataPlayedBack
-                ) { _ in
-                    cont.resume()
+            // Wait for playback to drain without scheduling invalid empty buffers.
+            if didScheduleAudio {
+                while player.isPlaying {
+                    try? await Task.sleep(for: .milliseconds(50))
+                    if Task.isCancelled { break }
                 }
             }
 
@@ -156,11 +234,13 @@ public class TextToSpeechService: ObservableObject, TextToSpeaking {
             RodaLog.voice.error("MLX TTS failed: \(error.localizedDescription, privacy: .public) — falling back to AVSpeech")
             isSpeaking = false
             isUsingFallback = true
+            neuralVoiceModelState = .failed(error.localizedDescription)
             try await speakWithAVSpeech(text)
         }
         #else
         // MLXAudioTTS not available — use AVSpeech
         isUsingFallback = true
+        neuralVoiceModelState = .unavailable
         try await speakWithAVSpeech(text)
         #endif
     }

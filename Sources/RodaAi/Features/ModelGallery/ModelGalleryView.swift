@@ -9,6 +9,8 @@ import RodaAiCore
 /// - Cada card permite Baixar / Ativar / Desativar / Excluir
 struct ModelGalleryView: View {
     @State var modelManager: ModelManager
+    let textToSpeechService: TextToSpeechService?
+
     @State private var searchText = ""
     @State private var filter: ModelFilter = .all
 
@@ -68,11 +70,17 @@ struct ModelGalleryView: View {
                         filterEmptyState
                     } else {
                         ScrollView {
-                            LazyVGrid(columns: [
-                                GridItem(.adaptive(minimum: 320), spacing: 12)
-                            ], spacing: 12) {
-                                ForEach(filtered) { entry in
-                                    ModelCard(entry: entry, modelManager: modelManager)
+                            VStack(spacing: 12) {
+                                if let textToSpeechService {
+                                    KokoroModelCard(textToSpeechService: textToSpeechService)
+                                }
+
+                                LazyVGrid(columns: [
+                                    GridItem(.adaptive(minimum: 320), spacing: 12)
+                                ], spacing: 12) {
+                                    ForEach(filtered) { entry in
+                                        ModelCard(entry: entry, modelManager: modelManager)
+                                    }
                                 }
                             }
                             .padding()
@@ -114,5 +122,144 @@ struct ModelGalleryView: View {
             description: Text("model.filter.empty.description")
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+private struct KokoroModelCard: View {
+    @ObservedObject var textToSpeechService: TextToSpeechService
+    @State private var isRunning = false
+
+    private let approxSizeLabel = "320MB"
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Kokoro TTS (pt-BR)")
+                        .font(.headline)
+                    Text("Voz neural local para modo de voz")
+                        .font(.caption)
+                        .foregroundStyle(ColorPalette.textSecondary)
+                }
+                Spacer()
+                statusBadge
+            }
+
+            HStack(spacing: 14) {
+                Label("Neural Voice", systemImage: "waveform")
+                    .font(.caption)
+                    .foregroundStyle(ColorPalette.textSecondary)
+                Label(approxSizeLabel, systemImage: "internaldrive")
+                    .font(.caption)
+                    .foregroundStyle(ColorPalette.textSecondary)
+            }
+
+            if case .failed(let message) = textToSpeechService.neuralVoiceModelState {
+                Text(message)
+                    .font(.caption2)
+                    .foregroundStyle(ColorPalette.error)
+                    .lineLimit(2)
+            }
+
+            HStack(spacing: 8) {
+                if textToSpeechService.neuralVoiceModelState != .available {
+                    Button {
+                        isRunning = true
+                        Task {
+                            await textToSpeechService.downloadNeuralVoiceModel()
+                            isRunning = false
+                        }
+                    } label: {
+                        Label(buttonTitle, systemImage: buttonIcon)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(isRunning || textToSpeechService.neuralVoiceModelState == .downloading)
+                }
+
+                if textToSpeechService.neuralVoiceModelState == .available {
+                    Label("Disponivel no modo voz", systemImage: "checkmark.seal.fill")
+                        .font(.caption)
+                        .foregroundStyle(ColorPalette.accent)
+                }
+            }
+            .font(.caption)
+            .controlSize(.small)
+        }
+        .padding(16)
+        .background(.regularMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(
+                    textToSpeechService.neuralVoiceModelState == .available ? Color.accentColor : .clear,
+                    lineWidth: 2
+                )
+        )
+    }
+
+    @ViewBuilder
+    private var statusBadge: some View {
+        switch textToSpeechService.neuralVoiceModelState {
+        case .available:
+            Text("Disponivel")
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(ColorPalette.accent)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(ColorPalette.accent.opacity(0.15))
+                .clipShape(Capsule())
+        case .downloading:
+            Text("Baixando")
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(.blue)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Color.blue.opacity(0.15))
+                .clipShape(Capsule())
+        case .failed:
+            Text("Falhou")
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(ColorPalette.error)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(ColorPalette.error.opacity(0.12))
+                .clipShape(Capsule())
+        case .notDownloaded:
+            Text("Nao baixado")
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(ColorPalette.textSecondary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(ColorPalette.textSecondary.opacity(0.12))
+                .clipShape(Capsule())
+        case .unavailable:
+            Text("Indisponivel")
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(ColorPalette.warning)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(ColorPalette.warning.opacity(0.12))
+                .clipShape(Capsule())
+        }
+    }
+
+    private var buttonTitle: String {
+        switch textToSpeechService.neuralVoiceModelState {
+        case .failed:
+            return "Tentar novamente"
+        case .downloading:
+            return "Baixando..."
+        default:
+            return "Baixar voz neural"
+        }
+    }
+
+    private var buttonIcon: String {
+        switch textToSpeechService.neuralVoiceModelState {
+        case .failed:
+            return "arrow.clockwise"
+        default:
+            return "arrow.down.circle"
+        }
     }
 }

@@ -180,7 +180,12 @@ public final class ChatViewModel {
                         }
                     } else {
                         if self.messages.indices.contains(assistantIndex) {
-                            let finalText = self.formatAssistantOutputForDisplay(self.messages[assistantIndex].content)
+                            let rawText = self.messages[assistantIndex].content
+                            self.logLLMText(stage: "raw", text: rawText)
+
+                            let finalText = self.formatAssistantOutputForDisplay(rawText)
+                            self.logLLMText(stage: "formatted", text: finalText)
+
                             self.messages[assistantIndex] = ChatMessage(role: .assistant, content: finalText)
                         }
                         try self.chatState.transition(.finished(durationMs: duration))
@@ -806,13 +811,31 @@ public final class ChatViewModel {
     }
 
     private func formatPlainAssistantText(_ text: String) -> String {
-        let sanitizedMarkdown = normalizeBrokenInlineMarkdownMarkers(in: text)
+        let normalizedLineEndings = text
+            .replacingOccurrences(of: "\r\n", with: "\n")
+            .replacingOccurrences(of: "\r", with: "\n")
+            .replacingOccurrences(of: "\n{3,}", with: "\n\n", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // If model output already has markdown/lists/paragraphs, preserve it.
+        if shouldPreserveStructuredFormatting(normalizedLineEndings) {
+            return normalizedLineEndings
+        }
+
+        let sanitizedMarkdown = normalizeBrokenInlineMarkdownMarkers(in: normalizedLineEndings)
         let withSentenceSpaces = insertMissingSentenceSpaces(in: sanitizedMarkdown)
         let withMarkdownHeadingBreaks = breakMarkdownHeadingRuns(in: withSentenceSpaces)
         let paragraphReady = injectParagraphBreaksForLongSingleBlock(withMarkdownHeadingBreaks)
         let lines = paragraphReady
             .components(separatedBy: .newlines)
             .map { $0.trimmingCharacters(in: .whitespaces) }
+
+        if looksLikeVerse(lines) {
+            return lines
+                .joined(separator: "\n")
+                .replacingOccurrences(of: "\n{3,}", with: "\n\n", options: .regularExpression)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        }
 
         var rebuilt: [String] = []
         var paragraph = ""
@@ -861,6 +884,35 @@ public final class ChatViewModel {
         return rebuilt.joined(separator: "\n\n")
     }
 
+    private func looksLikeVerse(_ lines: [String]) -> Bool {
+        let nonEmpty = lines.filter { !$0.isEmpty }
+        guard nonEmpty.count >= 3 else { return false }
+
+        let hasList = nonEmpty.contains {
+            $0.hasPrefix("- ")
+                || $0.hasPrefix("* ")
+                || $0.range(of: "^[0-9]+\\.\\s", options: .regularExpression) != nil
+        }
+        guard !hasList else { return false }
+
+        let shortLineCount = nonEmpty.filter { $0.count <= 52 }.count
+        let shortLineRatio = Double(shortLineCount) / Double(nonEmpty.count)
+        let commaEndedCount = nonEmpty.filter { $0.hasSuffix(",") }.count
+
+        return shortLineRatio >= 0.6 || commaEndedCount >= 2
+    }
+
+    private func shouldPreserveStructuredFormatting(_ text: String) -> Bool {
+        if text.contains("\n\n") { return true }
+        if text.contains("```") { return true }
+        if text.contains("---") { return true }
+        if text.contains("**") || text.contains("__") { return true }
+        if text.range(of: "(?m)^\\s*(?:[-*]\\s|[0-9]+\\.\\s)", options: .regularExpression) != nil {
+            return true
+        }
+        return false
+    }
+
     private func insertMissingSentenceSpaces(in text: String) -> String {
         var normalized = text
             .replacingOccurrences(of: "\r\n", with: "\n")
@@ -884,9 +936,11 @@ public final class ChatViewModel {
             options: .regularExpression
         )
 
-        // Fecha markdown inline e garante espaco antes da proxima sentenca (ex.: "**texto**Pergunta").
+        // Fecha markdown inline e garante espaco antes da proxima sentenca
+        // apenas quando o marcador e de FECHAMENTO (ex.: "**texto**Pergunta").
+        // Nao altera abertura valida como "**Titulo**".
         normalized = normalized.replacingOccurrences(
-            of: "(\\*{1,2}|_{1,2}|`)([A-ZÀ-Ý0-9])",
+            of: "(?<=[\\p{L}\\p{N}])(\\*{1,2}|_{1,2}|`)([A-ZÀ-Ý0-9])",
             with: "$1 $2",
             options: .regularExpression
         )
@@ -938,6 +992,11 @@ public final class ChatViewModel {
     private func normalizeBrokenInlineMarkdownMarkers(in text: String) -> String {
         var normalized = text
 
+        // Fix malformed emphasis with spaces right after opening markers.
+        // Example: "** O Sol Nasce**" -> "**O Sol Nasce**"
+        normalized = normalizeEmphasisSpacing("**", in: normalized)
+        normalized = normalizeEmphasisSpacing("__", in: normalized)
+
         // Preserve valid markdown pairs and remove only orphan markers.
         normalized = balancePairedToken("**", in: normalized)
         normalized = balancePairedToken("__", in: normalized)
@@ -962,6 +1021,16 @@ public final class ChatViewModel {
         return normalized
     }
 
+    private func normalizeEmphasisSpacing(_ token: String, in text: String) -> String {
+        let escaped = NSRegularExpression.escapedPattern(for: token)
+        let pattern = "\(escaped)\\s+([^\\n]+?)\\s*\(escaped)"
+        return text.replacingOccurrences(
+            of: pattern,
+            with: "\(token)$1\(token)",
+            options: .regularExpression
+        )
+    }
+
     private func balancePairedToken(_ token: String, in text: String) -> String {
         let count = text.components(separatedBy: token).count - 1
         guard count % 2 != 0 else { return text }
@@ -973,6 +1042,20 @@ public final class ChatViewModel {
             return fixed
         }
         return text
+    }
+
+    private func logLLMText(stage: String, text: String) {
+        let escaped = text
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\n", with: "\\n")
+            .replacingOccurrences(of: "\r", with: "\\r")
+            .replacingOccurrences(of: "\t", with: "\\t")
+
+        print("[LLM_TEXT][\(stage)] chars=\(text.count)")
+        print("[LLM_TEXT][\(stage)][RAW_BEGIN]")
+        print(text)
+        print("[LLM_TEXT][\(stage)][RAW_END]")
+        print("[LLM_TEXT][\(stage)][ESCAPED] \(escaped)")
     }
 
     private func explicitResponseConstraint(from userText: String) -> String? {

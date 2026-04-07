@@ -74,7 +74,7 @@ struct ContentView: View {
                 conversationsTab
             }
             Tab("tab.models", systemImage: "cpu.fill", value: 1) {
-                ModelGalleryView(modelManager: deps.modelManager)
+                ModelGalleryView(modelManager: deps.modelManager, textToSpeechService: deps.textToSpeechService)
             }
             Tab("tab.voice", systemImage: "mic.fill", value: 2) {
                 NavigationStack {
@@ -129,7 +129,7 @@ struct ContentView: View {
             ConversationsContainer()
                 .environment(deps)
         case .models:
-            ModelGalleryView(modelManager: deps.modelManager)
+            ModelGalleryView(modelManager: deps.modelManager, textToSpeechService: deps.textToSpeechService)
         case .voice:
             VoiceModeView(voiceService: deps.voiceService)
                 .navigationTitle("tab.voice")

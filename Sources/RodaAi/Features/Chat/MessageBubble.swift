@@ -303,6 +303,79 @@ private struct AttachmentImageView: View {
     }
 }
 
+private enum MarkdownDisplayNormalizer {
+    struct PreparedMarkdown {
+        let text: String
+        let useFullSyntax: Bool
+    }
+
+    static func prepare(_ text: String) -> PreparedMarkdown {
+        let normalized = text
+            .replacingOccurrences(of: "\r\n", with: "\n")
+            .replacingOccurrences(of: "\r", with: "\n")
+
+        // CommonMark treats a single newline as a soft break, so poetry often
+        // renders as a single wrapped paragraph. Convert verse-like lines to
+        // explicit hard breaks while keeping regular markdown semantics.
+        let hardBroken = applyHardLineBreaksForVerseParagraphs(in: normalized)
+        return PreparedMarkdown(text: hardBroken, useFullSyntax: true)
+    }
+
+    private static func containsVerseLikeParagraph(_ text: String) -> Bool {
+        let paragraphs = text.components(separatedBy: "\n\n")
+        for paragraph in paragraphs {
+            let lines = paragraph
+                .components(separatedBy: "\n")
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+            if shouldPreserveLineBreaks(lines) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private static func applyHardLineBreaksForVerseParagraphs(in text: String) -> String {
+        let paragraphs = text.components(separatedBy: "\n\n")
+        let transformed = paragraphs.map { paragraph in
+            let lines = paragraph
+                .components(separatedBy: "\n")
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+
+            guard shouldPreserveLineBreaks(lines) else {
+                return paragraph
+            }
+
+            // Markdown hard line break: two spaces before newline.
+            return lines.joined(separator: "  \n")
+        }
+
+        return transformed.joined(separator: "\n\n")
+    }
+
+    private static func shouldPreserveLineBreaks(_ lines: [String]) -> Bool {
+        let nonEmpty = lines.filter { !$0.isEmpty }
+        guard nonEmpty.count >= 3 else { return false }
+
+        let hasBlockMarkdown = nonEmpty.contains { line in
+            line.hasPrefix("#")
+                || line.hasPrefix(">")
+                || line.hasPrefix("```")
+                || line == "---"
+                || line == "***"
+                || line == "___"
+                || line.range(of: "^[-*+]\\s", options: .regularExpression) != nil
+                || line.range(of: "^[0-9]+\\.\\s", options: .regularExpression) != nil
+        }
+        guard !hasBlockMarkdown else { return false }
+
+        let shortLines = nonEmpty.filter { $0.count <= 64 }.count
+        let shortRatio = Double(shortLines) / Double(nonEmpty.count)
+        let punctuationEnded = nonEmpty.filter { $0.hasSuffix(",") || $0.hasSuffix(";") }.count
+
+        return shortRatio >= 0.65 || punctuationEnded >= 2
+    }
+}
+
 private struct SelectableMessageText: View {
     let text: String
     let parseMarkdown: Bool
@@ -321,11 +394,12 @@ private struct SelectableMessageText: View {
         )
         .frame(maxWidth: .infinity, alignment: .leading)
         #else
+        let prepared = MarkdownDisplayNormalizer.prepare(text)
         if parseMarkdown,
            let markdown = try? AttributedString(
-            markdown: text,
+            markdown: prepared.text,
             options: AttributedString.MarkdownParsingOptions(
-                interpretedSyntax: .full,
+                interpretedSyntax: prepared.useFullSyntax ? .full : .inlineOnlyPreservingWhitespace,
                 failurePolicy: .returnPartiallyParsedIfPossible
             )
            ) {
@@ -385,11 +459,12 @@ private struct IOSSelectableTextView: UIViewRepresentable {
         let dynamicBaseFont = UIFontMetrics(forTextStyle: bodyStyle)
             .scaledFont(for: UIFont.systemFont(ofSize: adjustedBasePointSize))
 
+        let prepared = MarkdownDisplayNormalizer.prepare(text)
         if parseMarkdown,
            let attributed = try? AttributedString(
-            markdown: text,
+            markdown: prepared.text,
             options: AttributedString.MarkdownParsingOptions(
-                interpretedSyntax: .full,
+                interpretedSyntax: prepared.useFullSyntax ? .full : .inlineOnlyPreservingWhitespace,
                 failurePolicy: .returnPartiallyParsedIfPossible
             )
            ) {

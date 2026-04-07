@@ -52,8 +52,13 @@ struct VoiceModeView: View {
                 Text("voice.state.idle")
                     .foregroundStyle(.secondary)
             case .listening:
-                Text("voice.state.listening")
-                    .foregroundStyle(.primary)
+                if voiceService.transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Text("voice.state.listening")
+                        .foregroundStyle(.primary)
+                } else {
+                    Text("Aguardando \(VoiceService.silenceAutoSendSeconds)s de silencio para enviar")
+                        .foregroundStyle(.primary)
+                }
             case .processing:
                 Text("voice.state.processing")
                     .foregroundStyle(.primary)
@@ -84,7 +89,7 @@ struct VoiceModeView: View {
                     .transition(.blurReplace)
             }
             if !voiceService.response.isEmpty {
-                Text(voiceService.response)
+                Text(cleanResponseForVoice(voiceService.response))
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -149,6 +154,19 @@ struct VoiceModeView: View {
         case .speaking: return .speaking
         case .error: return .error
         }
+    }
+
+    private func cleanResponseForVoice(_ text: String) -> String {
+        var value = text
+        value = value.replacingOccurrences(of: "```[\\s\\S]*?```", with: " ", options: .regularExpression)
+        value = value.replacingOccurrences(of: "`", with: "")
+        value = value.replacingOccurrences(of: "**", with: "")
+        value = value.replacingOccurrences(of: "__", with: "")
+        value = value.replacingOccurrences(of: "(?m)^\\s*#{1,6}\\s*", with: "", options: .regularExpression)
+        value = value.replacingOccurrences(of: "(?m)^\\s*[-*+]\\s+", with: "", options: .regularExpression)
+        value = value.replacingOccurrences(of: "\\[[^\\]]+\\]\\([^\\)]+\\)", with: "", options: .regularExpression)
+        value = value.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+        return value.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
 
