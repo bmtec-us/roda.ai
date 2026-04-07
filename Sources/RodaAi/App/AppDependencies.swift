@@ -69,10 +69,26 @@ final class AppDependencies {
         let downloader = HuggingFaceDownloader()
         self.modelDownloader = downloader
 
-        // 4. ModelManager coordena download/load/unload/validate
+        // 4. Backend-specific providers
+        //    - Vision: VLM models (Gemma 4, Qwen VL) via VLMModelFactory
+        //    - GGUF: llama.cpp runtime for architectures MLX doesn't yet support
+        //    - Foundation Model: Apple Intelligence (iOS 26+ on eligible devices)
+        let vision: any InferenceProvider = VisionInferenceProvider()
+        let ggufProvider: any InferenceProvider = LlamaCppInferenceProvider()
+
+        var fmProvider: (any InferenceProvider)? = nil
+        if #available(iOS 26, macOS 26, *) {
+            fmProvider = FoundationModelInferenceProvider()
+        }
+
+        // 5. ModelManager coordena download/load/unload/validate
         let manager = ModelManager(
             downloader: downloader,
-            inferenceProvider: inference
+            inferenceProvider: inference,
+            visionInferenceProvider: vision,
+            ggufInferenceProvider: ggufProvider,
+            apiInferenceProvider: nil,
+            foundationModelProvider: fmProvider
         )
         manager.loadCatalog()
         manager.scanDownloadedModels()
