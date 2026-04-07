@@ -1,60 +1,36 @@
 // Sources/RodaAi/Design/Colors.swift
+//
+// Design tokens para Liquid Glass (iOS 26+).
+//
+// Principio: usar cores SEMANTICAS do SwiftUI que se adaptam automaticamente
+// a materiais glass, dark mode, e acessibilidade. Cores hardcoded (hex)
+// nao refratam corretamente em superficies glass e parecem "flat".
+//
+// Ref: Apple HIG "Color and Materials" — Liquid Glass design language.
 import SwiftUI
 
-/// Tokens de cor do design system RodaAi.
-/// Cada cor tem variantes light e dark com contraste WCAG AA garantido.
 struct ColorPalette: Sendable {
-    // MARK: - Primary
-    static let accent = Color(hex: "#00875A")
-    static let accentLight = Color(hex: "#00A86B")
+    // MARK: - Brand Accent
+    /// Accent primario do app. Usado como .tint() no root e propagado para glass.
+    static let accent = Color.green  // Maps to SF Green, adapts to glass
 
     // MARK: - Semantic
-    static let success = Color(hex: "#00875A")
-    static let warning = Color(hex: "#E5A100")
-    static let error = Color(hex: "#D4351C")
+    static let success = Color.green
+    static let warning = Color.orange
+    static let error = Color.red
 
-    // MARK: - Surfaces (Light)
-    static let surface = Color(hex: "#FAFAFA")
-    static let surfaceElevated = Color(hex: "#FFFFFF")
-    static let surfaceSecondary = Color(hex: "#F5F5F5")
+    // MARK: - Text (Semantic — adapts to glass & dark mode automatically)
+    static let textPrimary: Color = .primary
+    static let textSecondary: Color = .secondary
+    static let textTertiary = Color.secondary.opacity(0.7)
 
-    // MARK: - Text (Light)
-    static let textPrimary = Color(hex: "#1A1A1A")
-    static let textSecondary = Color(hex: "#6B6B6B")
-    // Note: WCAG AA requires 3:1 for large text. #9B9B9B (2.66:1) was below threshold.
-    // Darkened to #898989 (3.35:1) on #FAFAFA surface.
-    static let textTertiary = Color(hex: "#898989")
+    // MARK: - Surfaces (Semantic Materials)
+    // No Liquid Glass, nao usamos cores de fundo opacas.
+    // Usamos Materials do SwiftUI que se adaptam ao glass.
+    static let surface = Color(.systemBackground)
+    static let surfaceElevated = Color(.secondarySystemBackground)
+    static let surfaceSecondary = Color(.tertiarySystemBackground)
 
-    // MARK: - Dark Mode Registry
-    private static let darkVariants: [String: Color] = [
-        "rodaAccent": Color(hex: "#00A86B"),
-        "rodaAccentLight": Color(hex: "#00C77B"),
-        "rodaSuccess": Color(hex: "#00A86B"),
-        "rodaWarning": Color(hex: "#FFBF00"),
-        "rodaError": Color(hex: "#FF6B4A"),
-        "rodaSurface": Color(hex: "#1A1A1A"),
-        "rodaSurfaceElevated": Color(hex: "#2A2A2A"),
-        "rodaSurfaceSecondary": Color(hex: "#242424"),
-        "rodaTextPrimary": Color(hex: "#F0F0F0"),
-        "rodaTextSecondary": Color(hex: "#A0A0A0"),
-        "rodaTextTertiary": Color(hex: "#707070"),
-    ]
-
-    static func darkVariant(for name: String) -> Color? {
-        darkVariants[name]
-    }
-}
-
-extension Color {
-    init(hex: String) {
-        let hex = hex.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
-        let scanner = Scanner(string: hex)
-        var rgb: UInt64 = 0
-        scanner.scanHexInt64(&rgb)
-        self.init(
-            red: Double((rgb >> 16) & 0xFF) / 255.0,
-            green: Double((rgb >> 8) & 0xFF) / 255.0,
-            blue: Double(rgb & 0xFF) / 255.0
-        )
-    }
+    // MARK: - Legacy compat
+    static let accentLight = Color.green.opacity(0.85)
 }

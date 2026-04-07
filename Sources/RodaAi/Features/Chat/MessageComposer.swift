@@ -92,8 +92,9 @@ struct MessageComposer: View {
                     .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
-            .padding(.horizontal)
-            .padding(.vertical, 8)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .modifier(ComposerBackgroundModifier())
         }
     }
 
@@ -141,6 +142,22 @@ struct MessageComposer: View {
         .padding(.horizontal)
         .padding(.vertical, 6)
         .background(ColorPalette.accent.opacity(0.1))
+    }
+
+    // MARK: - Helpers
+
+    private struct ComposerBackgroundModifier: ViewModifier {
+        func body(content: Content) -> some View {
+            if #available(iOS 26, macOS 26, *) {
+                content
+                    .glassEffect(in: .capsule)
+                    .padding(.horizontal, 8)
+                    .padding(.bottom, 4)
+            } else {
+                content
+                    .background(.bar)
+            }
+        }
     }
 
     private func sendIfValid() {

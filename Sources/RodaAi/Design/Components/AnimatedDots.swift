@@ -14,7 +14,7 @@ struct AnimatedDots: View {
 
     @State private var animating = false
 
-    init(reduceMotion: Bool = false, color: Color = ColorPalette.textSecondary) {
+    init(reduceMotion: Bool = false, color: Color = .secondary) {
         self.reduceMotion = reduceMotion
         self.color = color
     }

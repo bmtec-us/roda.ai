@@ -11,31 +11,29 @@ struct ErrorRecoveryView: View {
         VStack(spacing: 16) {
             Image(systemName: iconName)
                 .font(.system(size: 40))
-                .foregroundStyle(ColorPalette.error)
+                .foregroundStyle(.red)
 
             Text(error.errorDescription ?? "Erro desconhecido")
-                .font(.rodaHeadline)
-                .foregroundStyle(ColorPalette.textPrimary)
+                .font(.headline)
+                .foregroundStyle(.primary)
                 .multilineTextAlignment(.center)
 
             Text(recoveryMessage)
-                .font(.rodaBody)
-                .foregroundStyle(ColorPalette.textSecondary)
+                .font(.body)
+                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
 
             HStack(spacing: 12) {
                 if let onRetry {
                     Button("Tentar novamente") { onRetry() }
                         .buttonStyle(.borderedProminent)
-                        .tint(ColorPalette.accent)
                 }
                 Button("Fechar") { onDismiss() }
                     .buttonStyle(.bordered)
             }
         }
         .padding(24)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .modifier(GlassCardModifier())
         .padding()
     }
 
@@ -113,6 +111,19 @@ struct ErrorRecoveryView: View {
             return "Use arquivos PDF, CSV, TXT ou de codigo-fonte."
         default:
             return "Verifique se o arquivo nao esta corrompido e tente novamente."
+        }
+    }
+}
+
+private struct GlassCardModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26, macOS 26, *) {
+            content
+                .glassEffect(in: .rect(cornerRadius: 20))
+        } else {
+            content
+                .background(.ultraThinMaterial)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
         }
     }
 }

@@ -47,13 +47,8 @@ struct ModelCard: View {
 
             actionButtons
         }
-        .padding(14)
-        .background(.regularMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(isActive ? ColorPalette.accent : Color.clear, lineWidth: 2)
-        )
+        .padding(16)
+        .modifier(ModelCardBackgroundModifier(isActive: isActive))
         .accessibilityIdentifier("modelCard")
         .accessibilityLabel("\(entry.displayName), \(entry.provider), \(entry.parameterCount)")
     }
@@ -296,5 +291,30 @@ struct ModelCard: View {
             actionError = error.localizedDescription
         }
         isPerformingAction = false
+    }
+}
+
+// MARK: - Glass Background
+
+private struct ModelCardBackgroundModifier: ViewModifier {
+    let isActive: Bool
+
+    func body(content: Content) -> some View {
+        if #available(iOS 26, macOS 26, *) {
+            content
+                .glassEffect(in: .rect(cornerRadius: 20))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .strokeBorder(isActive ? Color.accentColor : .clear, lineWidth: 2)
+                )
+        } else {
+            content
+                .background(.regularMaterial)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .strokeBorder(isActive ? Color.accentColor : .clear, lineWidth: 2)
+                )
+        }
     }
 }

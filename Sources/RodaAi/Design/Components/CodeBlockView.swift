@@ -10,8 +10,8 @@ struct CodeBlockView: View {
             if let language {
                 HStack {
                     Text(language)
-                        .font(.rodaCaption)
-                        .foregroundStyle(ColorPalette.textSecondary)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                     Spacer()
                     Button("common.copy") {
                         #if canImport(UIKit)
@@ -20,20 +20,20 @@ struct CodeBlockView: View {
                         NSPasteboard.general.setString(code, forType: .string)
                         #endif
                     }
-                    .font(.rodaCaption)
+                    .font(.caption)
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
-                .background(ColorPalette.surfaceSecondary)
+                .background(.quaternary)
             }
             ScrollView(.horizontal, showsIndicators: false) {
                 Text(code)
-                    .font(.rodaCode)
-                    .foregroundStyle(ColorPalette.textPrimary)
+                    .font(.system(.body, design: .monospaced))
+                    .foregroundStyle(.primary)
                     .padding(12)
             }
         }
-        .background(ColorPalette.surface)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .background(.tertiary.opacity(0.3))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 }

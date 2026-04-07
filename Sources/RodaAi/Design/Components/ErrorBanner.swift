@@ -1,16 +1,10 @@
 // Sources/RodaAi/Design/Components/ErrorBanner.swift
-//
-// Componente reutilizavel para exibir erros nao-fatais com opcao de retry
-// e dismiss. Substitui o HStack inline ad-hoc usado em ChatView/ModelGallery.
-//
-// Visual: ultraThinMaterial background, warning icon, label, optional buttons.
-// Slide-down animation respeita @Environment(\.accessibilityReduceMotion).
 import SwiftUI
 
 struct ErrorBanner: View {
     let message: String
     var systemImage: String = "exclamationmark.triangle.fill"
-    var iconColor: Color = ColorPalette.warning
+    var iconColor: Color = .orange
     var onRetry: (() -> Void)? = nil
     var onDismiss: (() -> Void)? = nil
 
@@ -24,8 +18,8 @@ struct ErrorBanner: View {
                 .accessibilityHidden(true)
 
             Text(message)
-                .font(.rodaCaption)
-                .foregroundStyle(ColorPalette.textPrimary)
+                .font(.caption)
+                .foregroundStyle(.primary)
                 .fixedSize(horizontal: false, vertical: true)
 
             Spacer(minLength: 8)
@@ -62,29 +56,4 @@ struct ErrorBanner: View {
             ? .opacity
             : .move(edge: .top).combined(with: .opacity))
     }
-}
-
-#Preview("Error with retry + dismiss") {
-    VStack(spacing: 20) {
-        ErrorBanner(
-            message: "Memoria insuficiente. Necessario: 8GB, disponivel: 4GB",
-            onRetry: { print("retry") },
-            onDismiss: { print("dismiss") }
-        )
-
-        ErrorBanner(
-            message: "Erro ao baixar modelo. Verifique sua conexao.",
-            systemImage: "wifi.slash",
-            iconColor: ColorPalette.error,
-            onRetry: { print("retry") }
-        )
-
-        ErrorBanner(
-            message: "Modelo carregado com sucesso",
-            systemImage: "checkmark.circle.fill",
-            iconColor: ColorPalette.accent
-        )
-    }
-    .padding()
-    .background(ColorPalette.surface)
 }
