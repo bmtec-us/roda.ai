@@ -29,6 +29,7 @@ let package = Package(
         .package(url: "https://github.com/huggingface/swift-transformers", "1.2.0"..<"1.3.0"),
         .package(url: "https://github.com/gonzalezreal/textual", from: "0.3.1"),
         .package(url: "https://github.com/mattt/llama.swift", from: "2.8682.0"),
+        .package(url: "https://github.com/Blaizzy/mlx-audio-swift", from: "0.1.2"),
     ],
     targets: [
         .target(
@@ -42,6 +43,7 @@ let package = Package(
                 .product(name: "MLXLMCommon", package: "mlx-swift-lm"),
                 .product(name: "Tokenizers", package: "swift-transformers"),
                 .product(name: "llama", package: "llama.swift"),
+                .product(name: "MLXAudioTTS", package: "mlx-audio-swift"),
             ],
             path: "Sources/RodaAiCore",
             resources: [
