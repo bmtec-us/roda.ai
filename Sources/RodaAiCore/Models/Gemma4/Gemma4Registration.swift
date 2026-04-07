@@ -1,6 +1,7 @@
 import Foundation
 import MLXLMCommon
 import MLXVLM
+import Tokenizers
 
 /// Registra o modelo Gemma 4 nos registros VLM do mlx-swift-lm.
 /// Chamar `Gemma4Registration.register()` uma vez no launch do app

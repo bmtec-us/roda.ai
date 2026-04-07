@@ -61,6 +61,17 @@ public actor APIInferenceProvider: InferenceProvider {
             "top_p": Double(config.topP),
             "max_tokens": config.maxTokens,
         ]
+        // Serialize eagerly so the Task closure captures Sendable Data only.
+        let bodyData: Data
+        do {
+            bodyData = try JSONSerialization.data(withJSONObject: body)
+        } catch {
+            return AsyncThrowingStream { cont in
+                cont.finish(throwing: InferenceError.generationFailed(
+                    reason: "Falha ao serializar request: \(error.localizedDescription)"
+                ))
+            }
+        }
 
         return AsyncThrowingStream<String, any Error> { continuation in
             Task {
@@ -74,7 +85,7 @@ public actor APIInferenceProvider: InferenceProvider {
                             forHTTPHeaderField: "Authorization"
                         )
                     }
-                    request.httpBody = try JSONSerialization.data(withJSONObject: body)
+                    request.httpBody = bodyData
 
                     let (bytes, response) = try await capturedSession.bytes(for: request)
 

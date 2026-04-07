@@ -42,7 +42,7 @@ let package = Package(
                 .product(name: "MLXVLM", package: "mlx-swift-lm"),
                 .product(name: "MLXLMCommon", package: "mlx-swift-lm"),
                 .product(name: "Tokenizers", package: "swift-transformers"),
-                .product(name: "llama", package: "llama.swift"),
+                .product(name: "LlamaSwift", package: "llama.swift"),
                 .product(name: "MLXAudioTTS", package: "mlx-audio-swift"),
             ],
             path: "Sources/RodaAiCore",

@@ -130,7 +130,7 @@ public class TextToSpeechService: ObservableObject, TextToSpeaking {
 
             for try await buffer in stream {
                 if Task.isCancelled { break }
-                player.scheduleBuffer(buffer)
+                await player.scheduleBuffer(buffer)
             }
 
             // Wait for playback to finish

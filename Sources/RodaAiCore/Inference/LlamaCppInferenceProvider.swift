@@ -1,5 +1,5 @@
 import Foundation
-import llama
+import LlamaSwift
 
 /// Provedor de inferencia baseado em llama.cpp para modelos GGUF.
 /// Permite executar arquiteturas que o MLX Swift ainda nao suporta
@@ -104,8 +104,8 @@ public actor LlamaCppInferenceProvider: InferenceProvider {
                         return
                     }
 
-                    // Clear KV cache
-                    llama_kv_cache_clear(capturedContext)
+                    // Clear KV cache (llama.cpp >=b4000 memory API)
+                    llama_memory_clear(llama_get_memory(capturedContext), true)
 
                     // Decode prompt in batches
                     try decodeBatched(
@@ -149,13 +149,13 @@ public actor LlamaCppInferenceProvider: InferenceProvider {
                         }
 
                         // Prepare next batch with the new token
-                        llama_batch_clear(&batch)
-                        llama_batch_add(
+                        batchClear(&batch)
+                        batchAdd(
                             &batch,
-                            newToken,
-                            Int32(tokens.count + generatedCount),
-                            [0],
-                            true
+                            token: newToken,
+                            pos: Int32(tokens.count + generatedCount),
+                            seqId: 0,
+                            logits: true
                         )
 
                         let status = llama_decode(capturedContext, batch)
@@ -294,12 +294,12 @@ public actor LlamaCppInferenceProvider: InferenceProvider {
 
             for i in 0..<chunkSize {
                 let isLast = (offset + i == tokens.count - 1)
-                llama_batch_add(
+                batchAdd(
                     &batch,
-                    tokens[offset + i],
-                    Int32(offset + i),
-                    [0],
-                    isLast // Only compute logits for the last token
+                    token: tokens[offset + i],
+                    pos: Int32(offset + i),
+                    seqId: 0,
+                    logits: isLast // Only compute logits for the last token
                 )
             }
 
@@ -326,11 +326,35 @@ public actor LlamaCppInferenceProvider: InferenceProvider {
     }
 }
 
+// MARK: - Batch helpers (inline replacements for common/common.h utilities)
+
+/// Resets the batch token count to 0. Equivalent to llama_batch_clear in common.h.
+private func batchClear(_ batch: inout llama_batch) {
+    batch.n_tokens = 0
+}
+
+/// Appends a token to the batch. Equivalent to llama_batch_add in common.h.
+private func batchAdd(
+    _ batch: inout llama_batch,
+    token: llama_token,
+    pos: llama_pos,
+    seqId: llama_seq_id,
+    logits: Bool
+) {
+    let n = Int(batch.n_tokens)
+    batch.token[n] = token
+    batch.pos[n] = pos
+    batch.n_seq_id[n] = 1
+    batch.seq_id[n]?[0] = seqId
+    batch.logits[n] = logits ? 1 : 0
+    batch.n_tokens += 1
+}
+
 // MARK: - Sampler wrapper
 
 /// Wrapper fino sobre llama_sampler para configurar temperatura, top-p, etc.
 private struct LlamaSampler {
-    private let chain: OpaquePointer?
+    private let chain: UnsafeMutablePointer<llama_sampler>?
 
     init(
         temperature: Float,
@@ -338,7 +362,7 @@ private struct LlamaSampler {
         repetitionPenalty: Float,
         model: OpaquePointer
     ) {
-        var params = llama_sampler_chain_default_params()
+        let params = llama_sampler_chain_default_params()
         let ch = llama_sampler_chain_init(params)
 
         if repetitionPenalty != 1.0 {

@@ -98,7 +98,7 @@ public actor FoundationModelInferenceProvider: InferenceProvider {
                             continuation.finish(throwing: InferenceError.generationCancelled)
                             return
                         }
-                        continuation.yield(chunk)
+                        continuation.yield(chunk.content)
                     }
                     continuation.finish()
                 } catch {

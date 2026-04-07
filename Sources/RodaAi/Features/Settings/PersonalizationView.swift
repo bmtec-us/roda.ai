@@ -125,7 +125,7 @@ private struct PresetCard: View {
             VStack(alignment: .leading, spacing: 8) {
                 Image(systemName: preset.icon)
                     .font(.title2)
-                    .foregroundStyle(isSelected ? .white : .tint)
+                    .foregroundStyle(isSelected ? Color.white : Color.accentColor)
 
                 Text(preset.title)
                     .font(.subheadline.weight(.semibold))
