@@ -13,6 +13,7 @@ struct ModelGalleryView: View {
 
     @State private var searchText = ""
     @State private var filter: ModelFilter = .all
+    @Namespace private var galleryGlass
 
     enum ModelFilter: String, CaseIterable, Identifiable {
         case all
@@ -70,20 +71,26 @@ struct ModelGalleryView: View {
                         filterEmptyState
                     } else {
                         ScrollView {
-                            VStack(spacing: 12) {
-                                if let textToSpeechService {
-                                    KokoroModelCard(textToSpeechService: textToSpeechService)
-                                }
+                            GlassContainer(spacing: 20) {
+                                VStack(spacing: 12) {
+                                    if let textToSpeechService {
+                                        KokoroModelCard(textToSpeechService: textToSpeechService)
+                                    }
 
-                                LazyVGrid(columns: [
-                                    GridItem(.adaptive(minimum: 320), spacing: 12)
-                                ], spacing: 12) {
-                                    ForEach(filtered) { entry in
-                                        ModelCard(entry: entry, modelManager: modelManager)
+                                    LazyVGrid(columns: [
+                                        GridItem(.adaptive(minimum: 320), spacing: 12)
+                                    ], spacing: 12) {
+                                        ForEach(filtered) { entry in
+                                            ModelCard(
+                                                entry: entry,
+                                                modelManager: modelManager,
+                                                galleryNamespace: galleryGlass
+                                            )
+                                        }
                                     }
                                 }
+                                .padding()
                             }
-                            .padding()
                         }
                     }
                 }
@@ -172,7 +179,8 @@ private struct KokoroModelCard: View {
                     } label: {
                         Label(buttonTitle, systemImage: buttonIcon)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .tint(ColorPalette.accent)
+                    .glassButtonStyle(.glassProminent)
                     .disabled(isRunning || textToSpeechService.neuralVoiceModelState == .downloading)
                 }
 
@@ -186,10 +194,12 @@ private struct KokoroModelCard: View {
             .controlSize(.small)
         }
         .padding(16)
-        .background(.regularMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        // NOTE: Do NOT tint this glass when the voice is available — a
+        // tinted card surface floods children and destroys contrast. The
+        // stroke border signals the active/available state.
+        .glassShape(RoundedRectangle(cornerRadius: 20))
         .overlay(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: 20)
                 .strokeBorder(
                     textToSpeechService.neuralVoiceModelState == .available ? Color.accentColor : .clear,
                     lineWidth: 2
@@ -204,42 +214,37 @@ private struct KokoroModelCard: View {
             Text("Disponivel")
                 .font(.caption2.weight(.medium))
                 .foregroundStyle(ColorPalette.accent)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 3)
-                .background(ColorPalette.accent.opacity(0.15))
-                .clipShape(Capsule())
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .glassShape(Capsule())
         case .downloading:
             Text("Baixando")
                 .font(.caption2.weight(.medium))
                 .foregroundStyle(.blue)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 3)
-                .background(Color.blue.opacity(0.15))
-                .clipShape(Capsule())
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .glassShape(Capsule())
         case .failed:
             Text("Falhou")
                 .font(.caption2.weight(.medium))
                 .foregroundStyle(ColorPalette.error)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 3)
-                .background(ColorPalette.error.opacity(0.12))
-                .clipShape(Capsule())
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .glassShape(Capsule())
         case .notDownloaded:
             Text("Nao baixado")
                 .font(.caption2.weight(.medium))
                 .foregroundStyle(ColorPalette.textSecondary)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 3)
-                .background(ColorPalette.textSecondary.opacity(0.12))
-                .clipShape(Capsule())
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .glassShape(Capsule())
         case .unavailable:
             Text("Indisponivel")
                 .font(.caption2.weight(.medium))
                 .foregroundStyle(ColorPalette.warning)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 3)
-                .background(ColorPalette.warning.opacity(0.12))
-                .clipShape(Capsule())
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .glassShape(Capsule())
         }
     }
 

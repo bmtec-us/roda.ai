@@ -34,6 +34,9 @@ struct CodeBlockView: View {
                     .textSelection(.enabled)
             }
         }
+        // Solid tertiary fill reads more reliably than `.glass(.clear)` on
+        // the app's ice-white light-mode surface. Code blocks need to feel
+        // like a distinct surface, which a near-transparent glass can't do.
         .background(.tertiary.opacity(0.3))
         .clipShape(RoundedRectangle(cornerRadius: 10))
     }

@@ -44,6 +44,7 @@ let package = Package(
                 .product(name: "Tokenizers", package: "swift-transformers"),
                 .product(name: "LlamaSwift", package: "llama.swift"),
                 .product(name: "MLXAudioTTS", package: "mlx-audio-swift"),
+                .product(name: "Textual", package: "textual"),
             ],
             path: "Sources/RodaAiCore",
             resources: [

@@ -52,6 +52,8 @@ struct ConversationListView: View {
         }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
+                // System toolbar already provides Liquid Glass on iOS 26.
+                // Don't double-glass with .glassProminent here.
                 Button("chat.action.newConversation", systemImage: "plus") {
                     onNewConversation()
                 }

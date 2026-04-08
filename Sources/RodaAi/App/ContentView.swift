@@ -119,6 +119,7 @@ struct ContentView: View {
             .listStyle(.sidebar)
         } detail: {
             macOSDetail
+                .modifier(BackgroundExtensionModifier())
         }
     }
 
@@ -139,6 +140,21 @@ struct ContentView: View {
     }
     #endif
 }
+
+#if os(macOS)
+/// Applies `backgroundExtensionEffect()` on macOS 26+ so the detail pane's
+/// surface visually extends under the sidebar's Liquid Glass. No-op on
+/// earlier OS versions.
+private struct BackgroundExtensionModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(macOS 26.0, *) {
+            content.backgroundExtensionEffect()
+        } else {
+            content
+        }
+    }
+}
+#endif
 
 #if os(macOS)
 private enum MacNavTarget: Hashable {

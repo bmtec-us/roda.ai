@@ -2,11 +2,18 @@
 //
 // Voice mode com orbe animado estilo ChatGPT Advanced Voice.
 // Full-screen, orb central que reage ao estado, toque para falar.
+//
+// Liquid Glass: todos os elementos (label de estado, halo do orbe, transcript,
+// botao de cancelar) vivem dentro de um `GlassContainer` e recebem
+// `glassID` em um namespace compartilhado para que os shapes morfem
+// entre os estados idle/listening/processing/speaking.
 import SwiftUI
 import RodaAiCore
 
 struct VoiceModeView: View {
     @ObservedObject var voiceService: VoiceService
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Namespace private var voiceGlass
 
     var body: some View {
         ZStack {
@@ -14,33 +21,51 @@ struct VoiceModeView: View {
             Color.clear
                 .contentShape(Rectangle())
 
-            VStack(spacing: 0) {
-                Spacer()
+            GlassContainer(spacing: 40) {
+                VStack(spacing: 0) {
+                    Spacer()
 
-                // State label (small, above orb)
-                stateLabel
-                    .padding(.bottom, 24)
+                    // State label (small, above orb)
+                    stateLabel
+                        .padding(.bottom, 24)
 
-                // Central animated orb — tap to start/stop
-                VoiceOrb(state: orbState)
+                    // Central animated orb com halo Liquid Glass
+                    ZStack {
+                        Circle()
+                            .fill(Color.clear)
+                            .frame(width: 260, height: 260)
+                            .glassShape(
+                                Circle(),
+                                tint: orbTint,
+                                interactive: true
+                            )
+                            .glassID(GlassNamespaceID.voiceOrbHalo, in: voiceGlass)
+
+                        VoiceOrb(state: orbState)
+                    }
                     .onTapGesture {
                         handleTap()
                     }
                     .accessibilityLabel(isActive ? "voice.action.stop" : "voice.action.start")
                     .accessibilityAddTraits(.isButton)
 
-                // Transcript & response (below orb)
-                transcriptSection
-                    .padding(.top, 32)
+                    // Transcript & response (below orb)
+                    transcriptSection
+                        .padding(.top, 32)
 
-                Spacer()
+                    Spacer()
 
-                // Bottom controls
-                bottomControls
-                    .padding(.bottom, 20)
+                    // Bottom controls
+                    bottomControls
+                        .padding(.bottom, 20)
+                }
+                .padding(.horizontal)
             }
-            .padding(.horizontal)
         }
+        .animation(
+            reduceMotion ? nil : .spring(duration: 0.5),
+            value: voiceService.state
+        )
     }
 
     // MARK: - State Label
@@ -71,7 +96,10 @@ struct VoiceModeView: View {
             }
         }
         .font(.subheadline.weight(.medium))
-        .animation(.easeInOut(duration: 0.3), value: voiceService.state == .idle)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .glassShape(Capsule())
+        .glassID(GlassNamespaceID.voiceStateLabel, in: voiceGlass)
     }
 
     // MARK: - Transcript
@@ -98,6 +126,9 @@ struct VoiceModeView: View {
                     .transition(.blurReplace)
             }
         }
+        .padding(.vertical, 10)
+        .glassShape(RoundedRectangle(cornerRadius: 20))
+        .glassID(GlassNamespaceID.voiceTranscript, in: voiceGlass)
         .animation(.spring(duration: 0.4), value: voiceService.transcript)
         .animation(.spring(duration: 0.4), value: voiceService.response)
     }
@@ -114,10 +145,11 @@ struct VoiceModeView: View {
                 } label: {
                     Image(systemName: "xmark")
                         .font(.title3.weight(.semibold))
-                        .foregroundStyle(.primary)
                         .frame(width: 48, height: 48)
                 }
-                .modifier(GlassCircleModifier())
+                .tint(.red)
+                .glassButtonStyle(.glass)
+                .glassID(GlassNamespaceID.voiceCancelButton, in: voiceGlass)
                 .accessibilityLabel("voice.action.stop")
             }
 
@@ -156,6 +188,16 @@ struct VoiceModeView: View {
         }
     }
 
+    private var orbTint: Color? {
+        switch voiceService.state {
+        case .idle: return nil
+        case .listening: return .green
+        case .processing: return .blue
+        case .speaking: return ColorPalette.accent
+        case .error: return .red
+        }
+    }
+
     private func cleanResponseForVoice(_ text: String) -> String {
         var value = text
         value = value.replacingOccurrences(of: "```[\\s\\S]*?```", with: " ", options: .regularExpression)
@@ -167,20 +209,5 @@ struct VoiceModeView: View {
         value = value.replacingOccurrences(of: "\\[[^\\]]+\\]\\([^\\)]+\\)", with: "", options: .regularExpression)
         value = value.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
         return value.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-}
-
-// MARK: - Glass Circle Button
-
-private struct GlassCircleModifier: ViewModifier {
-    func body(content: Content) -> some View {
-        if #available(iOS 26, macOS 26, *) {
-            content
-                .glassEffect(in: .circle)
-        } else {
-            content
-                .background(.ultraThinMaterial)
-                .clipShape(Circle())
-        }
     }
 }

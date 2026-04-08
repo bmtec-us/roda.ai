@@ -117,7 +117,8 @@ struct MessageBubble: View {
                             Label(isExpanded ? "Ver menos" : "Ver mais", systemImage: isExpanded ? "chevron.up" : "chevron.down")
                                 .font(.caption)
                         }
-                        .buttonStyle(.plain)
+                        .glassButtonStyle(.glass)
+                        .controlSize(.small)
                         .foregroundStyle(.secondary)
                     }
 
@@ -128,7 +129,8 @@ struct MessageBubble: View {
                             Label("Copiar", systemImage: "doc.on.doc")
                                 .font(.caption2)
                         }
-                        .buttonStyle(.plain)
+                        .glassButtonStyle(.glass)
+                        .controlSize(.mini)
                         .foregroundStyle(.secondary)
 
                         Spacer(minLength: 0)
@@ -519,16 +521,9 @@ private struct BubbleBackgroundModifier: ViewModifier {
                 .foregroundStyle(.white)
                 .clipShape(RoundedRectangle(cornerRadius: 18))
         } else {
-            if #available(iOS 26, macOS 26, *) {
-                content
-                    .foregroundStyle(.primary)
-                    .glassEffect(in: .rect(cornerRadius: 18))
-            } else {
-                content
-                    .background(Color(.secondarySystemBackground))
-                    .foregroundStyle(.primary)
-                    .clipShape(RoundedRectangle(cornerRadius: 18))
-            }
+            content
+                .foregroundStyle(.primary)
+                .glassShape(RoundedRectangle(cornerRadius: 18))
         }
     }
 }

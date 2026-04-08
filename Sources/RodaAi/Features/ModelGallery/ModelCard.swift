@@ -9,6 +9,7 @@ import RodaAiCore
 struct ModelCard: View {
     let entry: CatalogEntry
     let modelManager: ModelManager
+    var galleryNamespace: Namespace.ID? = nil
     @StateObject private var networkMonitor = ConnectionTypeMonitor()
     @State private var isPerformingAction = false
     @State private var actionError: String?
@@ -64,7 +65,19 @@ struct ModelCard: View {
             actionButtons
         }
         .padding(16)
-        .modifier(ModelCardBackgroundModifier(isActive: isActive))
+        // NOTE: Do NOT tint this glass when the card is active — a tinted
+        // card surface floods all children (badges, buttons, text) and
+        // destroys contrast. The 2pt accent stroke border below is the
+        // correct way to signal the active state.
+        .glassShape(RoundedRectangle(cornerRadius: 20))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .strokeBorder(isActive ? Color.accentColor : .clear, lineWidth: 2)
+        )
+        .modifier(ModelCardMorphModifier(
+            identifier: entry.identifier,
+            galleryNamespace: galleryNamespace
+        ))
         .accessibilityIdentifier("modelCard")
         .accessibilityLabel("\(entry.displayName), \(entry.provider), \(entry.parameterCount)")
         .alert(
@@ -97,16 +110,20 @@ struct ModelCard: View {
     }
 
     // MARK: - Rating badge
+    // NOTE: Do NOT add `tint:` to this glass capsule. Tint on glass is a
+    // prominence marker (per swiftui.md line 45304) for primary actions.
+    // Rating badges are passive metadata; tinting them with the same color
+    // as the text makes the text invisible. Plain glass + colored text is
+    // the correct idiom (matches Apple's Landmarks badge pattern).
     private var ratingBadge: some View {
         let key = ratingText(for: entry.portugueseRating)
         let color = ratingColor(for: entry.portugueseRating)
         return Text(key)
             .font(.caption2.weight(.medium))
             .foregroundStyle(color)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
-            .background(color.opacity(0.15))
-            .clipShape(Capsule())
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .glassShape(Capsule())
     }
 
     private func ratingText(for rating: PortugueseRating) -> LocalizedStringKey {
@@ -148,19 +165,17 @@ struct ModelCard: View {
                         Label("Vision", systemImage: "eye")
                             .font(.caption2)
                             .foregroundStyle(ColorPalette.accent)
-                            .padding(.horizontal, 8)
+                            .padding(.horizontal, 10)
                             .padding(.vertical, 4)
-                            .background(ColorPalette.accent.opacity(0.12))
-                            .clipShape(Capsule())
+                            .glassShape(Capsule())
                     }
                     if entry.isReasoningCapable {
                         Label("Reasoning", systemImage: "brain")
                             .font(.caption2)
                             .foregroundStyle(.blue)
-                            .padding(.horizontal, 8)
+                            .padding(.horizontal, 10)
                             .padding(.vertical, 4)
-                            .background(Color.blue.opacity(0.12))
-                            .clipShape(Capsule())
+                            .glassShape(Capsule())
                     }
                 }
             }
@@ -216,7 +231,8 @@ struct ModelCard: View {
                 } label: {
                     Label("model.action.activate", systemImage: "play.circle")
                 }
-                .buttonStyle(.borderedProminent)
+                .tint(ColorPalette.accent)
+                .glassButtonStyle(.glassProminent)
                 .disabled(isPerformingAction || !isCompatible)
                 .accessibilityIdentifier("activate-builtin-\(entry.identifier)")
             } else if entry.isZeroDownload && isActive {
@@ -230,7 +246,8 @@ struct ModelCard: View {
                 } label: {
                     Label("model.action.download", systemImage: "arrow.down.circle")
                 }
-                .buttonStyle(.borderedProminent)
+                .tint(ColorPalette.accent)
+                .glassButtonStyle(.glassProminent)
                 .disabled(!isCompatible || isPerformingAction)
                 .accessibilityIdentifier("download-\(entry.identifier)")
             }
@@ -241,7 +258,8 @@ struct ModelCard: View {
                 } label: {
                     Label("model.action.activate", systemImage: "play.circle")
                 }
-                .buttonStyle(.bordered)
+                .tint(ColorPalette.accent)
+                .glassButtonStyle(.glassProminent)
                 .disabled(isPerformingAction)
                 .accessibilityIdentifier("activate-\(entry.identifier)")
             }
@@ -252,7 +270,7 @@ struct ModelCard: View {
                 } label: {
                     Label("model.action.deactivate", systemImage: "stop.circle")
                 }
-                .buttonStyle(.bordered)
+                .glassButtonStyle(.glass)
                 .disabled(isPerformingAction)
                 .accessibilityIdentifier("deactivate-\(entry.identifier)")
             }
@@ -263,7 +281,8 @@ struct ModelCard: View {
                 } label: {
                     Label("model.action.delete", systemImage: "trash")
                 }
-                .buttonStyle(.bordered)
+                .tint(.red)
+                .glassButtonStyle(.glass)
                 .disabled(isPerformingAction)
                 .accessibilityIdentifier("delete-\(entry.identifier)")
             }
@@ -353,27 +372,22 @@ struct ModelCard: View {
     }
 }
 
-// MARK: - Glass Background
+// MARK: - Morph identifier
 
-private struct ModelCardBackgroundModifier: ViewModifier {
-    let isActive: Bool
+/// Applies a per-card `glassID` within the gallery's namespace when one is
+/// provided, so adjacent cards can blend and morph as the grid filters/sorts.
+private struct ModelCardMorphModifier: ViewModifier {
+    let identifier: String
+    let galleryNamespace: Namespace.ID?
 
     func body(content: Content) -> some View {
-        if #available(iOS 26, macOS 26, *) {
-            content
-                .glassEffect(in: .rect(cornerRadius: 20))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .strokeBorder(isActive ? Color.accentColor : .clear, lineWidth: 2)
-                )
+        if let galleryNamespace {
+            content.glassID(
+                GlassNamespaceID.modelCard(identifier),
+                in: galleryNamespace
+            )
         } else {
             content
-                .background(.regularMaterial)
-                .clipShape(RoundedRectangle(cornerRadius: 16))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .strokeBorder(isActive ? Color.accentColor : .clear, lineWidth: 2)
-                )
         }
     }
 }

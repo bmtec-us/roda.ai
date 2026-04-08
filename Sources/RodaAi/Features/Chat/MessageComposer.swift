@@ -30,23 +30,27 @@ struct MessageComposer: View {
     @State private var showCameraUnavailableAlert = false
     @State private var cameraUnavailableMessage = "Camera indisponivel neste dispositivo."
     @FocusState private var isFocused: Bool
+    @Namespace private var composerGlass
 
     var body: some View {
-        VStack(spacing: 0) {
-            if let url = attachedFileURL {
-                fileAttachmentBanner(for: url)
-            }
-            if attachedImageData != nil {
-                imageAttachmentBanner
-            }
-            if let err = attachmentError {
-                Text(err.errorDescription ?? "Erro ao processar arquivo")
-                    .font(.caption2)
-                    .foregroundStyle(ColorPalette.error)
-                    .padding(.horizontal)
-            }
+        GlassContainer(spacing: 12) {
+            VStack(spacing: 0) {
+                if let url = attachedFileURL {
+                    fileAttachmentBanner(for: url)
+                        .glassID(GlassNamespaceID.composerFileBanner, in: composerGlass)
+                }
+                if attachedImageData != nil {
+                    imageAttachmentBanner
+                        .glassID(GlassNamespaceID.composerImageBanner, in: composerGlass)
+                }
+                if let err = attachmentError {
+                    Text(err.errorDescription ?? "Erro ao processar arquivo")
+                        .font(.caption2)
+                        .foregroundStyle(ColorPalette.error)
+                        .padding(.horizontal)
+                }
 
-            HStack(spacing: 12) {
+                HStack(spacing: 12) {
                 AttachmentPicker(
                     selectedFileURL: $attachedFileURL,
                     extractedText: $attachedFileText,
@@ -109,23 +113,27 @@ struct MessageComposer: View {
                             .font(.title2)
                             .foregroundStyle(.red)
                     }
+                    .glassButtonStyle(.glass)
                     .accessibilityLabel("chat.action.stop")
                 } else {
+                    let isEmpty = text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                     Button(action: sendIfValid) {
                         Image(systemName: "arrow.up.circle.fill")
                             .font(.title2)
-                            .foregroundStyle(
-                                text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                                ? .gray : .accentColor
-                            )
                     }
+                    .tint(isEmpty ? nil : ColorPalette.accent)
+                    .glassButtonStyle(isEmpty ? .glass : .glassProminent)
                     .accessibilityLabel("chat.action.send")
-                    .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .disabled(isEmpty)
                 }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .glassShape(Capsule(), interactive: true)
+                .glassID(GlassNamespaceID.composerCapsule, in: composerGlass)
+                .padding(.horizontal, 8)
+                .padding(.bottom, 4)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .modifier(ComposerBackgroundModifier())
         }
         #if os(iOS)
         .sheet(isPresented: $isCameraPresented) {
@@ -160,9 +168,10 @@ struct MessageComposer: View {
             .buttonStyle(.plain)
             .accessibilityLabel("chat.attachment.removeFile")
         }
-        .padding(.horizontal)
-        .padding(.vertical, 6)
-        .background(ColorPalette.accent.opacity(0.1))
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .glassShape(RoundedRectangle(cornerRadius: 14), tint: ColorPalette.accent)
+        .padding(.horizontal, 8)
     }
 
     private var imageAttachmentBanner: some View {
@@ -183,26 +192,13 @@ struct MessageComposer: View {
             .buttonStyle(.plain)
             .accessibilityLabel("chat.attachment.removeImage")
         }
-        .padding(.horizontal)
-        .padding(.vertical, 6)
-        .background(ColorPalette.accent.opacity(0.1))
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .glassShape(RoundedRectangle(cornerRadius: 14), tint: ColorPalette.accent)
+        .padding(.horizontal, 8)
     }
 
     // MARK: - Helpers
-
-    private struct ComposerBackgroundModifier: ViewModifier {
-        func body(content: Content) -> some View {
-            if #available(iOS 26, macOS 26, *) {
-                content
-                    .glassEffect(in: .capsule)
-                    .padding(.horizontal, 8)
-                    .padding(.bottom, 4)
-            } else {
-                content
-                    .background(.bar)
-            }
-        }
-    }
 
     private func sendIfValid() {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)

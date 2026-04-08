@@ -84,8 +84,9 @@ private struct OnboardingWelcomeStep: View {
                 Text("onboarding.continue")
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
             .tint(ColorPalette.accent)
+            .glassButtonStyle(.glassProminent)
+            .controlSize(.large)
         }
         .padding()
     }
@@ -107,8 +108,9 @@ private struct OnboardingModelStep: View {
                 Text("onboarding.continue")
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
             .tint(ColorPalette.accent)
+            .glassButtonStyle(.glassProminent)
+            .controlSize(.large)
             Button("onboarding.skip", action: onSkip)
                 .foregroundStyle(ColorPalette.textSecondary)
         }
@@ -132,8 +134,9 @@ private struct OnboardingChatStep: View {
                 Text("onboarding.continue")
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
             .tint(ColorPalette.accent)
+            .glassButtonStyle(.glassProminent)
+            .controlSize(.large)
             Button("onboarding.skip", action: onSkip)
                 .foregroundStyle(ColorPalette.textSecondary)
         }
@@ -157,8 +160,9 @@ private struct OnboardingReadyStep: View {
                 Text("onboarding.ready.button")
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
             .tint(ColorPalette.accent)
+            .glassButtonStyle(.glassProminent)
+            .controlSize(.large)
         }
         .padding()
     }

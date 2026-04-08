@@ -154,9 +154,9 @@ struct ChatView: View {
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: 150)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 5)
-        .modifier(GlassCapsuleModifier())
+        // NOTE: No custom .glassShape here — the enclosing ToolbarItem on
+        // iOS 26 already provides Liquid Glass automatically. Stacking a
+        // second glass layer produces a double-glass seam.
     }
 
     private var responseLengthMenu: some View {
@@ -234,6 +234,7 @@ struct ChatView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
+        // Status info, not an action — plain surface, not glass.
         .background(ColorPalette.surfaceElevated)
         .clipShape(Capsule())
         .padding(.horizontal, 12)
@@ -269,17 +270,3 @@ struct ChatView: View {
     }
 }
 
-// MARK: - Glass Capsule Modifier
-
-private struct GlassCapsuleModifier: ViewModifier {
-    func body(content: Content) -> some View {
-        if #available(iOS 26, macOS 26, *) {
-            content
-                .glassEffect(in: .capsule)
-        } else {
-            content
-                .background(.ultraThinMaterial)
-                .clipShape(Capsule())
-        }
-    }
-}

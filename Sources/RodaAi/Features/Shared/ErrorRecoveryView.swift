@@ -8,33 +8,38 @@ struct ErrorRecoveryView: View {
     let onDismiss: () -> Void
 
     var body: some View {
-        VStack(spacing: 16) {
-            Image(systemName: iconName)
-                .font(.system(size: 40))
-                .foregroundStyle(.red)
+        GlassContainer(spacing: 16) {
+            VStack(spacing: 16) {
+                Image(systemName: iconName)
+                    .font(.system(size: 40))
+                    .foregroundStyle(.red)
 
-            Text(error.errorDescription ?? "Erro desconhecido")
-                .font(.headline)
-                .foregroundStyle(.primary)
-                .multilineTextAlignment(.center)
+                Text(error.errorDescription ?? "Erro desconhecido")
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                    .multilineTextAlignment(.center)
 
-            Text(recoveryMessage)
-                .font(.body)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+                Text(recoveryMessage)
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
 
-            HStack(spacing: 12) {
-                if let onRetry {
-                    Button("Tentar novamente") { onRetry() }
-                        .buttonStyle(.borderedProminent)
+                HStack(spacing: 12) {
+                    if let onRetry {
+                        Button("Tentar novamente") { onRetry() }
+                            .tint(ColorPalette.accent)
+                            .glassButtonStyle(.glassProminent)
+                    }
+                    Button("Fechar") { onDismiss() }
+                        .glassButtonStyle(.glass)
                 }
-                Button("Fechar") { onDismiss() }
-                    .buttonStyle(.bordered)
             }
+            .padding(24)
+            // Plain glass — the red SF Symbol icon at the top carries the
+            // error signal. Tinting the whole card would flood all children.
+            .glassShape(RoundedRectangle(cornerRadius: 20))
+            .padding()
         }
-        .padding(24)
-        .modifier(GlassCardModifier())
-        .padding()
     }
 
     private var iconName: String {
@@ -115,15 +120,3 @@ struct ErrorRecoveryView: View {
     }
 }
 
-private struct GlassCardModifier: ViewModifier {
-    func body(content: Content) -> some View {
-        if #available(iOS 26, macOS 26, *) {
-            content
-                .glassEffect(in: .rect(cornerRadius: 20))
-        } else {
-            content
-                .background(.ultraThinMaterial)
-                .clipShape(RoundedRectangle(cornerRadius: 16))
-        }
-    }
-}
