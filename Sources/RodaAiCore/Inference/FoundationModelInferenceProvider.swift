@@ -85,12 +85,18 @@ public actor FoundationModelInferenceProvider: InferenceProvider {
         let model = SystemLanguageModel.default
         switch model.availability {
         case .available:
-            let newSession = makeSession()
+            // Load-time session uses the hardcoded fallback instructions.
+            // The first real `generate(...)` call rebuilds the session
+            // with whatever ChatViewModel actually sent (which includes
+            // the user's custom Settings prompt).
+            let initialInstructions = Self.systemInstructions
+            let newSession = makeSession(instructions: initialInstructions)
             // Warm the weights and pipeline so the first user turn feels snappy.
             // prewarm() is fire-and-forget — it returns immediately and
             // continues loading in the background.
             newSession.prewarm()
             session = newSession
+            currentInstructions = initialInstructions
             lastSentMessageCount = 0
             _isLoaded = true
             loadedModelIdentifier = identifier
@@ -134,13 +140,33 @@ public actor FoundationModelInferenceProvider: InferenceProvider {
         }
 
         #if canImport(FoundationModels)
-        // Reset session when the caller's message count went backwards — that
-        // signals a new conversation or a history truncation, and we don't
-        // want to carry stale transcript across it. The session itself owns
-        // history across `respond`/`streamResponse` calls, so on a normal
-        // turn we only send the newest user message.
-        if messages.count <= lastSentMessageCount {
-            session = makeSession()
+        // Extract the effective system instructions from the incoming
+        // messages array. ChatViewModel builds a single system-role message
+        // at index 0 that contains the default style prompt plus the user's
+        // custom Settings → Prompt do Sistema text. MLX providers honor that
+        // automatically; we have to copy it into the FM session manually
+        // because FM session instructions are immutable after construction.
+        let incomingInstructionsRaw = messages
+            .first(where: { $0.role == .system })?
+            .content
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let effectiveInstructions: String
+        if let incoming = incomingInstructionsRaw, !incoming.isEmpty {
+            effectiveInstructions = incoming
+        } else {
+            effectiveInstructions = Self.systemInstructions
+        }
+
+        // Rebuild the session when:
+        //   (a) the caller's message count went backwards → new conversation
+        //       or history truncation — drop stale transcript.
+        //   (b) the system instructions changed → user edited their custom
+        //       prompt and we must honor it from the next turn onward.
+        let instructionsChanged = effectiveInstructions != currentInstructions
+        if messages.count <= lastSentMessageCount || instructionsChanged {
+            session = makeSession(instructions: effectiveInstructions)
+            currentInstructions = effectiveInstructions
+            lastSentMessageCount = 0
         }
         lastSentMessageCount = messages.count
 
@@ -230,9 +256,11 @@ public actor FoundationModelInferenceProvider: InferenceProvider {
             // future enhancement.
             if case .exceededContextWindowSize = error, !isRetry {
                 RodaLog.inference.info("FM context exceeded — resetting session and retrying once")
-                let fresh = makeSession()
+                let retryInstructions = currentInstructions ?? Self.systemInstructions
+                let fresh = makeSession(instructions: retryInstructions)
                 fresh.prewarm()
                 session = fresh
+                currentInstructions = retryInstructions
                 lastSentMessageCount = 1
                 try await streamInto(
                     continuation: continuation,
@@ -246,23 +274,27 @@ public actor FoundationModelInferenceProvider: InferenceProvider {
         }
     }
 
-    /// Builds a new `LanguageModelSession` with the system instructions and,
+    /// Builds a new `LanguageModelSession` with the given instructions and,
     /// when the FM provider was configured with tool dependencies, the
     /// default Foundation Models tool set (list downloaded models, active
     /// model, search conversation history). Without tool dependencies, the
-    /// session runs tool-free and behaves exactly as before.
-    private func makeSession() -> LanguageModelSession {
+    /// session runs tool-free.
+    ///
+    /// Instructions are passed by argument (not pulled from a hardcoded
+    /// static) so that ChatViewModel's assembled system prompt — including
+    /// the user's Settings → Prompt do Sistema text — flows into the session.
+    private func makeSession(instructions: String) -> LanguageModelSession {
         if let modelManager, let conversationRepository {
             let tools = FoundationModelTools.make(
                 modelManager: modelManager,
                 conversationRepository: conversationRepository
             )
             return LanguageModelSession(tools: tools) {
-                Self.systemInstructions
+                instructions
             }
         } else {
             return LanguageModelSession {
-                Self.systemInstructions
+                instructions
             }
         }
     }
@@ -287,6 +319,7 @@ public actor FoundationModelInferenceProvider: InferenceProvider {
         _isLoaded = false
         loadedModelIdentifier = nil
         lastSentMessageCount = 0
+        currentInstructions = nil
     }
 }
 

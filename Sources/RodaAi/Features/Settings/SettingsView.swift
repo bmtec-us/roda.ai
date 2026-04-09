@@ -2,6 +2,9 @@
 import SwiftUI
 import SwiftData
 import RodaAiCore
+#if canImport(UIKit)
+import UIKit
+#endif
 #if canImport(FoundationModels)
 import FoundationModels
 #endif
@@ -11,6 +14,27 @@ struct SettingsView: View {
     @State private var viewModel: SettingsViewModel
     @State private var modelToDelete: LocalModel?
     @State private var foundationModelDiagnostics = FoundationModelDiagnostics.capture()
+
+    /// True when the current device is an iPhone (as opposed to iPad
+    /// or Mac). Used to show a red experimental-memory warning when
+    /// the user selects the Qwen3-TTS neural voice — the combination
+    /// of a chat model + Qwen3-TTS + SNAC codec pushes the process
+    /// past iOS jetsam budget on iPhone. iPad Pro and Mac have the
+    /// headroom, so we don't warn there.
+    static var isMemoryConstrainedDevice: Bool {
+        #if os(iOS)
+        return UIDevice.current.userInterfaceIdiom == .phone
+        #else
+        return false
+        #endif
+    }
+
+    // Hugging Face token is stored in Keychain, not SwiftData, so it lives
+    // as local view state here rather than on SettingsViewModel.
+    private let huggingFaceTokenStore = HuggingFaceTokenStore()
+    @State private var huggingFaceTokenInput: String = ""
+    @State private var huggingFaceTokenSaved: Bool = false
+    @State private var huggingFaceTokenRevealed: Bool = false
 
     init(modelContext: ModelContext) {
         _viewModel = State(initialValue: SettingsViewModel(modelContext: modelContext))
@@ -24,22 +48,34 @@ struct SettingsView: View {
                 generationSection
                 voiceSection
                 appearanceSection
+                huggingFaceSection
                 storageSection
                 deviceInfoSection
                 appleIntelligenceSection
                 aboutSection
             }
             .navigationTitle("tab.settings")
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
             .onAppear {
                 viewModel.loadPreferences()
                 deps.modelManager.scanDownloadedModels()
                 foundationModelDiagnostics = FoundationModelDiagnostics.capture()
+                huggingFaceTokenSaved = huggingFaceTokenStore.hasToken
+                huggingFaceTokenInput = ""
             }
             .onDisappear { try? viewModel.savePreferences() }
             .onChange(of: viewModel.appearanceMode) { _, _ in persistPreferencesNow() }
             .onChange(of: viewModel.responseStyle) { _, _ in persistPreferencesNow() }
             .onChange(of: viewModel.responseLength) { _, _ in persistPreferencesNow() }
             .onChange(of: viewModel.chatFontSize) { _, _ in persistPreferencesNow() }
+            .onChange(of: viewModel.neuralVoiceEngine) { _, newEngine in
+                // Push the new engine selection to the live TTS service so
+                // the change takes effect immediately without an app relaunch.
+                deps.textToSpeechService?.setEngine(newEngine)
+                persistPreferencesNow()
+            }
             .alert(
                 "settings.storage.deleteConfirm.title",
                 isPresented: Binding(
@@ -201,15 +237,72 @@ struct SettingsView: View {
 
     // MARK: - Voice
 
+    /// Dynamic list of MLX TTS voices: the built-in Qwen3-TTS default
+    /// plus any user-downloaded `.tts` models that mlx-audio-swift
+    /// can actually load. Rebuilt on each Settings paint so newly
+    /// downloaded voices appear without requiring an app relaunch.
+    private var availableNeuralVoices: [TextToSpeechService.NeuralVoiceOption] {
+        deps.textToSpeechService?.availableNeuralVoices() ?? []
+    }
+
     private var voiceSection: some View {
         Section {
             Toggle(isOn: $viewModel.voiceEnabled) {
                 Label("settings.voiceEnabled", systemImage: "mic.fill")
             }
+
+            Picker(selection: $viewModel.neuralVoiceEngine) {
+                Text("Apple (pt-BR nativo)")
+                    .tag(NeuralVoiceEngine.appleSystem)
+
+                ForEach(availableNeuralVoices, id: \.repoId) { voice in
+                    HStack {
+                        Text(voice.isBuiltInDefault
+                             ? "Qwen3-TTS (padrao)"
+                             : voice.displayName)
+                        if voice.isCached {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(ColorPalette.accent)
+                        }
+                    }
+                    .tag(NeuralVoiceEngine.mlxRepo(repoId: voice.repoId))
+                }
+            } label: {
+                Label("Voz neural", systemImage: "waveform")
+            }
+            .pickerStyle(.menu)
+
+            if case .mlxRepo(let selectedRepo) = viewModel.neuralVoiceEngine {
+                if Self.isMemoryConstrainedDevice {
+                    // Hard warning on iPhone — the combination of a
+                    // chat model + neural TTS + speech codec weights
+                    // frequently pushes the process past iOS jetsam
+                    // budget. Allowed for explicit testing, but flagged.
+                    Label {
+                        Text("Experimental — pode exceder a memoria do iPhone e travar o app. Qualidade em portugues e limitada (modelos TTS MLX sao treinados em ingles/mandarim). Apenas para testes.")
+                            .font(.caption)
+                    } icon: {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                    }
+                    .foregroundStyle(ColorPalette.error)
+                }
+
+                let selectedVoice = availableNeuralVoices.first { $0.repoId == selectedRepo }
+                let isReady = selectedVoice?.isCached == true
+                let label = selectedVoice.map {
+                    $0.isBuiltInDefault ? "Qwen3-TTS" : $0.displayName
+                } ?? "modelo neural"
+                Text(isReady
+                    ? "Modelo \(label) pronto e carregado."
+                    : "O modelo neural \(label) sera baixado na primeira vez que voce usar o modo voz. Requer conexao a internet e token do Hugging Face configurado."
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
         } header: {
             Text("settings.voice")
         } footer: {
-            Text("settings.voice.footer")
+            Text("Apple: vozes do sistema, sem download, idioma portugues brasileiro nativo. Qwen3-TTS: voz neural multilingua via MLX, requer download e mais memoria.")
         }
     }
 
@@ -233,6 +326,74 @@ struct SettingsView: View {
     }
 
     // MARK: - Storage
+
+    // MARK: - Hugging Face Token
+
+    private var huggingFaceSection: some View {
+        Section {
+            if huggingFaceTokenSaved && huggingFaceTokenInput.isEmpty {
+                HStack {
+                    Label("Token configurado", systemImage: "checkmark.seal.fill")
+                        .foregroundStyle(ColorPalette.accent)
+                    Spacer()
+                    Button(role: .destructive) {
+                        huggingFaceTokenStore.clear()
+                        huggingFaceTokenStore.applyToEnvironment()
+                        huggingFaceTokenSaved = false
+                        huggingFaceTokenInput = ""
+                    } label: {
+                        Text("Remover")
+                    }
+                }
+            } else {
+                HStack {
+                    Group {
+                        if huggingFaceTokenRevealed {
+                            TextField("hf_...", text: $huggingFaceTokenInput)
+                        } else {
+                            SecureField("hf_...", text: $huggingFaceTokenInput)
+                        }
+                    }
+                    .autocorrectionDisabled(true)
+                    .textInputAutocapitalization(.never)
+                    .font(.body.monospaced())
+
+                    Button {
+                        huggingFaceTokenRevealed.toggle()
+                    } label: {
+                        Image(systemName: huggingFaceTokenRevealed ? "eye.slash" : "eye")
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(huggingFaceTokenRevealed ? "Ocultar token" : "Mostrar token")
+                }
+
+                Button("Salvar token") {
+                    let trimmed = huggingFaceTokenInput.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard !trimmed.isEmpty else { return }
+                    if huggingFaceTokenStore.save(trimmed) {
+                        huggingFaceTokenStore.applyToEnvironment()
+                        huggingFaceTokenSaved = true
+                        huggingFaceTokenInput = ""
+                        huggingFaceTokenRevealed = false
+                    }
+                }
+                .disabled(huggingFaceTokenInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+                Link(
+                    "Gerar token em huggingface.co/settings/tokens",
+                    destination: URL(string: "https://huggingface.co/settings/tokens")!
+                )
+                .font(.caption)
+            }
+        } header: {
+            Text("Hugging Face")
+        } footer: {
+            Text(
+                "Um token pessoal (permissao de leitura) remove os limites de download anonimos do Hugging Face. O token e armazenado no Keychain do dispositivo, criptografado, e nunca sai do seu aparelho."
+            )
+        }
+    }
 
     @ViewBuilder
     private var storageSection: some View {

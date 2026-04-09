@@ -506,15 +506,22 @@ public final class ChatViewModel {
 
             let customSystem = systemPrompt.trimmingCharacters(in: .whitespacesAndNewlines)
 
-            var promptParts: [String] = [
-                Self.defaultSystemStylePrompt,
-                Self.instructionPriorityPrompt,
-                stylePrompt,
-                lengthPrompt,
-            ]
+            // When the user sets a custom system prompt in Settings, it
+            // OWNS the model's identity and role. We skip the hardcoded
+            // "Voce e o Roda..." default and put the custom prompt at the
+            // very top, so there's no conflicting identity statement that
+            // a strongly-trained model (Gemma, etc.) could anchor on.
+            // Style and length preferences are orthogonal — they describe
+            // HOW to respond, not WHO the assistant is — so they stay.
+            var promptParts: [String] = []
             if !customSystem.isEmpty {
-                promptParts.append("Instrucoes personalizadas do usuario:\n\(customSystem)")
+                promptParts.append(customSystem)
+            } else {
+                promptParts.append(Self.defaultSystemStylePrompt)
             }
+            promptParts.append(Self.instructionPriorityPrompt)
+            promptParts.append(stylePrompt)
+            promptParts.append(lengthPrompt)
             if !rollingPinnedFacts.isEmpty {
                 promptParts.append("Memoria fixa (fatos importantes):\n- " + rollingPinnedFacts.joined(separator: "\n- "))
             }
@@ -890,9 +897,21 @@ public final class ChatViewModel {
                 continue
             }
 
+            // A line starting with a numeric "N." is only treated as a
+            // list item when it's likely a real list: the digit is 1-3
+            // (first few items) and the remainder starts with a
+            // capital letter. Otherwise it's probably a sentence
+            // fragment from mid-text (e.g. "4. Eu sou um modelo")
+            // that we shouldn't special-case.
+            let looksLikeOrderedListItem: Bool = {
+                guard line.range(of: "^[1-3]\\.\\s[A-ZÀ-Ý]", options: .regularExpression) != nil else {
+                    return false
+                }
+                return true
+            }()
             let isListLike = line.hasPrefix("- ")
                 || line.hasPrefix("* ")
-                || line.range(of: "^[0-9]+\\.\\s", options: .regularExpression) != nil
+                || looksLikeOrderedListItem
             let isShortHeading = line.hasSuffix(":") && line.count <= 80
 
             if isListLike || isShortHeading {
@@ -981,9 +1000,18 @@ public final class ChatViewModel {
             options: .regularExpression
         )
 
-        // Garante quebra para listas que vieram coladas ao texto anterior.
+        // Garante quebra para listas com marcadores inequívocos (-, *) que
+        // vieram coladas ao texto anterior. Numbered-list detection
+        // (\d+\.\s) was intentionally REMOVED from this rule — it was
+        // misfiring on mid-sentence numbers like "Gemma 4. Eu sou um
+        // modelo", converting the space before "4." into a newline and
+        // then rendering "4. Eu sou..." as an ordered-list item. The
+        // markdown renderer would then strip the "4." and collapse
+        // "Gemma" against "Eu sou". Real numbered lists already arrive
+        // at the start of their own lines from the model and are
+        // handled correctly by `shouldPreserveStructuredFormatting`.
         normalized = normalized.replacingOccurrences(
-            of: "\\s(?=(?:- |\\* |[0-9]+\\.\\s))",
+            of: "\\s(?=(?:- |\\* ))",
             with: "\n",
             options: .regularExpression
         )

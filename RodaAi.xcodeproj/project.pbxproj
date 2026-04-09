@@ -12,6 +12,7 @@
 		08AF9AB142515721A9000879 /* VoiceModeUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FEF1F584810DD2D6F49F8B7 /* VoiceModeUITests.swift */; };
 		0A6C954471EBBAAF3C1CFECC /* MessageComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87516FD22E8FCD5FAEB2BDE9 /* MessageComposer.swift */; };
 		0BF5D58C7013B09C9AD8DC10 /* ErrorBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71CDA783752BEFB7C117728F /* ErrorBanner.swift */; };
+		0FA322006BDC4B65C260300C /* ExplorerModelRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 099A4054F0E31017903E7579 /* ExplorerModelRow.swift */; };
 		1050F7956E30596BCA1C6497 /* ColorTokensTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 306A51A3B510EA49581BF315 /* ColorTokensTests.swift */; };
 		137579CB117021CF3FFA4EE0 /* RodaAiControlWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A13111DD5A681E4734F3007A /* RodaAiControlWidget.swift */; };
 		137E64016EE0E41639940CB2 /* TypingIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D1573E25DD07CB05FD48AB1 /* TypingIndicator.swift */; };
@@ -26,6 +27,7 @@
 		268CC646E74D33797938B2EE /* CodeBlockView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3BC9AD868432AFF24A0E5EF /* CodeBlockView.swift */; };
 		274281202431CB05A06A5DB6 /* SettingsUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C696F247565AB5AD9E24CD79 /* SettingsUITests.swift */; };
 		289A23745F90DBE7154BB3C4 /* Textual in Frameworks */ = {isa = PBXBuildFile; productRef = 8D709E227F12DB7AB651B499 /* Textual */; };
+		2F0042825A5B393B51E271EB /* ExplorerDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3B717BE11EC2968A7C6594C /* ExplorerDetailSheet.swift */; };
 		35368985DE944CD33EFB9728 /* ConversationRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CB6BDDA4DD294A6BE2E77FE /* ConversationRow.swift */; };
 		367B8504106F7AF0CD2E06E3 /* RodaAiApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04246D0E43DC937F21665C90 /* RodaAiApp.swift */; };
 		36986205EF67454FDE558AD4 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3397A7F06789822C08CF5399 /* ChatView.swift */; };
@@ -38,6 +40,7 @@
 		48787BFF373F764DDEAAABC2 /* OnboardingState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A84A551561F1F1262DE7DA1 /* OnboardingState.swift */; };
 		4B4598380460E2EFB7378FA8 /* RodaAiCore in Frameworks */ = {isa = PBXBuildFile; productRef = 5749F281F3FDB90442D7EDB2 /* RodaAiCore */; };
 		50FFB15664E7F72415568F60 /* AttachmentFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E87BC659BA9CCF07F5C2161 /* AttachmentFlowTests.swift */; };
+		525FB21A391DB7AED16C5408 /* ExplorerDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3B717BE11EC2968A7C6594C /* ExplorerDetailSheet.swift */; };
 		5607AF2AA9390B6193917199 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7F4D4E0E75999D1C0B24A32 /* ContentView.swift */; };
 		5613B0D98E0F4F9FC1E78FB6 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 104DFDFFAB0551B06EF5D5C8 /* SettingsView.swift */; };
 		59A1C2B5B4DA77FE7563925F /* OnboardingStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3F4E422EC9E339E58382F78 /* OnboardingStateTests.swift */; };
@@ -55,6 +58,7 @@
 		6F822E95E80C6914485AE05E /* ConversationRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CB6BDDA4DD294A6BE2E77FE /* ConversationRow.swift */; };
 		71CEC91D76E0B80C2B23CEBE /* CodeBlockView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3BC9AD868432AFF24A0E5EF /* CodeBlockView.swift */; };
 		746CD1902D14E4379280FE50 /* ComponentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48FA881A0036C5AD927F8DEC /* ComponentTests.swift */; };
+		75687898A518706FA7D3FDFA /* ModelExplorerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 922C88B5A1D3B4C7D43E0E2E /* ModelExplorerViewModel.swift */; };
 		757E45D7880C266377CD5EAC /* AppDependencies.swift in Sources */ = {isa = PBXBuildFile; fileRef = 578C409EE51275EEB31F5A08 /* AppDependencies.swift */; };
 		7C179B5FB7C7FC695F88F479 /* ModelEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1EFA6FF677CDFFDDF8F6EB8 /* ModelEntity.swift */; };
 		8299788370A29E8F792B1621 /* ProgressRing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96AB29CB75B54FE68F00D70F /* ProgressRing.swift */; };
@@ -84,8 +88,10 @@
 		B94133DE75204C8E98CFD680 /* ConversationListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 156F3C4F6471A4688342F4CF /* ConversationListView.swift */; };
 		BAAD54943D1A2FF5B243C5C6 /* ModelCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DD30FC4B528132E5B45E30D /* ModelCard.swift */; };
 		C03CC7C3254A574690D6049F /* GlassCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDCEF2B4686B590BB1B2D9D3 /* GlassCard.swift */; };
+		C34B0E871F8E1A965418B3FE /* ExplorerModelRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 099A4054F0E31017903E7579 /* ExplorerModelRow.swift */; };
 		C36432C87FC368BB5B9DA13A /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3397A7F06789822C08CF5399 /* ChatView.swift */; };
 		C70F67B17A45741A888E6EF0 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CC27A512D84BCED76479201 /* OnboardingView.swift */; };
+		C85B2E85D3B2A59FCE62E457 /* ModelExplorerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 922C88B5A1D3B4C7D43E0E2E /* ModelExplorerViewModel.swift */; };
 		CB457D3C5CA440739E2B739A /* QuickActionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0692D2F88BE433E34A3CCED7 /* QuickActionHandler.swift */; };
 		D06A01C0755D62C393526450 /* ModelDownloadUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB36125EC23138F6E2CE986 /* ModelDownloadUITests.swift */; };
 		D278EF1B53288E8F6135E8C2 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 2AF92C9DB4E339329D7A3B2C /* Localizable.xcstrings */; };
@@ -96,9 +102,11 @@
 		E2342CF1B1D528F0241B211A /* Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD90AA9970BFD37AD6D1AD10 /* Typography.swift */; };
 		E3DA3FB93BDADC38DF8CDE2E /* SiriShortcutsProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55DB64FABA1210F8C020EAF8 /* SiriShortcutsProvider.swift */; };
 		E71F2B91DC45C67679D98122 /* AppDependencies.swift in Sources */ = {isa = PBXBuildFile; fileRef = 578C409EE51275EEB31F5A08 /* AppDependencies.swift */; };
+		E7B37709339BF5A6D7A2240C /* OCRCaptureSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0BDD76C5082E30D6D98600B /* OCRCaptureSheet.swift */; };
 		F0C08C0F1738D2B71AB5A8FF /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7F4D4E0E75999D1C0B24A32 /* ContentView.swift */; };
 		F49A8325514D33AF626759F6 /* AskRodaAiIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0ACF784BAC2C2314E7FDF9A5 /* AskRodaAiIntent.swift */; };
 		F7914815D2709C2243CAF455 /* ModelCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DD30FC4B528132E5B45E30D /* ModelCard.swift */; };
+		F8124347D445F05BE4169EA1 /* OCRCaptureSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0BDD76C5082E30D6D98600B /* OCRCaptureSheet.swift */; };
 		FE6ED47953A33A43B6AB9E6D /* PersonalizationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCE98EBAB20170EE222DBDB6 /* PersonalizationView.swift */; };
 		FEFECF359A3FB1D1CB48B82F /* ModelEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1EFA6FF677CDFFDDF8F6EB8 /* ModelEntity.swift */; };
 		FFCC6CA4C10B3F62BE98DF01 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 2AF92C9DB4E339329D7A3B2C /* Localizable.xcstrings */; };
@@ -124,6 +132,7 @@
 /* Begin PBXFileReference section */
 		04246D0E43DC937F21665C90 /* RodaAiApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RodaAiApp.swift; sourceTree = "<group>"; };
 		0692D2F88BE433E34A3CCED7 /* QuickActionHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickActionHandler.swift; sourceTree = "<group>"; };
+		099A4054F0E31017903E7579 /* ExplorerModelRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExplorerModelRow.swift; sourceTree = "<group>"; };
 		0A84A551561F1F1262DE7DA1 /* OnboardingState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingState.swift; sourceTree = "<group>"; };
 		0ACF784BAC2C2314E7FDF9A5 /* AskRodaAiIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AskRodaAiIntent.swift; sourceTree = "<group>"; };
 		104DFDFFAB0551B06EF5D5C8 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -131,11 +140,11 @@
 		21C9CA006616EA72B7CDF077 /* AccessibilityUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityUITests.swift; sourceTree = "<group>"; };
 		2AF92C9DB4E339329D7A3B2C /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		306A51A3B510EA49581BF315 /* ColorTokensTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorTokensTests.swift; sourceTree = "<group>"; };
-		30B8D0E7CC9AE54A678D05CE /* RodaAiUITests-iOS.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = "RodaAiUITests-iOS.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		30B8D0E7CC9AE54A678D05CE /* RodaAiUITests-iOS.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "RodaAiUITests-iOS.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		3397A7F06789822C08CF5399 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
 		36CCE30A4788EA64F2DD8960 /* DownloadProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadProgressView.swift; sourceTree = "<group>"; };
 		37184F91CDD8A04F52204B40 /* roda.ai */ = {isa = PBXFileReference; lastKnownFileType = folder; name = roda.ai; path = .; sourceTree = SOURCE_ROOT; };
-		3BFDE4809D6EFEC82009339A /* RodaAi-macOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = "RodaAi-macOS.app"; path = RodaAi.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3BFDE4809D6EFEC82009339A /* RodaAi.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RodaAi.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3CC27A512D84BCED76479201 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		3CEE7991393036EBE7EAF0DF /* InferenceServiceLocator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InferenceServiceLocator.swift; sourceTree = "<group>"; };
 		4286691DE40E8471C9BB6B71 /* VoiceModeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceModeView.swift; sourceTree = "<group>"; };
@@ -158,6 +167,7 @@
 		85F9E5053C84328880BDB89D /* MessageBubble.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageBubble.swift; sourceTree = "<group>"; };
 		87516FD22E8FCD5FAEB2BDE9 /* MessageComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageComposer.swift; sourceTree = "<group>"; };
 		8FEF1F584810DD2D6F49F8B7 /* VoiceModeUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceModeUITests.swift; sourceTree = "<group>"; };
+		922C88B5A1D3B4C7D43E0E2E /* ModelExplorerViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelExplorerViewModel.swift; sourceTree = "<group>"; };
 		96AB29CB75B54FE68F00D70F /* ProgressRing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressRing.swift; sourceTree = "<group>"; };
 		9AE8CE1C3A1388E5631F8B03 /* AnimatedDots.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnimatedDots.swift; sourceTree = "<group>"; };
 		9CB6BDDA4DD294A6BE2E77FE /* ConversationRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationRow.swift; sourceTree = "<group>"; };
@@ -169,9 +179,11 @@
 		ABD1C6AFD84C52C399CC1D04 /* ErrorRecoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorRecoveryView.swift; sourceTree = "<group>"; };
 		B3BC9AD868432AFF24A0E5EF /* CodeBlockView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodeBlockView.swift; sourceTree = "<group>"; };
 		B3F4E422EC9E339E58382F78 /* OnboardingStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingStateTests.swift; sourceTree = "<group>"; };
-		B50D9AEC047B02F6B8A589E8 /* RodaAiTests-iOS.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = "RodaAiTests-iOS.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		B50D9AEC047B02F6B8A589E8 /* RodaAiTests-iOS.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "RodaAiTests-iOS.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		B647ED99C727B2DAEAAA4AF4 /* AnalyzeImageIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyzeImageIntent.swift; sourceTree = "<group>"; };
+		C0BDD76C5082E30D6D98600B /* OCRCaptureSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OCRCaptureSheet.swift; sourceTree = "<group>"; };
 		C396FDF7B83A417DCD99ACBF /* SettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewModel.swift; sourceTree = "<group>"; };
+		C3B717BE11EC2968A7C6594C /* ExplorerDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExplorerDetailSheet.swift; sourceTree = "<group>"; };
 		C696F247565AB5AD9E24CD79 /* SettingsUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsUITests.swift; sourceTree = "<group>"; };
 		CCE98EBAB20170EE222DBDB6 /* PersonalizationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonalizationView.swift; sourceTree = "<group>"; };
 		CD90AA9970BFD37AD6D1AD10 /* Typography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Typography.swift; sourceTree = "<group>"; };
@@ -341,7 +353,10 @@
 			isa = PBXGroup;
 			children = (
 				36CCE30A4788EA64F2DD8960 /* DownloadProgressView.swift */,
+				C3B717BE11EC2968A7C6594C /* ExplorerDetailSheet.swift */,
+				099A4054F0E31017903E7579 /* ExplorerModelRow.swift */,
 				9DD30FC4B528132E5B45E30D /* ModelCard.swift */,
+				922C88B5A1D3B4C7D43E0E2E /* ModelExplorerViewModel.swift */,
 				9E0C53C85FCD30A669A2F1B0 /* ModelGalleryView.swift */,
 			);
 			path = ModelGallery;
@@ -375,6 +390,7 @@
 				F347277DA01AC93659F7A4FF /* ImageAttachmentView.swift */,
 				85F9E5053C84328880BDB89D /* MessageBubble.swift */,
 				87516FD22E8FCD5FAEB2BDE9 /* MessageComposer.swift */,
+				C0BDD76C5082E30D6D98600B /* OCRCaptureSheet.swift */,
 				4D1573E25DD07CB05FD48AB1 /* TypingIndicator.swift */,
 			);
 			path = Chat;
@@ -406,7 +422,7 @@
 			isa = PBXGroup;
 			children = (
 				D5BF49898C7DF8D2BAE4E0CA /* RodaAi.app */,
-				3BFDE4809D6EFEC82009339A /* RodaAi-macOS.app */,
+				3BFDE4809D6EFEC82009339A /* RodaAi.app */,
 				B50D9AEC047B02F6B8A589E8 /* RodaAiTests-iOS.xctest */,
 				30B8D0E7CC9AE54A678D05CE /* RodaAiUITests-iOS.xctest */,
 			);
@@ -545,7 +561,7 @@
 				8D709E227F12DB7AB651B499 /* Textual */,
 			);
 			productName = "RodaAi-macOS";
-			productReference = 3BFDE4809D6EFEC82009339A /* RodaAi-macOS.app */;
+			productReference = 3BFDE4809D6EFEC82009339A /* RodaAi.app */;
 			productType = "com.apple.product-type.application";
 		};
 		359CC9B513147A36BBAC080F /* RodaAi-iOS */ = {
@@ -614,7 +630,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1430;
+				LastUpgradeCheck = 2640;
 				TargetAttributes = {
 					16C534ED0BBA648D9B7E6069 = {
 						DevelopmentTeam = "";
@@ -711,6 +727,8 @@
 				A48CB2F2F2E4FCAFB7973EEA /* DownloadProgressView.swift in Sources */,
 				0BF5D58C7013B09C9AD8DC10 /* ErrorBanner.swift in Sources */,
 				6565974E4DC658B364E9FE57 /* ErrorRecoveryView.swift in Sources */,
+				525FB21A391DB7AED16C5408 /* ExplorerDetailSheet.swift in Sources */,
+				0FA322006BDC4B65C260300C /* ExplorerModelRow.swift in Sources */,
 				3E74765F262508394CE55DC5 /* GlassCard.swift in Sources */,
 				1AFCA61BA914FCE3957710F0 /* ImageAttachmentView.swift in Sources */,
 				38976BEF9E1FE9CF352EB376 /* InferenceServiceLocator.swift in Sources */,
@@ -718,7 +736,9 @@
 				0A6C954471EBBAAF3C1CFECC /* MessageComposer.swift in Sources */,
 				BAAD54943D1A2FF5B243C5C6 /* ModelCard.swift in Sources */,
 				FEFECF359A3FB1D1CB48B82F /* ModelEntity.swift in Sources */,
+				75687898A518706FA7D3FDFA /* ModelExplorerViewModel.swift in Sources */,
 				8535DBF3976DFF8D6FC24077 /* ModelGalleryView.swift in Sources */,
+				F8124347D445F05BE4169EA1 /* OCRCaptureSheet.swift in Sources */,
 				48787BFF373F764DDEAAABC2 /* OnboardingState.swift in Sources */,
 				B0067CDE24B7C5765613F795 /* OnboardingView.swift in Sources */,
 				625875B4B1707BD6B368A7B8 /* PersonalizationView.swift in Sources */,
@@ -755,6 +775,8 @@
 				6D74D1EE25E28CA74786EB41 /* DownloadProgressView.swift in Sources */,
 				6F73F7FA879B9C91658E7B2A /* ErrorBanner.swift in Sources */,
 				044DA7428B93FF9A79DD8156 /* ErrorRecoveryView.swift in Sources */,
+				2F0042825A5B393B51E271EB /* ExplorerDetailSheet.swift in Sources */,
+				C34B0E871F8E1A965418B3FE /* ExplorerModelRow.swift in Sources */,
 				C03CC7C3254A574690D6049F /* GlassCard.swift in Sources */,
 				82E2E0D5EF108B9DBCB3C5D7 /* ImageAttachmentView.swift in Sources */,
 				2315DFBE3ECD0FA4BBF7ED7E /* InferenceServiceLocator.swift in Sources */,
@@ -762,7 +784,9 @@
 				9F5AFCC58459F8B5BACAD357 /* MessageComposer.swift in Sources */,
 				F7914815D2709C2243CAF455 /* ModelCard.swift in Sources */,
 				7C179B5FB7C7FC695F88F479 /* ModelEntity.swift in Sources */,
+				C85B2E85D3B2A59FCE62E457 /* ModelExplorerViewModel.swift in Sources */,
 				A0985B8527B2B6D8C80F7FC5 /* ModelGalleryView.swift in Sources */,
+				E7B37709339BF5A6D7A2240C /* OCRCaptureSheet.swift in Sources */,
 				3B40AB3AF065277829BF54A3 /* OnboardingState.swift in Sources */,
 				C70F67B17A45741A888E6EF0 /* OnboardingView.swift in Sources */,
 				FE6ED47953A33A43B6AB9E6D /* PersonalizationView.swift in Sources */,
@@ -818,6 +842,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = "";
 				CODE_SIGN_ENTITLEMENTS = "App/RodaAi-macOS.entitlements";
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "App/Info-macOS.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -909,6 +934,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = "";
 				CODE_SIGN_ENTITLEMENTS = "App/RodaAi-macOS.entitlements";
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "App/Info-macOS.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -931,6 +957,8 @@
 				DEVELOPMENT_TEAM = 8F4K6H352R;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = App/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = RodaAi;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -953,6 +981,8 @@
 				DEVELOPMENT_TEAM = 8F4K6H352R;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = App/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = RodaAi;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -970,6 +1000,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -1001,6 +1032,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = "";
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1019,6 +1051,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_STRICT_CONCURRENCY = complete;
@@ -1030,6 +1063,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -1061,6 +1095,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -1086,6 +1121,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_STRICT_CONCURRENCY = complete;

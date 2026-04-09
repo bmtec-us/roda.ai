@@ -100,8 +100,27 @@ public enum DeviceCapability {
     /// - MacBook Air M4 (16GB total): budget ~12GB → modelos ate 12GB
     /// - Mac Studio M4 Max (64GB total): budget ~48GB → modelos ate 48GB
     public static func canLoadModel(requiringRAM gb: Int) -> Bool {
+        compatibilityTier(forModelRAMGB: gb) != .incompatible
+    }
+
+    /// Fine-grained tier describing how comfortably a model fits within the
+    /// device's memory budget. Used by the Explorer UI to rank models and
+    /// show clear visual cues instead of a binary yes/no.
+    ///
+    /// - `.optimal`:    model RAM ≤ 50% of `modelMemoryBudget` — plenty of headroom
+    /// - `.good`:       ≤ 80% — fits with room for the OS and other apps
+    /// - `.tight`:      ≤ 100% — borderline, may thrash or crash under pressure
+    /// - `.incompatible`: > 100% — guaranteed to fail, download disabled
+    public static func compatibilityTier(forModelRAMGB gb: Int) -> CompatibilityTier {
+        guard gb > 0 else { return .optimal }
         let requiredBytes = Int64(gb) * 1_073_741_824
-        return requiredBytes <= modelMemoryBudget
+        let budget = modelMemoryBudget
+        guard budget > 0 else { return .incompatible }
+        let ratio = Double(requiredBytes) / Double(budget)
+        if ratio <= 0.50 { return .optimal }
+        if ratio <= 0.80 { return .good }
+        if ratio <= 1.00 { return .tight }
+        return .incompatible
     }
 
     /// Threshold de memoria (80% do total) — acima disso, exibir aviso ao usuario.
@@ -117,6 +136,47 @@ public enum DeviceCapability {
         #else
         return false
         #endif
+    }
+}
+
+/// Quão confortavelmente um modelo cabe no orçamento de memória do
+/// dispositivo. Usado pela UI (Explorer, ModelCard) para mostrar badges
+/// coloridos em vez de um sim/não binário.
+public enum CompatibilityTier: String, Codable, Sendable, CaseIterable {
+    case optimal       // ≤ 50% do orçamento
+    case good          // ≤ 80%
+    case tight         // ≤ 100% — instável
+    case incompatible  // > 100%
+
+    public var displayName: String {
+        switch self {
+        case .optimal:      return "Ótimo"
+        case .good:         return "Bom"
+        case .tight:        return "Apertado"
+        case .incompatible: return "Incompatível"
+        }
+    }
+
+    public var description: String {
+        switch self {
+        case .optimal:      return "Roda com folga"
+        case .good:         return "Roda bem"
+        case .tight:        return "Pode forçar a memória"
+        case .incompatible: return "Memória insuficiente"
+        }
+    }
+
+    public var sfSymbol: String {
+        switch self {
+        case .optimal:      return "checkmark.seal.fill"
+        case .good:         return "checkmark.circle.fill"
+        case .tight:        return "exclamationmark.triangle.fill"
+        case .incompatible: return "lock.fill"
+        }
+    }
+
+    public var canDownload: Bool {
+        self != .incompatible
     }
 }
 

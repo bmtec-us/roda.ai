@@ -17,7 +17,8 @@ struct ModelCard: View {
 
     private var isDownloaded: Bool { modelManager.isDownloaded(entry) }
     private var isActive: Bool { modelManager.activeModel?.identifier == entry.identifier }
-    private var isCompatible: Bool { modelManager.isCompatible(entry) }
+    private var tier: CompatibilityTier { modelManager.compatibilityTier(entry) }
+    private var isCompatible: Bool { tier != .incompatible }
     private var progress: Double? { modelManager.downloadProgress[entry.identifier] }
     private var downloadedBytes: Int64 { modelManager.downloadBytes[entry.identifier] ?? 0 }
     private var totalBytes: Int64 { modelManager.downloadTotalBytes[entry.identifier] ?? entry.downloadSizeBytes }
@@ -207,16 +208,38 @@ struct ModelCard: View {
                 Label("model.status.downloading", systemImage: "arrow.down.circle")
                     .font(.caption)
                     .foregroundStyle(ColorPalette.accent)
-            } else if !isCompatible {
-                Label(incompatibleReason, systemImage: "exclamationmark.triangle")
-                    .font(.caption)
-                    .foregroundStyle(ColorPalette.warning)
             } else {
-                Label("model.status.available", systemImage: "arrow.down.circle")
-                    .font(.caption)
-                    .foregroundStyle(ColorPalette.textSecondary)
+                compatibilityTierLabel
             }
             Spacer()
+            if !isActive && !isDownloaded && progress == nil {
+                compatibilityTierBadge
+            }
+        }
+    }
+
+    private var compatibilityTierLabel: some View {
+        Label(tier.description, systemImage: tier.sfSymbol)
+            .font(.caption)
+            .foregroundStyle(tierColor)
+    }
+
+    private var compatibilityTierBadge: some View {
+        Text(tier.displayName)
+            .font(.caption2.weight(.medium))
+            .foregroundStyle(tierColor)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(tierColor.opacity(0.15))
+            .clipShape(Capsule())
+    }
+
+    private var tierColor: Color {
+        switch tier {
+        case .optimal:      return ColorPalette.accent
+        case .good:         return .blue
+        case .tight:        return ColorPalette.warning
+        case .incompatible: return ColorPalette.error
         }
     }
 
@@ -253,15 +276,25 @@ struct ModelCard: View {
             }
 
             if isDownloaded && !isActive {
-                Button {
-                    performLoad()
-                } label: {
-                    Label("model.action.activate", systemImage: "play.circle")
+                if entry.isChatCapable {
+                    Button {
+                        performLoad()
+                    } label: {
+                        Label("model.action.activate", systemImage: "play.circle")
+                    }
+                    .tint(ColorPalette.accent)
+                    .glassButtonStyle(.glassProminent)
+                    .disabled(isPerformingAction)
+                    .accessibilityIdentifier("activate-\(entry.identifier)")
+                } else {
+                    // Specialized model (TTS, ASR, OCR, etc.) — not
+                    // usable as chat backbone. Show a clear label
+                    // instead of an Activate button that would crash
+                    // MLXLLM on the incompatible config.json schema.
+                    Label("Modelo especializado", systemImage: "sparkles")
+                        .font(.caption)
+                        .foregroundStyle(ColorPalette.textSecondary)
                 }
-                .tint(ColorPalette.accent)
-                .glassButtonStyle(.glassProminent)
-                .disabled(isPerformingAction)
-                .accessibilityIdentifier("activate-\(entry.identifier)")
             }
 
             if isActive {

@@ -58,9 +58,22 @@ public class SpeechRecognizer: ObservableObject, SpeechRecognizing {
         #if canImport(UIKit)
         do {
             let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.record, mode: .measurement, options: [.duckOthers])
+            // Use `.playAndRecord` here (not `.record`) so the session
+            // is ready for BOTH mic input (STT) and speaker output (TTS)
+            // throughout a voice-mode turn. Previously this was `.record`
+            // and TextToSpeech.speak(...) had to switch the category on
+            // every turn, costing 200-300ms of hardware reconfiguration
+            // lag before the reply was audible. `.playAndRecord` with
+            // `.spokenAudio` mode and `.defaultToSpeaker` matches what
+            // TextToSpeech.speak(...) wants, so no session change is
+            // needed between STT → inference → TTS.
+            try session.setCategory(
+                .playAndRecord,
+                mode: .spokenAudio,
+                options: [.defaultToSpeaker, .allowBluetoothHFP, .duckOthers]
+            )
             try session.setActive(true, options: .notifyOthersOnDeactivation)
-            RodaLog.voice.info("STT AVAudioSession activated")
+            RodaLog.voice.info("STT AVAudioSession activated (playAndRecord)")
         } catch {
             RodaLog.voice.error("STT AVAudioSession setup failed: \(error.localizedDescription, privacy: .public)")
             throw VoiceError.audioEngineStartFailed(reason: error.localizedDescription)

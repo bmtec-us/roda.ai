@@ -1,6 +1,7 @@
 // Sources/RodaAiCore/Models/ModelManager.swift
 import Foundation
 import Observation
+import SwiftData
 #if canImport(FoundationModels)
 import FoundationModels
 #endif
@@ -14,6 +15,10 @@ public final class ModelManager {
     // MARK: - State
     public private(set) var downloadedModels: [LocalModel] = []
     public private(set) var activeModel: LocalModel?
+    /// User-added models (from the Explorer / "Adicionar por ID" flow).
+    /// Loaded from SwiftData once via `loadUserModels(from:)` and merged
+    /// into `catalog` alongside curated entries.
+    public private(set) var userModels: [CatalogEntry] = []
     public private(set) var downloadProgress: [String: Double] = [:]
     public private(set) var downloadBytes: [String: Int64] = [:]
     public private(set) var downloadTotalBytes: [String: Int64] = [:]
@@ -99,7 +104,103 @@ public final class ModelManager {
     /// Carrega o catalogo curado do bundle RodaAiCore.
     /// Chamar apos inicializacao para popular `catalog`.
     public func loadCatalog() {
-        catalog = ModelCatalog.loadSafe()
+        let curated = ModelCatalog.loadSafe()
+        catalog = curated + userModels
+    }
+
+    /// Loads user-added models from a SwiftData `ModelContainer` and
+    /// merges them into the in-memory `catalog`. Called from
+    /// `AppDependencies.init` after the `ModelContainer` is constructed.
+    public func loadUserModels(from container: ModelContainer) {
+        let context = ModelContext(container)
+        let descriptor = FetchDescriptor<UserModel>()
+        guard let persisted = try? context.fetch(descriptor) else { return }
+        userModels = persisted.map { $0.makeCatalogEntry() }
+        catalog = ModelCatalog.loadSafe() + userModels
+    }
+
+    /// Downloads any Hugging Face repo by ID (typically `author/name`),
+    /// classifies it via `MLXModelCategory`, persists it to the
+    /// `UserModel` SwiftData table, and adds it to the in-memory
+    /// catalog. The Explorer UI calls this after the user taps
+    /// "Baixar" in a detail sheet.
+    ///
+    /// - Parameters:
+    ///   - repoId: full HF repo identifier (e.g. "mlx-community/Llama-3.2-1B-Instruct-4bit").
+    ///   - summary: detail metadata (download size, pipeline tag).
+    ///   - category: inferred category used for UI grouping and feature gating.
+    ///   - persistenceContainer: SwiftData container used to persist the
+    ///     `UserModel` row.
+    public func downloadModelByRepoId(
+        _ repoId: String,
+        summary: HuggingFaceModelSummary,
+        category: MLXModelCategory,
+        persistenceContainer: ModelContainer
+    ) async throws {
+        let identifier = UserModel.identifier(forRepoId: repoId)
+
+        // Skip if already downloaded — idempotent.
+        if downloadedModels.contains(where: { $0.identifier == identifier }) {
+            RodaLog.model.info("downloadModelByRepoId: \(identifier, privacy: .public) already present — noop")
+            return
+        }
+
+        // Synthesize a CatalogEntry so the rest of the pipeline (download,
+        // validation, telemetry) has the shape it expects. The synthesized
+        // entry mirrors the persisted UserModel fields.
+        let displayName = repoId
+            .split(separator: "/")
+            .last
+            .map(String.init) ?? repoId
+        let estimatedRAM = max(1, summary.estimatedRAMGB)
+
+        let synthetic = CatalogEntry(
+            identifier: identifier,
+            displayName: displayName,
+            provider: "Comunidade",
+            familyName: category.displayName,
+            parameterCount: "?",
+            quantization: "?",
+            downloadSizeBytes: summary.totalBytes ?? 0,
+            estimatedRAMBytes: Int64(estimatedRAM) * 1_073_741_824,
+            portugueseRating: .razoavel,
+            cpuUsageLevel: .medio,
+            minimumRAM: estimatedRAM,
+            isVisionCapable: category == .visionChat,
+            isReasoningCapable: category == .reasoning,
+            huggingFaceRepoId: repoId,
+            modelBackend: .mlx,
+            downloadFileName: nil
+        )
+
+        // Add to the in-memory catalog BEFORE downloading so the existing
+        // downloadModel pipeline can look it up by identifier.
+        if !catalog.contains(where: { $0.identifier == identifier }) {
+            catalog.append(synthetic)
+        }
+
+        try await downloadModel(synthetic)
+
+        // Persist to SwiftData now that the download succeeded.
+        let context = ModelContext(persistenceContainer)
+        let newModel = UserModel(
+            identifier: identifier,
+            repoId: repoId,
+            displayName: displayName,
+            category: category,
+            downloadSizeBytes: summary.totalBytes ?? 0,
+            estimatedRAMGB: estimatedRAM,
+            pipelineTag: summary.pipelineTag
+        )
+        context.insert(newModel)
+        do {
+            try context.save()
+            if !userModels.contains(where: { $0.identifier == identifier }) {
+                userModels.append(synthetic)
+            }
+        } catch {
+            RodaLog.model.error("Failed to persist user model \(identifier, privacy: .public): \(error.localizedDescription, privacy: .public)")
+        }
     }
 
     /// Escaneia o diretorio de modelos no launch do app e popula:
@@ -271,6 +372,19 @@ public final class ModelManager {
         }
 
         let entry = catalog.first { $0.identifier == model.identifier }
+
+        // Specialized models (TTS, ASR, OCR, embedding, audio) can
+        // be downloaded via the Explorer but can NOT be activated as
+        // the chat backbone — their config.json schemas don't match
+        // what MLXLLM expects and loading crashes at parse time.
+        // Fail fast with a clear error that the UI can surface.
+        if let entry, !entry.isChatCapable {
+            RodaLog.model.warning(
+                "loadModel rejected specialized model \(model.identifier, privacy: .public) (family=\(entry.familyName, privacy: .public)) — not chat-capable"
+            )
+            throw InferenceError.unsupportedArchitecture(identifier: model.identifier)
+        }
+
         let isZeroDownload = entry?.isZeroDownload ?? false
 
         // Zero-download models (Apple FM) don't have files on disk.
@@ -347,10 +461,18 @@ public final class ModelManager {
     }
 
     public func isCompatible(_ entry: CatalogEntry) -> Bool {
+        compatibilityTier(entry) != .incompatible
+    }
+
+    /// Compatibility tier (Ótimo/Bom/Apertado/Incompatível) for the given
+    /// catalog entry. Apple Foundation Model short-circuits — it's either
+    /// fully available (`.optimal`) or unavailable (`.incompatible`) on
+    /// this device. Every other model type defers to `DeviceCapability`.
+    public func compatibilityTier(_ entry: CatalogEntry) -> CompatibilityTier {
         if entry.backend == .foundationModel {
-            return foundationModelIsAvailable()
+            return foundationModelIsAvailable() ? .optimal : .incompatible
         }
-        return DeviceCapability.canLoadModel(requiringRAM: entry.minimumRAM)
+        return DeviceCapability.compatibilityTier(forModelRAMGB: entry.minimumRAM)
     }
 
     private func foundationModelIsAvailable() -> Bool {

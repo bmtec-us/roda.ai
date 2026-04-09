@@ -18,6 +18,7 @@ final class SettingsViewModel {
 
     // MARK: - App
     var voiceEnabled: Bool = true
+    var neuralVoiceEngine: NeuralVoiceEngine = .appleSystem
     var appearanceMode: AppearanceMode = .system
     var chatFontSize: ChatFontSizePreference = .system
     var defaultModelIdentifier: String?
@@ -124,6 +125,7 @@ final class SettingsViewModel {
         responseLength = prefs.responseLength
         systemPrompt = prefs.systemPrompt
         voiceEnabled = prefs.voiceEnabled
+        neuralVoiceEngine = prefs.neuralVoiceEngine
         appearanceMode = prefs.appearanceMode
         chatFontSize = prefs.chatFontSize
         defaultModelIdentifier = prefs.defaultModelIdentifier
@@ -141,6 +143,7 @@ final class SettingsViewModel {
         prefs.responseLength = responseLength
         prefs.systemPrompt = systemPrompt
         prefs.voiceEnabled = voiceEnabled
+        prefs.neuralVoiceEngine = neuralVoiceEngine
         prefs.appearanceMode = appearanceMode
         prefs.chatFontSize = chatFontSize
         prefs.defaultModelIdentifier = defaultModelIdentifier

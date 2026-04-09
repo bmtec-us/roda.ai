@@ -42,12 +42,19 @@ final class AppDependencies {
         speechRecognizerOverride: (any SpeechRecognizing)? = nil,
         textToSpeechOverride: (any TextToSpeaking)? = nil
     ) {
+        // 0. Export the user's Hugging Face token (if any) as HF_TOKEN so
+        //    swift-huggingface-based subsystems (Kokoro TTS via mlx-audio,
+        //    future SDKs) pick it up automatically. Must happen BEFORE any
+        //    component that could resolve the env var is constructed.
+        HuggingFaceTokenStore().applyToEnvironment()
+
         // 1. SwiftData container — apenas @Model classes vao no schema.
         //    LocalModel e struct (nao @Model).
         let schema = Schema([
             Conversation.self,
             Message.self,
             UserPreferences.self,
+            UserModel.self,
         ])
         // SwiftData.ModelConfiguration tem o mesmo nome de RodaAiCore.ModelConfiguration.
         let config = SwiftData.ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
@@ -102,6 +109,7 @@ final class AppDependencies {
             activeInferenceProvider: activeInference
         )
         manager.loadCatalog()
+        manager.loadUserModels(from: modelContainer)
         manager.scanDownloadedModels()
         self.modelManager = manager
 
@@ -126,6 +134,34 @@ final class AppDependencies {
         let defaultTTS = TextToSpeechService()
         let tts: any TextToSpeaking = textToSpeechOverride ?? defaultTTS
         self.textToSpeechService = tts as? TextToSpeechService
+
+        // 6b. Restore the persisted neural voice engine selection so the
+        //     TTS service uses the right backend from the first `speak(...)`
+        //     call, not just after the user opens Settings.
+        if let concreteTTS = self.textToSpeechService {
+            // Inject our robust HuggingFace downloader so neural TTS
+            // downloads bypass swift-huggingface's flaky native path
+            // and use our auth/redirect/retry-aware pipeline. The
+            // downloader pre-populates swift-huggingface's HubCache
+            // so TTS.loadModel finds the files already there.
+            concreteTTS.configureDownloader(downloader)
+            // Inject the ModelManager so the Settings TTS picker can
+            // enumerate downloaded TTS-category user models at runtime.
+            concreteTTS.configureModelManager(manager)
+
+            let prefsContext = ModelContext(modelContainer)
+            if let prefs = try? prefsContext.fetch(FetchDescriptor<UserPreferences>()).first {
+                // setEngine also calls setTTSRepo internally for any
+                // .mlxRepo case, so the right cache directory is
+                // probed on the next refreshNeuralVoiceAvailability
+                // call right below.
+                concreteTTS.setEngine(prefs.neuralVoiceEngine)
+            }
+            // Probe the on-disk cache so the Settings picker and
+            // ModelGallery card reflect reality on first launch
+            // instead of showing "needs download" for a cached model.
+            concreteTTS.refreshNeuralVoiceAvailability()
+        }
         self.voiceService = VoiceService(
             speechRecognizer: recognizer,
             textToSpeech: tts,

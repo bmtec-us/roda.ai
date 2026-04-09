@@ -9,6 +9,7 @@ import UniformTypeIdentifiers
 #endif
 
 struct MessageComposer: View {
+    @Environment(AppDependencies.self) private var deps
     let isStreaming: Bool
     /// Callback: (text, attachedText, imageData)
     /// - text: o texto digitado pelo usuario
@@ -29,8 +30,26 @@ struct MessageComposer: View {
     @State private var isCameraPresented = false
     @State private var showCameraUnavailableAlert = false
     @State private var cameraUnavailableMessage = "Camera indisponivel neste dispositivo."
+    @State private var isOCRSheetPresented = false
     @FocusState private var isFocused: Bool
     @Namespace private var composerGlass
+
+    /// OCR engine used by the "Extrair texto de imagem" action. When
+    /// the currently-active chat model is vision-capable (Gemma 4 E2B,
+    /// Qwen3-VL, Molmo, etc.) we delegate OCR to that same model via
+    /// `ActiveVLMOCRProvider`. Otherwise we fall back to Apple Vision
+    /// (`VNRecognizeTextRequest`) which is always available and fast.
+    private var ocrProvider: any OCRProvider {
+        if let active = deps.modelManager.activeModel,
+           let entry = deps.modelManager.catalog.first(where: { $0.identifier == active.identifier }),
+           entry.isVisionCapable {
+            return ActiveVLMOCRProvider(
+                provider: deps.inferenceProvider,
+                modelName: active.displayName
+            )
+        }
+        return AppleVisionOCRProvider()
+    }
 
     var body: some View {
         GlassContainer(spacing: 12) {
@@ -85,6 +104,14 @@ struct MessageComposer: View {
                 .accessibilityLabel("Abrir camera")
                 #endif
 
+                Button {
+                    isOCRSheetPresented = true
+                } label: {
+                    Image(systemName: "doc.text.viewfinder")
+                }
+                .disabled(isStreaming)
+                .accessibilityLabel("Extrair texto de imagem")
+
                 TextField("chat.message.placeholder", text: $text, axis: .vertical)
                     .textFieldStyle(.plain)
                     .lineLimit(1...5)
@@ -133,6 +160,21 @@ struct MessageComposer: View {
                 .glassID(GlassNamespaceID.composerCapsule, in: composerGlass)
                 .padding(.horizontal, 8)
                 .padding(.bottom, 4)
+            }
+        }
+        .sheet(isPresented: $isOCRSheetPresented) {
+            OCRCaptureSheet(provider: ocrProvider) { extractedText in
+                // Insert extracted text into the composer. Appends to
+                // existing draft so users can still type a question
+                // about the image afterwards.
+                let trimmed = extractedText.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty else { return }
+                if text.isEmpty {
+                    text = trimmed
+                } else {
+                    text += "\n\n" + trimmed
+                }
+                isFocused = true
             }
         }
         #if os(iOS)

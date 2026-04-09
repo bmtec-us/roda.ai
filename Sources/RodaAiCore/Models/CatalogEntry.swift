@@ -41,6 +41,27 @@ public struct CatalogEntry: Codable, Sendable, Equatable, Identifiable {
         huggingFaceRepoId.isEmpty || downloadSizeBytes == 0
     }
 
+    /// True when this entry represents a model the chat pipeline can
+    /// actually activate (text-in → text-out). Specialized categories
+    /// like TTS, ASR, OCR, embedding, and audio need dedicated
+    /// subsystems to run; activating them as a chat backbone crashes
+    /// MLXLLM on config.json parsing because their schemas are
+    /// incompatible with the standard LLM layout.
+    ///
+    /// For synthesized entries from the Explorer's "Add by ID" flow
+    /// the `familyName` carries the inferred `MLXModelCategory`
+    /// display name, so we can detect non-chat categories here.
+    public var isChatCapable: Bool {
+        let nonChatFamilies: Set<String> = [
+            "Voz (TTS)",
+            "Voz (ASR)",
+            "OCR",
+            "Embeddings",
+            "Áudio"
+        ]
+        return !nonChatFamilies.contains(familyName)
+    }
+
     public init(
         identifier: String,
         displayName: String,

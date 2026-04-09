@@ -1,6 +1,11 @@
 # Local-only Apple documentation scrape (large, auto-generated)
 docs/apple/
 
+# Vendored mlx-audio-swift fork — build artifacts only. The source
+# is intentionally checked in so Kokoro work survives clean checkouts.
+Vendor/mlx-audio-swift/.build/
+Vendor/mlx-audio-swift/.swiftpm/
+
 # Xcode
 build/
 DerivedData/

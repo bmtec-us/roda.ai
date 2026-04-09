@@ -29,7 +29,13 @@ let package = Package(
         .package(url: "https://github.com/huggingface/swift-transformers", "1.2.0"..<"1.3.0"),
         .package(url: "https://github.com/gonzalezreal/textual", from: "0.3.1"),
         .package(url: "https://github.com/mattt/llama.swift", from: "2.8682.0"),
-        .package(url: "https://github.com/Blaizzy/mlx-audio-swift", from: "0.1.2"),
+        // Local fork of mlx-audio-swift — we're porting Kokoro TTS
+        // (and eventually more) directly in this checkout so we can
+        // iterate without waiting for upstream. Remote URL for
+        // reference: https://github.com/Blaizzy/mlx-audio-swift
+        // Baseline commit: v0.1.2 (fcbd04d, 2026-03-14).
+        .package(path: "Vendor/mlx-audio-swift"),
+        .package(url: "https://github.com/huggingface/swift-huggingface.git", .upToNextMajor(from: "0.8.1")),
     ],
     targets: [
         .target(
@@ -44,6 +50,7 @@ let package = Package(
                 .product(name: "Tokenizers", package: "swift-transformers"),
                 .product(name: "LlamaSwift", package: "llama.swift"),
                 .product(name: "MLXAudioTTS", package: "mlx-audio-swift"),
+                .product(name: "HuggingFace", package: "swift-huggingface"),
                 .product(name: "Textual", package: "textual"),
             ],
             path: "Sources/RodaAiCore",

@@ -35,6 +35,69 @@ public enum ResponseLengthPreference: String, Codable, Sendable, CaseIterable {
     case detailed
 }
 
+/// Which Text-to-Speech backend the voice mode should use.
+///
+/// - `.appleSystem`: uses `AVSpeechSynthesizer` with native system voices.
+///   Zero download, native pt-BR quality (Joana/Felipe), works offline.
+///   Default on first launch.
+/// - `.mlxRepo(repoId:)`: any mlx-audio-swift-compatible neural TTS
+///   repo, identified by its full HF repo ID. The built-in default
+///   (`mlx-community/Qwen3-TTS-12Hz-0.6B-Base-4bit`) and any
+///   user-downloaded TTS model both use this case — differentiated
+///   only by the stored repo ID. Which architecture each repo maps
+///   to is decided internally by `TTS.loadModel(modelRepo:)` in
+///   mlx-audio-swift.
+///
+/// Persisted to SwiftData as a plain `String` via `rawPersistenceValue`:
+/// `"apple"` for `.appleSystem`, `"mlx:<repoId>"` for `.mlxRepo`.
+public enum NeuralVoiceEngine: Sendable, Hashable, Codable {
+    case appleSystem
+    case mlxRepo(repoId: String)
+
+    /// Convenience constant for the built-in Qwen3-TTS default.
+    public static let defaultMLXRepoId = "mlx-community/Qwen3-TTS-12Hz-0.6B-Base-4bit"
+
+    /// Convenience constant representing the built-in Qwen3-TTS default
+    /// as a `NeuralVoiceEngine` value. Used by UI pickers as the
+    /// "factory" neural voice option.
+    public static var defaultMLXRepo: NeuralVoiceEngine {
+        .mlxRepo(repoId: defaultMLXRepoId)
+    }
+
+    /// Stable string encoding for SwiftData persistence. Keep this
+    /// format forever — older records must continue to decode.
+    public var rawPersistenceValue: String {
+        switch self {
+        case .appleSystem:
+            return "apple"
+        case .mlxRepo(let repoId):
+            return "mlx:\(repoId)"
+        }
+    }
+
+    /// Inverse of `rawPersistenceValue`. Unknown strings fall back to
+    /// `.appleSystem` so a corrupted or legacy value (`"mlxQwen3"`
+    /// from the old enum, for example) boots into the safe default.
+    public init(rawPersistenceValue raw: String) {
+        if raw == "apple" {
+            self = .appleSystem
+        } else if raw.hasPrefix("mlx:") {
+            let repoId = String(raw.dropFirst("mlx:".count))
+            if repoId.isEmpty {
+                self = .appleSystem
+            } else {
+                self = .mlxRepo(repoId: repoId)
+            }
+        } else if raw == "mlxQwen3" {
+            // Legacy: the old closed-enum value used by pre-plan-G
+            // installs. Map it to the built-in Qwen3 repo.
+            self = .defaultMLXRepo
+        } else {
+            self = .appleSystem
+        }
+    }
+}
+
 @Model
 public final class UserPreferences {
     // MARK: - Model
@@ -59,6 +122,12 @@ public final class UserPreferences {
     // MARK: - Voice
     public var voiceEnabled: Bool = true
 
+    /// Persisted as `"apple"` or `"mlx:<repoId>"` via
+    /// `NeuralVoiceEngine.rawPersistenceValue`. Plain string storage
+    /// keeps SwiftData migrations simple when we add new TTS
+    /// backends or retire old ones.
+    public var neuralVoiceEngineRaw: String = NeuralVoiceEngine.appleSystem.rawPersistenceValue
+
     // MARK: - Appearance
     public var appearanceMode: AppearanceMode = AppearanceMode.system
 
@@ -79,6 +148,11 @@ public final class UserPreferences {
     public var responseLength: ResponseLengthPreference {
         get { ResponseLengthPreference(rawValue: responseLengthRaw) ?? .normal }
         set { responseLengthRaw = newValue.rawValue }
+    }
+
+    public var neuralVoiceEngine: NeuralVoiceEngine {
+        get { NeuralVoiceEngine(rawPersistenceValue: neuralVoiceEngineRaw) }
+        set { neuralVoiceEngineRaw = newValue.rawPersistenceValue }
     }
 
     public var clampedTemperature: Float {

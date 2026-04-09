@@ -115,7 +115,7 @@ public actor LlamaCppInferenceProvider: InferenceProvider {
                     )
 
                     // Generate tokens
-                    var sampler = LlamaSampler(
+                    let sampler = LlamaSampler(
                         temperature: temperature,
                         topP: topP,
                         repetitionPenalty: repetitionPenalty,

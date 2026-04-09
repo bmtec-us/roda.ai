@@ -217,7 +217,16 @@ public class VoiceService: ObservableObject {
     Se precisar enfatizar, use no maximo um destaque curto em negrito.
     """
 
-    private static let minSpeakableChunkCharacters = 28
+    /// Minimum spoken-text length (after markdown stripping) before a
+    /// sentence-boundary chunk is flushed to TTS. Lower = snappier first
+    /// audio, higher = smoother phrasing.
+    ///
+    /// 12 catches short opening sentences like "Oi, tudo bem?" (13 chars)
+    /// which at 28 got buffered until the full response arrived, making
+    /// the whole feature feel like "wait for text, then speak the whole
+    /// thing" instead of ChatGPT-style streaming speech. Anything
+    /// smaller than 12 tends to chop interjections mid-clause.
+    private static let minSpeakableChunkCharacters = 12
 
     private static func extractSpeakableChunk(from buffer: inout String) -> String? {
         let separators: Set<Character> = [".", "!", "?", "\n", ":", ";"]

@@ -80,6 +80,9 @@ struct ContentView: View {
                 NavigationStack {
                     VoiceModeView(voiceService: deps.voiceService)
                         .navigationTitle("tab.voice")
+                        #if os(iOS)
+                        .navigationBarTitleDisplayMode(.inline)
+                        #endif
                 }
             }
             Tab("tab.settings", systemImage: "gearshape.fill", value: 3) {
