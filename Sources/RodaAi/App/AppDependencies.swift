@@ -82,6 +82,14 @@ final class AppDependencies {
         if #available(iOS 26, macOS 26, *) {
             fmProvider = FoundationModelInferenceProvider()
         }
+        // Hold a concrete reference so we can inject tool dependencies
+        // below once ModelManager and ConversationRepository exist.
+        let fmConcrete: FoundationModelInferenceProvider?
+        if #available(iOS 26, macOS 26, *) {
+            fmConcrete = fmProvider as? FoundationModelInferenceProvider
+        } else {
+            fmConcrete = nil
+        }
 
         // 5. ModelManager coordena download/load/unload/validate
         let manager = ModelManager(
@@ -98,7 +106,20 @@ final class AppDependencies {
         self.modelManager = manager
 
         // 5. ConversationRepository sobre SwiftData (@ModelActor)
-        self.conversationRepository = ConversationRepository(modelContainer: modelContainer)
+        let repository = ConversationRepository(modelContainer: modelContainer)
+        self.conversationRepository = repository
+
+        // 5b. Wire Foundation Models tool-calling dependencies now that
+        //     both ModelManager and ConversationRepository exist. Tools
+        //     become active on the next loadModel(...) call.
+        if #available(iOS 26, macOS 26, *), let fmConcrete {
+            Task { [manager, repository] in
+                await fmConcrete.configureTools(
+                    modelManager: manager,
+                    conversationRepository: repository
+                )
+            }
+        }
 
         // 6. Voice services — reais por padrao, mocks em testes/previews
         let recognizer: any SpeechRecognizing = speechRecognizerOverride ?? SpeechRecognizer()

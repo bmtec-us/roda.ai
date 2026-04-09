@@ -148,6 +148,21 @@ public final class MockConversationRepository {
         return title
     }
 
+    public func setTitle(_ title: String, for conversationId: UUID) throws(PersistenceError) {
+        if let error = shouldThrow { throw error }
+        if let index = conversations.firstIndex(where: { $0.id == conversationId }) {
+            let old = conversations[index]
+            conversations[index] = ConversationSummary(
+                id: old.id,
+                title: title,
+                modelIdentifier: old.modelIdentifier,
+                createdAt: old.createdAt,
+                updatedAt: old.updatedAt,
+                messageCount: old.messageCount
+            )
+        }
+    }
+
     public func save() throws(PersistenceError) {
         saveCallCount += 1
         if let error = shouldThrow { throw error }

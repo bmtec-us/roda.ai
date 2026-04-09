@@ -69,7 +69,10 @@ public class SpeechRecognizer: ObservableObject, SpeechRecognizing {
 
         let request = SFSpeechAudioBufferRecognitionRequest()
         request.shouldReportPartialResults = true
-        request.requiresOnDeviceRecognition = false
+        // Privacy promise: all STT must run locally. RodaAi does not transmit
+        // audio to Apple or any network service. The speech framework falls
+        // back to an on-device model (pt-BR supported on iOS 13+).
+        request.requiresOnDeviceRecognition = true
         self.request = request
 
         let inputNode = audioEngine.inputNode

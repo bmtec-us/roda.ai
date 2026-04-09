@@ -215,6 +215,28 @@ struct MessageComposer: View {
 
     private func setImageAttachment(data: Data) {
         attachedImageData = data
+        // Run OCR in the background. If the image contains readable text,
+        // append it to `attachedFileText` so non-VLM models (Llama, Qwen)
+        // can still answer questions about the content. VLM models benefit
+        // too — the recognized text gives them a reliable anchor.
+        Task {
+            do {
+                let extractor = ImageTextExtractor()
+                guard let text = try await extractor.extractText(from: data) else { return }
+                await MainActor.run {
+                    // Only attach if the user hasn't removed the image in the meantime.
+                    guard attachedImageData != nil else { return }
+                    let prefix = "Texto detectado na imagem:\n"
+                    if let existing = attachedFileText, !existing.isEmpty {
+                        attachedFileText = existing + "\n\n" + prefix + text
+                    } else {
+                        attachedFileText = prefix + text
+                    }
+                }
+            } catch {
+                // Silent — OCR failure shouldn't block attachment flow.
+            }
+        }
     }
 
     private func resetImageAttachment() {

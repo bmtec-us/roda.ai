@@ -241,6 +241,21 @@ public actor ConversationRepository {
         return title
     }
 
+    /// Overwrites the stored title for a conversation. Used by the FM-backed
+    /// title generator in `ChatViewModel` to replace the truncation fallback
+    /// with a natural-language title once Apple Intelligence produces one.
+    public func setTitle(_ title: String, for conversationId: UUID) throws(PersistenceError) {
+        guard let conversation = try findConversation(by: conversationId) else {
+            throw PersistenceError.conversationNotFound(id: conversationId)
+        }
+        conversation.title = title
+        do {
+            try modelContext.save()
+        } catch {
+            throw PersistenceError.saveFailed(reason: error.localizedDescription)
+        }
+    }
+
     // MARK: - Private
 
     private func findConversation(by id: UUID) throws(PersistenceError) -> Conversation? {

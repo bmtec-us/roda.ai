@@ -6,6 +6,7 @@ struct ConversationListView: View {
     @State private var conversations: [ConversationSummary] = []
     @State private var searchText = ""
     @State private var selectedConversation: ConversationSummary?
+    private let semanticSearch = SemanticSearchService()
 
     let repository: ConversationRepository
     /// ID da conversa atualmente carregada no ChatViewModel — destacada com checkmark
@@ -66,10 +67,18 @@ struct ConversationListView: View {
 
     private func loadConversations(matching query: String? = nil) async {
         do {
-            let query = query?.isEmpty == true ? nil : query
-            conversations = try await repository.fetch(matching: query)
+            // Always fetch the full list (sorted by updatedAt desc) and let
+            // the semantic search service re-rank when there's a query.
+            // SQL substring filtering is too strict — "mistral MoE" wouldn't
+            // match a conversation titled "Modelos esparsos".
+            let all = try await repository.fetch(matching: nil)
+            let trimmed = query?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if trimmed.isEmpty {
+                conversations = all
+            } else {
+                conversations = await semanticSearch.rank(all, query: trimmed)
+            }
         } catch {
-            // Handle PersistenceError.fetchFailed
             conversations = []
         }
     }
