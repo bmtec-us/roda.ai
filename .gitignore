@@ -52,6 +52,9 @@ Pods/
 .claude/
 CLAUDE.md
 
+# Documentation (local only)
+/docs
+
 # IDE
 *.swp
 *~
