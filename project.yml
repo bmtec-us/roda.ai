@@ -2,14 +2,14 @@ name: RodaAi
 options:
   bundleIdPrefix: com.bmtec.rodaai
   deploymentTarget:
-    iOS: "18.0"
-    macOS: "15.0"
+    iOS: "26.0"
+    macOS: "26.0"
   createIntermediateGroups: true
   generateEmptyDirectories: true
 
 settings:
   base:
-    SWIFT_VERSION: "6.0"
+    SWIFT_VERSION: "6.3"
     DEVELOPMENT_TEAM: ""
     CODE_SIGN_STYLE: Automatic
     SWIFT_STRICT_CONCURRENCY: complete
@@ -26,7 +26,7 @@ targets:
   RodaAi-iOS:
     type: application
     platform: iOS
-    deploymentTarget: "18.0"
+    deploymentTarget: "26.0"
     sources:
       - path: Sources/RodaAi
         excludes:
@@ -54,7 +54,7 @@ targets:
   RodaAi-macOS:
     type: application
     platform: macOS
-    deploymentTarget: "15.0"
+    deploymentTarget: "26.0"
     sources:
       - path: Sources/RodaAi
         excludes:
@@ -80,7 +80,7 @@ targets:
   RodaAiTests-iOS:
     type: bundle.unit-test
     platform: iOS
-    deploymentTarget: "18.0"
+    deploymentTarget: "26.0"
     sources:
       - path: Tests/RodaAiTests
     settings:
@@ -100,7 +100,7 @@ targets:
   RodaAiUITests-iOS:
     type: bundle.ui-testing
     platform: iOS
-    deploymentTarget: "18.0"
+    deploymentTarget: "26.0"
     sources:
       - path: Tests/RodaAiUITests
     settings:

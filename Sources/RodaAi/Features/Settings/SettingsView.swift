@@ -355,8 +355,10 @@ struct SettingsView: View {
                         }
                     }
                     .autocorrectionDisabled(true)
+                    #if os(iOS)
                     .textInputAutocapitalization(.never)
-                    .font(.body.monospaced())
+                    #endif
+                    .font(.system(.body, design: .monospaced))
 
                     Button {
                         huggingFaceTokenRevealed.toggle()

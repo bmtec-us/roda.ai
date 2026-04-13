@@ -257,7 +257,9 @@ private struct ExplorerContent: View {
             TextField("Buscar em mlx-community…", text: $vm.searchText)
                 .textFieldStyle(.plain)
                 .autocorrectionDisabled()
+                #if os(iOS)
                 .textInputAutocapitalization(.never)
+                #endif
                 .onSubmit { vm.search(debounced: false) }
                 .onChange(of: vm.searchText) { _, _ in vm.search() }
         }
@@ -327,8 +329,10 @@ private struct ExplorerContent: View {
                 TextField("Adicionar por ID (ex: mlx-community/Kokoro-82M-4bit)", text: $manualRepoId)
                     .textFieldStyle(.plain)
                     .autocorrectionDisabled()
+                    #if os(iOS)
                     .textInputAutocapitalization(.never)
-                    .font(.caption.monospaced())
+                    #endif
+                    .font(.system(size: 12, design: .monospaced))
 
                 Button {
                     Task { await verifyManual() }

@@ -93,9 +93,15 @@ struct ChatView: View {
             ToolbarItem(placement: .principal) {
                 modelSwitcherMenu
             }
+            #if os(iOS)
             ToolbarItem(placement: .topBarTrailing) {
                 responseLengthMenu
             }
+            #else
+            ToolbarItem(placement: .automatic) {
+                responseLengthMenu
+            }
+            #endif
         }
         .onChange(of: viewModel.responseLength) { _, newValue in
             onResponseLengthChange(newValue)

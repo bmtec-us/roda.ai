@@ -16,8 +16,7 @@ struct ColorPalette: Sendable {
     #elseif os(macOS)
     private static func dynamic(light: NSColor, dark: NSColor) -> Color {
         Color(NSColor(name: nil) { appearance in
-            guard let appearance else { return light }
-            return appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? dark : light
+            appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? dark : light
         })
     }
     #endif
