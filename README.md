@@ -15,13 +15,13 @@
 ---
 
 <details open>
-<summary><strong>Leia em Portugues</strong></summary>
+<summary><strong>Leia em Português</strong></summary>
 
 # RodaAi
 
-**Inteligencia artificial local no seu dispositivo Apple. Sem internet. Sem coleta de dados. Sem compromisso.**
+**Inteligência artificial local no seu dispositivo Apple. Sem internet. Sem coleta de dados. Sem compromisso.**
 
-RodaAi e um aplicativo nativo para iPhone, iPad e Mac que executa modelos de IA diretamente no dispositivo, usando aceleracao Metal GPU no Apple Silicon. Nao precisa de internet para inferencia, nao coleta nenhum dado, nao exige conta. O nome combina "roda" (do verbo rodar) com "AI". Desenvolvido por [Bmtec](https://bmtec.us).
+RodaAi é um aplicativo nativo para iPhone, iPad e Mac que executa modelos de IA diretamente no dispositivo, usando aceleração Metal GPU no Apple Silicon. Não precisa de internet para inferência, não coleta nenhum dado, não exige conta. O nome combina "roda" (do verbo rodar) com "AI". Desenvolvido por [Bmtec](https://bmtec.us).
 
 ---
 
@@ -29,105 +29,105 @@ RodaAi e um aplicativo nativo para iPhone, iPad e Mac que executa modelos de IA 
 
 ### Chat Inteligente
 - Conversas multi-turno com **streaming em tempo real** (buffer de 45ms para UI fluida)
-- Historico persistente via **SwiftData** com busca semantica
-- Gerenciamento automatico de contexto: resumos rotativos e fatos fixados para manter coerencia em longas conversas
-- Estilos de resposta configuraveis: Natural, Tecnico, Detalhado
+- Histórico persistente via **SwiftData** com busca semântica
+- Gerenciamento automático de contexto: resumos rotativos e fatos fixados para manter coerência em longas conversas
+- Estilos de resposta configuráveis: Natural, Técnico, Detalhado
 - Suporte a **system prompts personalizados**
-- Renderizacao Markdown completa nas respostas
-- Anexo de imagens para modelos com visao
+- Renderização Markdown completa nas respostas
+- Anexo de imagens para modelos com visão
 
 ### Modo Voz
-- Pipeline completo: **Fala > Inferencia > Sintese**
-- Reconhecimento de fala em **portugues brasileiro (pt-BR)** via Apple Speech Framework
-- **Envio automatico** por deteccao de silencio (2 segundos)
+- Pipeline completo: **Fala > Inferência > Síntese**
+- Reconhecimento de fala em **português brasileiro (pt-BR)** via Apple Speech Framework
+- **Envio automático** por detecção de silêncio (2 segundos)
 - Dois motores de TTS:
-  - **Apple System** (padrao): vozes nativas Joana, Felipe, Luciana — sempre disponivel
-  - **Neural Qwen3-TTS** (opcional): sintese de alta qualidade via mlx-audio (~300MB)
-- Visualizacao de waveform durante gravacao
-- Deteccao de atividade vocal com thresholds de confianca
+  - **Apple System** (padrão): vozes nativas Joana, Felipe, Luciana — sempre disponível
+  - **Neural Qwen3-TTS** (opcional): síntese de alta qualidade via mlx-audio (~300MB)
+- Visualização de waveform durante gravação
+- Detecção de atividade vocal com thresholds de confiança
 
 ### Galeria de Modelos
-- **20+ modelos curados** com avaliacao de desempenho em portugues:
-  - **Excelente** / **Bom** / **Razoavel** / **Limitado**
-- Categorias: LLM (1B-32B+), VLM (visao), Reasoning, MoE
+- **20+ modelos curados** com avaliação de desempenho em português:
+  - **Excelente** / **Bom** / **Razoável** / **Limitado**
+- Categorias: LLM (1B-32B+), VLM (visão), Reasoning, MoE
 - **Download com retomada** — interrompa e continue sem perder progresso
 - **Explorador Hugging Face** integrado — busque qualquer modelo da comunidade mlx
-- Adicione modelos customizados por ID do repositorio
+- Adicione modelos customizados por ID do repositório
 - Monitoramento de armazenamento e uso de RAM em tempo real
-- Validacao de integridade dos arquivos baixados
+- Validação de integridade dos arquivos baixados
 
-### Visao Computacional
-- Modelos multimodais (VLM) para analise de imagens
+### Visão Computacional
+- Modelos multimodais (VLM) para análise de imagens
 - Suporte a Gemma 4 e Qwen VL para entendimento visual
 - **OCR** de documentos via Apple Vision e modelos MLX
-- Processamento de **PDF, CSV, TXT** e arquivos de codigo para analise
+- Processamento de **PDF, CSV, TXT** e arquivos de código para análise
 
 ### Privacidade Total — LGPD by Design
 - **Zero coleta de dados** — nenhum analytics, nenhum crash reporting
-- **Zero rede durante inferencia** — tudo acontece no dispositivo
-- **Sem conta necessaria** — abra e use
+- **Zero rede durante inferência** — tudo acontece no dispositivo
+- **Sem conta necessária** — abra e use
 - Conversas criptografadas em repouso via `NSFileProtectionComplete`
-- Token Hugging Face armazenado no **Keychain** (nao em texto plano)
+- Token Hugging Face armazenado no **Keychain** (não em texto plano)
 - Privacy Label da App Store: **"Data Not Collected"**
 
 ---
 
 ## Arquitetura
 
-O RodaAi segue uma **arquitetura em 4 camadas** com separacao clara de responsabilidades:
+O RodaAi segue uma **arquitetura em 4 camadas** com separação clara de responsabilidades:
 
 | Camada | Responsabilidade | Tecnologias |
 |--------|------------------|-------------|
-| **Apresentacao** | Views SwiftUI, design system, navegacao | SwiftUI, Liquid Glass (iOS 26) |
-| **Servicos** | Logica de negocio, estado, orquestracao | ChatViewModel, ModelManager, VoiceService |
-| **Inferencia** | Runtime ML, geracao de tokens, carregamento | MLX Swift, MLXVLM, llama.cpp, Foundation Models |
-| **Dados** | Persistencia, sistema de arquivos, downloads | SwiftData, FileManager, HF Hub, Keychain |
+| **Apresentação** | Views SwiftUI, design system, navegação | SwiftUI, Liquid Glass (iOS 26) |
+| **Serviços** | Lógica de negócio, estado, orquestração | ChatViewModel, ModelManager, VoiceService |
+| **Inferência** | Runtime ML, geração de tokens, carregamento | MLX Swift, MLXVLM, llama.cpp, Foundation Models |
+| **Dados** | Persistência, sistema de arquivos, downloads | SwiftData, FileManager, HF Hub, Keychain |
 
-### Motores de Inferencia
+### Motores de Inferência
 
 | Motor | Uso | Requisito |
 |-------|-----|-----------|
 | **MLX Swift** | Motor principal — GPU Metal nativo | Apple Silicon |
-| **MLXVLM** | Modelos de visao (imagem + texto) | Apple Silicon |
+| **MLXVLM** | Modelos de visão (imagem + texto) | Apple Silicon |
 | **llama.cpp** | Fallback para arquiteturas GGUF | Qualquer dispositivo |
 | **Foundation Models** | Apple Intelligence (~3B) sem download | iOS 26+ / macOS 26+ |
 
-### Navegacao por Plataforma
+### Navegação por Plataforma
 
 - **iPhone**: `TabView` — Conversas, Modelos, Voz, Ajustes
 - **iPad**: `NavigationSplitView` — sidebar + detalhe + inspector
-- **Mac**: 3 colunas — sidebar + conteudo + inspector + barra de menus
+- **Mac**: 3 colunas — sidebar + conteúdo + inspector + barra de menus
 
 ---
 
-## Stack Tecnologico
+## Stack Tecnológico
 
-### Dependencias Principais
+### Dependências Principais
 
 ```swift
-// Inferencia ML
-mlx-swift          >= 0.31.3    // Aceleracao Metal GPU
+// Inferência ML
+mlx-swift          >= 0.31.3    // Aceleração Metal GPU
 mlx-swift-lm       >= 2.31.3    // Runtime LLM e VLM
 swift-transformers  >= 1.3.0     // Tokenizadores Hugging Face
 llama.swift         >= 2.8682.0  // Suporte GGUF via llama.cpp
 
-// Audio
+// Áudio
 mlx-audio-swift                  // TTS neural (Qwen3-TTS, Kokoro)
 
 // Dados & UI
 swift-huggingface   >= 0.8.1     // API Hugging Face Hub
-Textual             >= 0.3.1     // Renderizacao Markdown
+Textual             >= 0.3.1     // Renderização Markdown
 ```
 
 ### Requisitos de Sistema
 
-| Plataforma | Versao Minima | Dispositivo Minimo |
+| Plataforma | Versão Mínima | Dispositivo Mínimo |
 |------------|---------------|--------------------|
 | **iOS** | 26.0 | iPhone 15 Pro (A17 Pro) |
 | **iPadOS** | 26.0 | iPad com chip M1+ |
 | **macOS** | 26.0 (Tahoe) | Mac com Apple Silicon M1+ |
 
-> **Nota**: Requer Xcode 26.4+ com Swift 6.3. Modelos 8B+ requerem o entitlement `com.apple.developer.kernel.increased-memory-limit`. O uso de RAM nunca ultrapassa 80% da memoria disponivel.
+> **Nota**: Requer Xcode 26.4+ com Swift 6.3. Modelos 8B+ requerem o entitlement `com.apple.developer.kernel.increased-memory-limit`. O uso de RAM nunca ultrapassa 80% da memória disponível.
 
 ---
 
@@ -135,15 +135,15 @@ Textual             >= 0.3.1     // Renderizacao Markdown
 
 ### Modelos Curados
 
-| Modelo | Parametros | Download | Avaliacao PT | Visao | Reasoning |
+| Modelo | Parâmetros | Download | Avaliação PT | Visão | Reasoning |
 |--------|------------|----------|-------------|-------|-----------|
-| Llama 3.2 | 1B / 3B | ~750MB-2GB | Razoavel-Bom | — | — |
+| Llama 3.2 | 1B / 3B | ~750MB-2GB | Razoável-Bom | — | — |
 | Qwen 3 | 4B / 8B / 14B | ~2.5-8.5GB | Bom-Excelente | — | — |
 | DeepSeek R1 | 7B | ~4GB | Bom | — | Sim |
 | Gemma 4 | 12B-26B MoE | ~7-15GB | Excelente | Sim | Sim |
 | Qwen VL | 2B | ~1.5GB | Bom | Sim | — |
 
-### Alem do Catalogo
+### Além do Catálogo
 
 Qualquer modelo da comunidade `mlx-community` no Hugging Face pode ser adicionado manualmente por ID. O explorador integrado permite buscar, filtrar e baixar modelos diretamente do app.
 
@@ -152,7 +152,7 @@ Qualquer modelo da comunidade `mlx-community` no Hugging Face pode ser adicionad
 ## Como Compilar
 
 ```bash
-# Clone o repositorio
+# Clone o repositório
 git clone https://github.com/bmtec-us/roda.ai.git
 cd roda.ai
 
@@ -163,7 +163,7 @@ open Package.swift
 swift build
 ```
 
-> **Importante**: Requer Xcode 26.4+ com Swift 6.3 e um dispositivo Apple Silicon (simulador x86 nao suporta MLX).
+> **Importante**: Requer Xcode 26.4+ com Swift 6.3 e um dispositivo Apple Silicon (simulador x86 não suporta MLX).
 
 ---
 
@@ -171,29 +171,29 @@ swift build
 
 ```
 Sources/
-├── RodaAi/                     # Camada de apresentacao (SwiftUI)
-│   ├── App/                    # Entry point, dependencias, AppDelegate
-│   ├── Design/                 # Cores, tipografia, componentes reutilizaveis
-│   ├── Features/               # Modulos de funcionalidade
+├── RodaAi/                     # Camada de apresentação (SwiftUI)
+│   ├── App/                    # Entry point, dependências, AppDelegate
+│   ├── Design/                 # Cores, tipografia, componentes reutilizáveis
+│   ├── Features/               # Módulos de funcionalidade
 │   │   ├── Chat/               # Interface de chat
 │   │   ├── ModelGallery/       # Galeria e explorador de modelos
-│   │   ├── Settings/           # Configuracoes do app
+│   │   ├── Settings/           # Configurações do app
 │   │   ├── Voice/              # Interface do modo voz
 │   │   ├── Onboarding/         # Fluxo de boas-vindas
 │   │   └── ConversationList/   # Lista de conversas
-│   └── Resources/              # Localizacao (xcstrings), assets
+│   └── Resources/              # Localização (xcstrings), assets
 │
-├── RodaAiCore/                 # Camada de logica (sem UI)
-│   ├── Chat/                   # ViewModel, estado, maquina de estados
-│   ├── Models/                 # Catalogo, ModelManager, validacao
+├── RodaAiCore/                 # Camada de lógica (sem UI)
+│   ├── Chat/                   # ViewModel, estado, máquina de estados
+│   ├── Models/                 # Catálogo, ModelManager, validação
 │   ├── Inference/              # Providers MLX, VLM, llama.cpp, FM
 │   ├── Voice/                  # STT, TTS, VoiceService, atividade vocal
 │   ├── Data/                   # Modelos SwiftData (Conversation, Message)
 │   ├── Vision/                 # OCR (Apple Vision + MLX)
-│   ├── Search/                 # Busca semantica em conversas
-│   └── Files/                  # Extracao de texto (PDF, CSV, TXT, codigo)
+│   ├── Search/                 # Busca semântica em conversas
+│   └── Files/                  # Extração de texto (PDF, CSV, TXT, código)
 │
-└── Vendor/                     # Dependencias vendorizadas
+└── Vendor/                     # Dependências vendorizadas
     └── mlx-audio-swift/        # Fork do mlx-audio para TTS neural
 ```
 
@@ -201,33 +201,33 @@ Sources/
 
 ## Design
 
-O RodaAi utiliza um design system proprio com paleta de cores cuidadosamente escolhida:
+O RodaAi utiliza um design system próprio com paleta de cores cuidadosamente escolhida:
 
 - **Accent**: Verde (#00875A) — identidade brasileira sutil
 - **Warning**: Dourado (#E5A100) — alertas e avisos
 - **Surfaces**: Tons frios que respeitam modo claro/escuro
 - **Liquid Glass**: Suporte nativo ao design iOS 26/macOS 26 com fallbacks
 
-Componentes reutilizaveis incluem `GlassCard`, `MessageBubble`, `ProgressRing`, `ErrorBanner`, `TypingIndicator` e `AnimatedDots`.
+Componentes reutilizáveis incluem `GlassCard`, `MessageBubble`, `ProgressRing`, `ErrorBanner`, `TypingIndicator` e `AnimatedDots`.
 
 ---
 
 ## Roadmap
 
-- [ ] Suporte a mais vozes neurais em portugues
-- [ ] Exportacao de conversas
-- [ ] Atalhos Siri avancados
+- [ ] Suporte a mais vozes neurais em português
+- [ ] Exportação de conversas
+- [ ] Atalhos Siri avançados
 - [ ] Widgets para tela inicial
 - [ ] Compartilhamento de modelos entre dispositivos via AirDrop
-- [ ] Modo offline completo com modelos pre-embarcados
+- [ ] Modo offline completo com modelos pré-embarcados
 
 ---
 
-## Licenca
+## Licença
 
-Este projeto e licenciado sob a **GNU General Public License v3.0** — veja [LICENSE](LICENSE) para os termos completos.
+Este projeto é licenciado sob a **GNU General Public License v3.0** — veja [LICENSE](LICENSE) para os termos completos.
 
-Voce pode usar, modificar e distribuir este software livremente, desde que qualquer obra derivada tambem seja distribuida sob os mesmos termos da GPL-3.0. Isso garante que o codigo permaneca livre e aberto para todos.
+Você pode usar, modificar e distribuir este software livremente, desde que qualquer obra derivada também seja distribuída sob os mesmos termos da GPL-3.0. Isso garante que o código permaneça livre e aberto para todos.
 
 ---
 
