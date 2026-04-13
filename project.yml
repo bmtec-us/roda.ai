@@ -47,6 +47,8 @@ targets:
         product: RodaAiCore
       - package: RodaAiCore
         product: Textual
+      - sdk: FoundationModels.framework
+        weak: true
 
   # ============================================================
   # macOS App
@@ -73,6 +75,8 @@ targets:
         product: RodaAiCore
       - package: RodaAiCore
         product: Textual
+      - sdk: FoundationModels.framework
+        weak: true
 
   # ============================================================
   # iOS Unit Tests (RodaAiTests)

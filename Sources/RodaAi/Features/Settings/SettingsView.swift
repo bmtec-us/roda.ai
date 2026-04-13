@@ -41,57 +41,66 @@ struct SettingsView: View {
     }
 
     var body: some View {
+        #if os(iOS)
         NavigationStack {
-            Form {
-                modelSection
-                systemPromptSection
-                generationSection
-                voiceSection
-                appearanceSection
-                huggingFaceSection
-                storageSection
-                deviceInfoSection
-                appleIntelligenceSection
-                aboutSection
-            }
+            formContent
+                .navigationTitle("tab.settings")
+                .navigationBarTitleDisplayMode(.inline)
+        }
+        #else
+        formContent
             .navigationTitle("tab.settings")
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
-            .onAppear {
-                viewModel.loadPreferences()
-                deps.modelManager.scanDownloadedModels()
-                foundationModelDiagnostics = FoundationModelDiagnostics.capture()
-                huggingFaceTokenSaved = huggingFaceTokenStore.hasToken
-                huggingFaceTokenInput = ""
+        #endif
+    }
+
+    private var formContent: some View {
+        Form {
+            modelSection
+            systemPromptSection
+            generationSection
+            voiceSection
+            appearanceSection
+            huggingFaceSection
+            storageSection
+            deviceInfoSection
+            appleIntelligenceSection
+            aboutSection
+        }
+        .formStyle(.grouped)
+        #if os(macOS)
+        .scenePadding()
+        #endif
+        .onAppear {
+            viewModel.loadPreferences()
+            deps.modelManager.scanDownloadedModels()
+            foundationModelDiagnostics = FoundationModelDiagnostics.capture()
+            huggingFaceTokenSaved = huggingFaceTokenStore.hasToken
+            huggingFaceTokenInput = ""
+        }
+        .onDisappear { try? viewModel.savePreferences() }
+        .onChange(of: viewModel.appearanceMode) { _, _ in persistPreferencesNow() }
+        .onChange(of: viewModel.responseStyle) { _, _ in persistPreferencesNow() }
+        .onChange(of: viewModel.responseLength) { _, _ in persistPreferencesNow() }
+        .onChange(of: viewModel.chatFontSize) { _, _ in persistPreferencesNow() }
+        .onChange(of: viewModel.neuralVoiceEngine) { _, newEngine in
+            deps.textToSpeechService?.setEngine(newEngine)
+            persistPreferencesNow()
+        }
+        .alert(
+            "settings.storage.deleteConfirm.title",
+            isPresented: Binding(
+                get: { modelToDelete != nil },
+                set: { if !$0 { modelToDelete = nil } }
+            ),
+            presenting: modelToDelete
+        ) { model in
+            Button("settings.storage.deleteConfirm.cancel", role: .cancel) { modelToDelete = nil }
+            Button("settings.storage.deleteConfirm.delete", role: .destructive) {
+                try? deps.modelManager.deleteModel(model)
+                modelToDelete = nil
             }
-            .onDisappear { try? viewModel.savePreferences() }
-            .onChange(of: viewModel.appearanceMode) { _, _ in persistPreferencesNow() }
-            .onChange(of: viewModel.responseStyle) { _, _ in persistPreferencesNow() }
-            .onChange(of: viewModel.responseLength) { _, _ in persistPreferencesNow() }
-            .onChange(of: viewModel.chatFontSize) { _, _ in persistPreferencesNow() }
-            .onChange(of: viewModel.neuralVoiceEngine) { _, newEngine in
-                // Push the new engine selection to the live TTS service so
-                // the change takes effect immediately without an app relaunch.
-                deps.textToSpeechService?.setEngine(newEngine)
-                persistPreferencesNow()
-            }
-            .alert(
-                "settings.storage.deleteConfirm.title",
-                isPresented: Binding(
-                    get: { modelToDelete != nil },
-                    set: { if !$0 { modelToDelete = nil } }
-                ),
-                presenting: modelToDelete
-            ) { model in
-                Button("settings.storage.deleteConfirm.cancel", role: .cancel) { modelToDelete = nil }
-                Button("settings.storage.deleteConfirm.delete", role: .destructive) {
-                    try? deps.modelManager.deleteModel(model)
-                    modelToDelete = nil
-                }
-            } message: { model in
-                Text(deleteConfirmMessage(for: model))
-            }
+        } message: { model in
+            Text(deleteConfirmMessage(for: model))
         }
     }
 
@@ -536,26 +545,30 @@ struct SettingsView: View {
     @ViewBuilder
     private var appleIntelligenceSection: some View {
         Section {
+            diagnosticsRow("Status", foundationModelDiagnostics.statusLabel)
             diagnosticsRow("OS", foundationModelDiagnostics.osVersion)
             diagnosticsRow("Locale", foundationModelDiagnostics.localeIdentifier)
             diagnosticsRow("Region", foundationModelDiagnostics.regionIdentifier)
-            diagnosticsRow("Model Availability", foundationModelDiagnostics.availability)
-            if let reason = foundationModelDiagnostics.unavailableReason {
-                diagnosticsRow("Unavailable Reason", reason)
-            }
             if let supports = foundationModelDiagnostics.supportsCurrentLocale {
-                diagnosticsRow("Supports Locale", supports ? "true" : "false")
+                diagnosticsRow("Locale Support", supports ? "Supported" : "Not supported")
             }
-            if let isAvailable = foundationModelDiagnostics.isAvailable {
-                diagnosticsRow("isAvailable", isAvailable ? "true" : "false")
+            if let hint = foundationModelDiagnostics.userHint {
+                Label {
+                    Text(hint)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } icon: {
+                    Image(systemName: "exclamationmark.triangle")
+                        .foregroundStyle(.orange)
+                }
             }
             Button("Refresh Diagnostics") {
                 foundationModelDiagnostics = FoundationModelDiagnostics.capture()
             }
         } header: {
-            Text("Apple Intelligence Diagnostics")
+            Text("Apple Intelligence")
         } footer: {
-            Text("Use this section to verify runtime Foundation Models status on-device.")
+            Text("Apple Intelligence runs a ~3B model on-device without download. Requires Apple Silicon and matching system/Siri language settings.")
         }
     }
 
@@ -589,14 +602,14 @@ struct SettingsView: View {
         let format = NSLocalizedString("settings.storage.summary", comment: "")
         return String(
             format: format,
-            deps.modelManager.downloadedModels.count,
+            "\(deps.modelManager.downloadedModels.count)",
             formatBytes(deps.modelManager.totalStorageUsed)
         )
     }
 
     private var partialDownloadsTitle: String {
         let format = NSLocalizedString("settings.storage.partial.title", comment: "")
-        return String(format: format, deps.modelManager.partialDownloads.count)
+        return String(format: format, "\(deps.modelManager.partialDownloads.count)")
     }
 
     private func persistPreferencesNow() {
@@ -612,6 +625,37 @@ private struct FoundationModelDiagnostics {
     let unavailableReason: String?
     let supportsCurrentLocale: Bool?
     let isAvailable: Bool?
+
+    var statusLabel: String {
+        switch availability {
+        case "available":
+            return "Available"
+        case "unavailable":
+            return "Unavailable — \(unavailableReason ?? "unknown")"
+        default:
+            return "Not supported on this OS"
+        }
+    }
+
+    var userHint: String? {
+        switch unavailableReason {
+        case "appleIntelligenceNotEnabled":
+            #if os(macOS)
+            return "Enable Apple Intelligence in System Settings > Apple Intelligence & Siri. Make sure the system language and Siri language match."
+            #else
+            return "Enable Apple Intelligence in Settings > Apple Intelligence & Siri."
+            #endif
+        case "modelNotReady":
+            return "The on-device model is still downloading. This happens automatically in the background. Try again in a few minutes."
+        case "deviceNotEligible":
+            return "This device does not support Apple Intelligence. Requires iPhone 15 Pro+, iPad M1+, or Mac with Apple Silicon."
+        default:
+            if availability == "framework-or-os-unavailable" {
+                return "Requires iOS 26+ or macOS 26+ (Tahoe)."
+            }
+            return nil
+        }
+    }
 
     static func capture() -> FoundationModelDiagnostics {
         let locale = Locale.current.identifier

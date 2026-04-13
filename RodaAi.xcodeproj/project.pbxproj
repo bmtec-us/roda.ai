@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		022D05D170135D9E5BDA8E16 /* VoiceModeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4286691DE40E8471C9BB6B71 /* VoiceModeView.swift */; };
 		044DA7428B93FF9A79DD8156 /* ErrorRecoveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABD1C6AFD84C52C399CC1D04 /* ErrorRecoveryView.swift */; };
+		055BFFFE1AFB7330BEA2DB67 /* FoundationModels.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DAC9ADDE8C596CD450EBC455 /* FoundationModels.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		08AF9AB142515721A9000879 /* VoiceModeUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FEF1F584810DD2D6F49F8B7 /* VoiceModeUITests.swift */; };
 		0A6C954471EBBAAF3C1CFECC /* MessageComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87516FD22E8FCD5FAEB2BDE9 /* MessageComposer.swift */; };
 		0BF5D58C7013B09C9AD8DC10 /* ErrorBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71CDA783752BEFB7C117728F /* ErrorBanner.swift */; };
@@ -47,6 +48,7 @@
 		5BE7F81AA93393B919C0A79D /* AccessibilityLabels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5872DA97BC6D4A1A81BE515A /* AccessibilityLabels.swift */; };
 		5EA81997748C5BE7F1324A25 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 104DFDFFAB0551B06EF5D5C8 /* SettingsView.swift */; };
 		5EE9C68F83714F42F76BDD9A /* Textual in Frameworks */ = {isa = PBXBuildFile; productRef = 030D35812574E0B676D2B807 /* Textual */; };
+		61FD975C998FA92BBBF02177 /* FoundationModels.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DAC9ADDE8C596CD450EBC455 /* FoundationModels.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		625875B4B1707BD6B368A7B8 /* PersonalizationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCE98EBAB20170EE222DBDB6 /* PersonalizationView.swift */; };
 		6565974E4DC658B364E9FE57 /* ErrorRecoveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABD1C6AFD84C52C399CC1D04 /* ErrorRecoveryView.swift */; };
 		67561D17562A9A9D62622514 /* SettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C396FDF7B83A417DCD99ACBF /* SettingsViewModel.swift */; };
@@ -189,6 +191,7 @@
 		CD90AA9970BFD37AD6D1AD10 /* Typography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Typography.swift; sourceTree = "<group>"; };
 		D1EFA6FF677CDFFDDF8F6EB8 /* ModelEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelEntity.swift; sourceTree = "<group>"; };
 		D5BF49898C7DF8D2BAE4E0CA /* RodaAi-iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "RodaAi-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		DAC9ADDE8C596CD450EBC455 /* FoundationModels.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FoundationModels.framework; path = System/Library/Frameworks/FoundationModels.framework; sourceTree = SDKROOT; };
 		E79E652AB400213CEB0B6BEE /* AttachmentPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttachmentPicker.swift; sourceTree = "<group>"; };
 		F347277DA01AC93659F7A4FF /* ImageAttachmentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageAttachmentView.swift; sourceTree = "<group>"; };
 		FDCEF2B4686B590BB1B2D9D3 /* GlassCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassCard.swift; sourceTree = "<group>"; };
@@ -201,6 +204,7 @@
 			files = (
 				AA73F4A45B3021CFF0ACD3CB /* RodaAiCore in Frameworks */,
 				289A23745F90DBE7154BB3C4 /* Textual in Frameworks */,
+				055BFFFE1AFB7330BEA2DB67 /* FoundationModels.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -210,6 +214,7 @@
 			files = (
 				4B4598380460E2EFB7378FA8 /* RodaAiCore in Frameworks */,
 				5EE9C68F83714F42F76BDD9A /* Textual in Frameworks */,
+				61FD975C998FA92BBBF02177 /* FoundationModels.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -368,6 +373,7 @@
 				300612D46683B819EE36709C /* Packages */,
 				31F765387F7B3D4796656868 /* Sources */,
 				9EAC7BAA4DC9EDB03DBF7F87 /* Tests */,
+				B7DC3DEE889BE1A473E39C48 /* Frameworks */,
 				9D7B5D9FD6CE1E760AB6A15C /* Products */,
 			);
 			sourceTree = "<group>";
@@ -448,6 +454,14 @@
 				96AB29CB75B54FE68F00D70F /* ProgressRing.swift */,
 			);
 			path = Components;
+			sourceTree = "<group>";
+		};
+		B7DC3DEE889BE1A473E39C48 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				DAC9ADDE8C596CD450EBC455 /* FoundationModels.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 		B92F60B4756BFFB1170EB271 /* RodaAiTests */ = {
