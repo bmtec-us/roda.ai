@@ -55,6 +55,9 @@ CLAUDE.md
 # Documentation (local only)
 /docs
 
+# Playwright
+.playwright-mcp/
+
 # IDE
 *.swp
 *~
