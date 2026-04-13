@@ -3,12 +3,12 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Swift-6.0+-F05138?style=flat-square&logo=swift&logoColor=white" alt="Swift 6.0+">
+  <img src="https://img.shields.io/badge/Swift-6.3-F05138?style=flat-square&logo=swift&logoColor=white" alt="Swift 6.3">
   <img src="https://img.shields.io/badge/SwiftUI-Universal-007AFF?style=flat-square&logo=swift&logoColor=white" alt="SwiftUI">
   <img src="https://img.shields.io/badge/MLX-Apple%20Silicon-000000?style=flat-square&logo=apple&logoColor=white" alt="MLX">
   <img src="https://img.shields.io/badge/Metal-GPU%20Accelerated-8A8A8A?style=flat-square&logo=apple&logoColor=white" alt="Metal">
-  <img src="https://img.shields.io/badge/iOS-18.0+-000000?style=flat-square&logo=apple&logoColor=white" alt="iOS 18.0+">
-  <img src="https://img.shields.io/badge/macOS-15.0+-000000?style=flat-square&logo=apple&logoColor=white" alt="macOS 15.0+">
+  <img src="https://img.shields.io/badge/iOS-26.0+-000000?style=flat-square&logo=apple&logoColor=white" alt="iOS 26.0+">
+  <img src="https://img.shields.io/badge/macOS-Tahoe%2026.0+-000000?style=flat-square&logo=apple&logoColor=white" alt="macOS Tahoe 26.0+">
   <img src="https://img.shields.io/badge/License-GPL--3.0-blue?style=flat-square" alt="License">
 </p>
 
@@ -108,7 +108,7 @@ O RodaAi segue uma **arquitetura em 4 camadas** com separacao clara de responsab
 // Inferencia ML
 mlx-swift          >= 0.31.3    // Aceleracao Metal GPU
 mlx-swift-lm       >= 2.31.3    // Runtime LLM e VLM
-swift-transformers  >= 1.2.0     // Tokenizadores Hugging Face
+swift-transformers  >= 1.3.0     // Tokenizadores Hugging Face
 llama.swift         >= 2.8682.0  // Suporte GGUF via llama.cpp
 
 // Audio
@@ -121,13 +121,13 @@ Textual             >= 0.3.1     // Renderizacao Markdown
 
 ### Requisitos de Sistema
 
-| Plataforma | Versao Minima | Recomendado |
-|------------|---------------|-------------|
-| **iOS** | 18.0 | iPhone 15 Pro+ (>=10 tok/s para modelos 3B) |
-| **iPadOS** | 18.0 | iPad com chip M1+ |
-| **macOS** | 15.0 (Sequoia) | Mac com Apple Silicon |
+| Plataforma | Versao Minima | Dispositivo Minimo |
+|------------|---------------|--------------------|
+| **iOS** | 26.0 | iPhone 15 Pro (A17 Pro) |
+| **iPadOS** | 26.0 | iPad com chip M1+ |
+| **macOS** | 26.0 (Tahoe) | Mac com Apple Silicon M1+ |
 
-> **Nota**: Modelos 8B+ requerem o entitlement `com.apple.developer.kernel.increased-memory-limit`. O uso de RAM nunca ultrapassa 80% da memoria disponivel.
+> **Nota**: Requer Xcode 26.4+ com Swift 6.3. Modelos 8B+ requerem o entitlement `com.apple.developer.kernel.increased-memory-limit`. O uso de RAM nunca ultrapassa 80% da memoria disponivel.
 
 ---
 
@@ -163,7 +163,7 @@ open Package.swift
 swift build
 ```
 
-> **Importante**: Requer Xcode 16.0+ com Swift 6.0 e um dispositivo Apple Silicon (simulador x86 nao suporta MLX).
+> **Importante**: Requer Xcode 26.4+ com Swift 6.3 e um dispositivo Apple Silicon (simulador x86 nao suporta MLX).
 
 ---
 
@@ -333,7 +333,7 @@ RodaAi follows a **4-layer architecture** with clear separation of concerns:
 // ML Inference
 mlx-swift          >= 0.31.3    // Metal GPU acceleration
 mlx-swift-lm       >= 2.31.3    // LLM and VLM runtime
-swift-transformers  >= 1.2.0     // Hugging Face tokenizers
+swift-transformers  >= 1.3.0     // Hugging Face tokenizers
 llama.swift         >= 2.8682.0  // GGUF support via llama.cpp
 
 // Audio
@@ -346,13 +346,13 @@ Textual             >= 0.3.1     // Markdown rendering
 
 ### System Requirements
 
-| Platform | Minimum | Recommended |
-|----------|---------|-------------|
-| **iOS** | 18.0 | iPhone 15 Pro+ (>=10 tok/s for 3B models) |
-| **iPadOS** | 18.0 | iPad with M1+ chip |
-| **macOS** | 15.0 (Sequoia) | Mac with Apple Silicon |
+| Platform | Minimum | Minimum Device |
+|----------|---------|----------------|
+| **iOS** | 26.0 | iPhone 15 Pro (A17 Pro) |
+| **iPadOS** | 26.0 | iPad with M1+ chip |
+| **macOS** | 26.0 (Tahoe) | Mac with Apple Silicon M1+ |
 
-> **Note**: 8B+ models require the `com.apple.developer.kernel.increased-memory-limit` entitlement. RAM usage never exceeds 80% of available memory.
+> **Note**: Requires Xcode 26.4+ with Swift 6.3. 8B+ models require the `com.apple.developer.kernel.increased-memory-limit` entitlement. RAM usage never exceeds 80% of available memory.
 
 ---
 
@@ -388,7 +388,7 @@ open Package.swift
 swift build
 ```
 
-> **Important**: Requires Xcode 16.0+ with Swift 6.0 and an Apple Silicon device (x86 simulator does not support MLX).
+> **Important**: Requires Xcode 26.4+ with Swift 6.3 and an Apple Silicon device (x86 simulator does not support MLX).
 
 ---
 

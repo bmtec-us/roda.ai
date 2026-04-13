@@ -1,4 +1,4 @@
-// swift-tools-version: 6.0
+// swift-tools-version: 6.3
 //
 // Package.swift defines ONLY the core library (RodaAiCore) and its unit tests.
 // The iOS and macOS app targets, app unit tests, and UI tests live in
@@ -17,8 +17,8 @@ import PackageDescription
 let package = Package(
     name: "RodaAi",
     platforms: [
-        .iOS(.v18),
-        .macOS(.v15),
+        .iOS(.v26),
+        .macOS(.v26),
     ],
     products: [
         .library(name: "RodaAiCore", targets: ["RodaAiCore"]),
@@ -26,7 +26,7 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/ml-explore/mlx-swift", from: "0.31.3"),
         .package(url: "https://github.com/ml-explore/mlx-swift-lm", from: "2.31.3"),
-        .package(url: "https://github.com/huggingface/swift-transformers", "1.2.0"..<"1.3.0"),
+        .package(url: "https://github.com/huggingface/swift-transformers", from: "1.3.0"),
         .package(url: "https://github.com/gonzalezreal/textual", from: "0.3.1"),
         .package(url: "https://github.com/mattt/llama.swift", from: "2.8682.0"),
         // Local fork of mlx-audio-swift — we're porting Kokoro TTS
