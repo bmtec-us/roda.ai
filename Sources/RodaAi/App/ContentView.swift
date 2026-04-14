@@ -120,9 +120,9 @@ struct ContentView: View {
             }
             .navigationTitle("app.name")
             .listStyle(.sidebar)
+            .navigationSplitViewColumnWidth(min: 160, ideal: 200, max: 280)
         } detail: {
             macOSDetail
-                .modifier(BackgroundExtensionModifier())
         }
     }
 
@@ -134,11 +134,14 @@ struct ContentView: View {
                 .environment(deps)
         case .models:
             ModelGalleryView(modelManager: deps.modelManager, textToSpeechService: deps.textToSpeechService)
+                .modifier(BackgroundExtensionModifier())
         case .voice:
             VoiceModeView(voiceService: deps.voiceService)
                 .navigationTitle("tab.voice")
+                .modifier(BackgroundExtensionModifier())
         case .settings:
             SettingsView(modelContext: deps.modelContainer.mainContext)
+                .modifier(BackgroundExtensionModifier())
         }
     }
     #endif
@@ -260,6 +263,9 @@ struct ConversationsContainer: View {
                 }
             }
         }
+        #if os(macOS)
+        .frame(minWidth: 400, minHeight: 500)
+        #endif
     }
 
     private func startNew() {

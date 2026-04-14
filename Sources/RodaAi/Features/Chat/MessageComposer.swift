@@ -247,8 +247,14 @@ struct MessageComposer: View {
         guard !trimmed.isEmpty else { return }
 
         onSend(trimmed, attachedFileText, attachedImageData)
-        isFocused = false
         text = ""
+        #if os(iOS)
+        isFocused = false
+        #else
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            isFocused = true
+        }
+        #endif
         attachedFileURL = nil
         attachedFileText = nil
         attachmentError = nil

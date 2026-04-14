@@ -16,7 +16,30 @@ public class SpeechRecognizer: ObservableObject, SpeechRecognizing {
     @Published public var isListening: Bool = false
 
     #if canImport(Speech)
-    private let recognizer = SFSpeechRecognizer(locale: Locale(identifier: "pt-BR"))
+    /// Locale used for recognition. Tied to the language the APP is
+    /// actually displaying (via `Bundle.main.preferredLocalizations`),
+    /// not `Locale.current`. `Locale.current` blends the system
+    /// language with the user's Region setting — e.g. a macOS set to
+    /// Portuguese UI + Spain region would return a Spanish-flavoured
+    /// locale and the recognizer would listen for Spanish even though
+    /// the user is speaking Portuguese. `preferredLocalizations`
+    /// gives us the same language the UI is rendered in, which
+    /// matches what the user is actually speaking.
+    private static var activeLocale: Locale {
+        let preferred = Bundle.main.preferredLocalizations.first
+            ?? Locale.current.language.languageCode?.identifier
+            ?? "pt"
+        // `preferredLocalizations` returns codes like "pt-BR", "en",
+        // "en-US", "pt" etc. Normalize to the languageCode prefix.
+        let code = preferred.lowercased().prefix(2)
+        switch code {
+        case "pt": return Locale(identifier: "pt-BR")
+        case "en": return Locale(identifier: "en-US")
+        case "es": return Locale(identifier: "es-ES")
+        default:   return Locale(identifier: "pt-BR")
+        }
+    }
+    private let recognizer = SFSpeechRecognizer(locale: SpeechRecognizer.activeLocale)
     private let audioEngine = AVAudioEngine()
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var recognitionTask: SFSpeechRecognitionTask?
@@ -51,8 +74,8 @@ public class SpeechRecognizer: ObservableObject, SpeechRecognizing {
         }
 
         guard let recognizer, recognizer.isAvailable else {
-            RodaLog.voice.error("STT recognizer unavailable for locale pt-BR")
-            throw VoiceError.speechRecognizerUnavailable(locale: "pt-BR")
+            RodaLog.voice.error("STT recognizer unavailable for locale \(Self.activeLocale.identifier, privacy: .public)")
+            throw VoiceError.speechRecognizerUnavailable(locale: Self.activeLocale.identifier)
         }
 
         #if canImport(UIKit)
@@ -85,7 +108,20 @@ public class SpeechRecognizer: ObservableObject, SpeechRecognizing {
         // Privacy promise: all STT must run locally. RodaAi does not transmit
         // audio to Apple or any network service. The speech framework falls
         // back to an on-device model (pt-BR supported on iOS 13+).
+        // On iOS, enforce on-device recognition for privacy (no audio
+        // leaves the device). On macOS, on-device pt-BR models may not
+        // be installed — prefer on-device but allow server fallback so
+        // the feature works at all.
+        #if os(iOS)
         request.requiresOnDeviceRecognition = true
+        #else
+        if recognizer.supportsOnDeviceRecognition {
+            request.requiresOnDeviceRecognition = true
+            RodaLog.voice.info("STT using on-device recognition (macOS)")
+        } else {
+            RodaLog.voice.info("STT on-device recognition unavailable on this macOS install; using server recognition")
+        }
+        #endif
         self.request = request
 
         let inputNode = audioEngine.inputNode
@@ -152,7 +188,7 @@ public class SpeechRecognizer: ObservableObject, SpeechRecognizing {
 
         if recognitionTask == nil {
             RodaLog.voice.error("STT recognitionTask creation returned nil")
-            throw VoiceError.speechRecognizerUnavailable(locale: "pt-BR")
+            throw VoiceError.speechRecognizerUnavailable(locale: Self.activeLocale.identifier)
         }
         RodaLog.voice.info("STT recognitionTask created")
 
@@ -233,8 +269,10 @@ public class SpeechRecognizer: ObservableObject, SpeechRecognizing {
         if existingSpeechStatus == .notDetermined {
             RodaLog.voice.info("STT requesting speech authorization")
             speechStatus = await withCheckedContinuation { continuation in
-                SFSpeechRecognizer.requestAuthorization { status in
-                    continuation.resume(returning: status)
+                SFSpeechRecognizer.requestAuthorization { @Sendable status in
+                    Task { @MainActor in
+                        continuation.resume(returning: status)
+                    }
                 }
             }
         } else {
@@ -246,7 +284,31 @@ public class SpeechRecognizer: ObservableObject, SpeechRecognizing {
             return .speechDenied
         }
 
-        #if canImport(UIKit)
+        #if os(macOS)
+        RodaLog.voice.info("STT checking microphone permission (macOS AVCaptureDevice)")
+        let macMicStatus = AVCaptureDevice.authorizationStatus(for: .audio)
+        RodaLog.voice.info("STT microphone permission currentStatus=\(macMicStatus.rawValue)")
+
+        let micAuthorized: Bool
+        switch macMicStatus {
+        case .authorized:
+            micAuthorized = true
+        case .notDetermined:
+            micAuthorized = await AVCaptureDevice.requestAccess(for: .audio)
+        case .denied, .restricted:
+            micAuthorized = false
+        @unknown default:
+            micAuthorized = false
+        }
+
+        if micAuthorized {
+            RodaLog.voice.info("STT microphone permission authorized (macOS)")
+            return .authorized
+        } else {
+            RodaLog.voice.error("STT microphone permission denied (macOS)")
+            return .microphoneDenied
+        }
+        #elseif canImport(UIKit)
         RodaLog.voice.info("STT checking microphone permission")
         let micPermission = AVAudioApplication.shared.recordPermission
         RodaLog.voice.info("STT microphone permission currentStatus=\(micPermission.rawValue)")

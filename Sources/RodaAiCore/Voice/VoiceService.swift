@@ -209,13 +209,9 @@ public class VoiceService: ObservableObject {
         }
     }
 
-    private static let voiceSystemPrompt = """
-    Voce esta no modo de voz do RodaAi.
-    Responda sempre em portugues brasileiro natural.
-    Fale em frases curtas e claras, com ritmo de fala.
-    Evite markdown complexo, codigo e listas longas.
-    Se precisar enfatizar, use no maximo um destaque curto em negrito.
-    """
+    private static var voiceSystemPrompt: String {
+        String(localized: "voice.system.prompt", bundle: .main)
+    }
 
     /// Minimum spoken-text length (after markdown stripping) before a
     /// sentence-boundary chunk is flushed to TTS. Lower = snappier first
@@ -267,8 +263,20 @@ public class VoiceService: ObservableObject {
     }
 
     private static func shouldStreamSpeechChunks(using tts: any TextToSpeaking) -> Bool {
+        // Stream by sentence only when the TTS backend produces a
+        // stable voice across consecutive calls. Apple AVSpeech uses
+        // the exact same voice ID per call — streaming is fine.
+        // Qwen3-TTS (VoiceDesign) is stochastic even with a consistent
+        // instruct, so per-sentence chunking produces the notorious
+        // "multiple narrators mid-response" effect. For neural engines
+        // we batch the full response into a single synth call so the
+        // listener hears one coherent voice.
         if let service = tts as? TextToSpeechService {
-            return !service.isUsingFallback
+            if service.isUsingFallback { return false }
+            switch service.activeEngine {
+            case .appleSystem: return true
+            case .mlxRepo:     return false
+            }
         }
         return true
     }

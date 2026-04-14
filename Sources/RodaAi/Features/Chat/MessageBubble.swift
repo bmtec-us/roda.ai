@@ -14,6 +14,7 @@ struct MessageBubble: View {
     let chatFontScale: CGFloat
     let responseLength: ResponseLengthPreference
     let loadingText: String
+    var generationSpeed: Double? = nil
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isExpanded = false
 
@@ -134,6 +135,12 @@ struct MessageBubble: View {
                         .foregroundStyle(.secondary)
 
                         Spacer(minLength: 0)
+
+                        if let speed = generationSpeed {
+                            Text(String(format: "%.1f tok/s", speed))
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        }
 
                         Text("~\(approximateTokenCount) tok")
                             .font(.caption2)
