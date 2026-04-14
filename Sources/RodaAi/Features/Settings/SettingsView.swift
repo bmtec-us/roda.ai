@@ -35,6 +35,7 @@ struct SettingsView: View {
     @State private var huggingFaceTokenInput: String = ""
     @State private var huggingFaceTokenSaved: Bool = false
     @State private var huggingFaceTokenRevealed: Bool = false
+    @State private var isPreviewingQwenPersona: Bool = false
 
     init(modelContext: ModelContext) {
         _viewModel = State(initialValue: SettingsViewModel(modelContext: modelContext))
@@ -59,6 +60,7 @@ struct SettingsView: View {
             systemPromptSection
             generationSection
             voiceSection
+            languageSection
             appearanceSection
             huggingFaceSection
             storageSection
@@ -84,6 +86,30 @@ struct SettingsView: View {
         .onChange(of: viewModel.chatFontSize) { _, _ in persistPreferencesNow() }
         .onChange(of: viewModel.neuralVoiceEngine) { _, newEngine in
             deps.textToSpeechService?.setEngine(newEngine)
+            // If the user picked a neural engine whose model isn't
+            // on disk yet, kick off the download in the background.
+            // Otherwise the first voice turn silently falls back to
+            // Apple and the user can't tell why.
+            if case .mlxRepo(let repoId) = newEngine,
+               let tts = deps.textToSpeechService,
+               !tts.isTTSRepoCached(repoId) {
+                Task { await tts.downloadTTSRepo(repoId) }
+            }
+            persistPreferencesNow()
+        }
+        .onChange(of: viewModel.appleVoiceIdentifier) { _, newId in
+            deps.textToSpeechService?.setAppleVoiceIdentifier(newId)
+            persistPreferencesNow()
+        }
+        .onChange(of: viewModel.qwenVoicePersonaId) { _, newId in
+            deps.textToSpeechService?.setQwenVoicePersona(newId)
+            persistPreferencesNow()
+        }
+        .onChange(of: viewModel.appLanguage) { _, _ in
+            // Persist immediately so the next launch picks up the new
+            // AppleLanguages override. UI strings inside the running
+            // process stay in the previous language until relaunch —
+            // the footer copy tells the user to restart.
             persistPreferencesNow()
         }
         .alert(
@@ -225,10 +251,10 @@ struct SettingsView: View {
                 Text("settings.responseStyle.detailed").tag(ResponseStyle.detailed)
             }
 
-            Picker("Comprimento da resposta", selection: $viewModel.responseLength) {
-                Text("Curta").tag(ResponseLengthPreference.compact)
-                Text("Normal").tag(ResponseLengthPreference.normal)
-                Text("Detalhada").tag(ResponseLengthPreference.detailed)
+            Picker("chat.responseLength.label", selection: $viewModel.responseLength) {
+                Text("chat.responseLength.short").tag(ResponseLengthPreference.compact)
+                Text("chat.responseLength.normal").tag(ResponseLengthPreference.normal)
+                Text("chat.responseLength.detailed").tag(ResponseLengthPreference.detailed)
             }
 
             // Reset
@@ -261,14 +287,16 @@ struct SettingsView: View {
             }
 
             Picker(selection: $viewModel.neuralVoiceEngine) {
-                Text("Apple (pt-BR nativo)")
+                Text("settings.voice.engine.apple")
                     .tag(NeuralVoiceEngine.appleSystem)
 
                 ForEach(availableNeuralVoices, id: \.repoId) { voice in
                     HStack {
-                        Text(voice.isBuiltInDefault
-                             ? "Qwen3-TTS (padrao)"
-                             : voice.displayName)
+                        if voice.isBuiltInDefault {
+                            Text("settings.voice.engine.neural.default")
+                        } else {
+                            Text(voice.displayName)
+                        }
                         if voice.isCached {
                             Image(systemName: "checkmark.circle.fill")
                                 .foregroundStyle(ColorPalette.accent)
@@ -277,9 +305,17 @@ struct SettingsView: View {
                     .tag(NeuralVoiceEngine.mlxRepo(repoId: voice.repoId))
                 }
             } label: {
-                Label("Voz neural", systemImage: "waveform")
+                Label("settings.voice.engine.label", systemImage: "waveform")
             }
             .pickerStyle(.menu)
+
+            if viewModel.neuralVoiceEngine == .appleSystem {
+                appleVoicePicker
+            }
+
+            if case .mlxRepo = viewModel.neuralVoiceEngine {
+                qwenPersonaPicker
+            }
 
             if case .mlxRepo(let selectedRepo) = viewModel.neuralVoiceEngine {
                 if Self.isMemoryConstrainedDevice {
@@ -288,7 +324,7 @@ struct SettingsView: View {
                     // frequently pushes the process past iOS jetsam
                     // budget. Allowed for explicit testing, but flagged.
                     Label {
-                        Text("Experimental — pode exceder a memoria do iPhone e travar o app. Qualidade em portugues e limitada (modelos TTS MLX sao treinados em ingles/mandarim). Apenas para testes.")
+                        Text("settings.voice.experimental.iphone")
                             .font(.caption)
                     } icon: {
                         Image(systemName: "exclamationmark.triangle.fill")
@@ -300,18 +336,231 @@ struct SettingsView: View {
                 let isReady = selectedVoice?.isCached == true
                 let label = selectedVoice.map {
                     $0.isBuiltInDefault ? "Qwen3-TTS" : $0.displayName
-                } ?? "modelo neural"
+                } ?? "neural"
                 Text(isReady
-                    ? "Modelo \(label) pronto e carregado."
-                    : "O modelo neural \(label) sera baixado na primeira vez que voce usar o modo voz. Requer conexao a internet e token do Hugging Face configurado."
+                    ? String(format: String(localized: "settings.voice.neural.ready"), label)
+                    : String(format: String(localized: "settings.voice.neural.downloadPrompt"), label)
                 )
                 .font(.caption)
                 .foregroundStyle(.secondary)
+
+                // When the selected neural repo isn't downloaded yet,
+                // the voice pipeline silently falls back to Apple.
+                // Surface a prominent "Download now" button so the
+                // user doesn't have to navigate to the Model Gallery
+                // to fix it.
+                if !isReady {
+                    Button {
+                        Task {
+                            await deps.textToSpeechService?.downloadTTSRepo(selectedRepo)
+                        }
+                    } label: {
+                        Label("settings.voice.neural.downloadButton", systemImage: "arrow.down.circle.fill")
+                            .font(.caption.weight(.medium))
+                    }
+                    .tint(ColorPalette.accent)
+                }
             }
         } header: {
             Text("settings.voice")
         } footer: {
-            Text("Apple: vozes do sistema, sem download, idioma portugues brasileiro nativo. Qwen3-TTS: voz neural multilingua via MLX, requer download e mais memoria.")
+            Text("settings.voice.footer")
+        }
+    }
+
+    // MARK: - Qwen3 Voice Persona Picker
+
+    /// Shown only when the neural TTS engine is selected. Lists
+    /// hand-crafted VoiceDesign personas (Clara, Maya, Rafael, …)
+    /// grouped by language, plus the 9 CustomVoice factory timbres
+    /// (Vivian, Aiden, Ryan, …) grouped separately. Includes a
+    /// preview button that synthesizes a short sample sentence.
+    @ViewBuilder
+    private var qwenPersonaPicker: some View {
+        Picker(selection: $viewModel.qwenVoicePersonaId) {
+            Text("settings.voice.qwen.auto").tag("")
+
+            Section("settings.voice.qwen.group.portuguese") {
+                ForEach(Qwen3VoiceCatalog.ptBR) { persona in
+                    qwenPersonaRow(persona).tag(persona.id)
+                }
+            }
+            Section("settings.voice.qwen.group.english") {
+                ForEach(Qwen3VoiceCatalog.enUS) { persona in
+                    qwenPersonaRow(persona).tag(persona.id)
+                }
+            }
+            Section("settings.voice.qwen.group.customvoice") {
+                ForEach(Qwen3VoiceCatalog.customVoiceFactory) { persona in
+                    qwenPersonaRow(persona).tag(persona.id)
+                }
+            }
+        } label: {
+            Label("settings.voice.qwen.label", systemImage: "person.wave.2")
+        }
+        .pickerStyle(.menu)
+
+        if !viewModel.qwenVoicePersonaId.isEmpty,
+           let persona = Qwen3VoiceCatalog.persona(withId: viewModel.qwenVoicePersonaId) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(persona.shortDescription)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                // Warn when the persona's native language differs
+                // from what the app is currently displaying. Cross-
+                // lingual synthesis with the CustomVoice factory
+                // timbres works (Vivian CAN speak Portuguese), but
+                // the result has a heavy foreign accent because each
+                // timbre's phoneme distribution is locked to its
+                // training language. Users hit this when picking
+                // Vivian (Chinese) for pt-BR output and getting
+                // accented Portuguese — a model limitation, not a
+                // bug. The hint points them at the matching native
+                // VoiceDesign persona instead.
+                let appLang = String(Bundle.main.preferredLocalizations.first?.lowercased().prefix(2) ?? "pt")
+                if persona.language != appLang && persona.language != "auto" {
+                    Label {
+                        Text(
+                            String(
+                                format: String(localized: "settings.voice.qwen.languageMismatch"),
+                                persona.language.uppercased(),
+                                appLang.uppercased()
+                            )
+                        )
+                        .font(.caption)
+                    } icon: {
+                        Image(systemName: "globe.badge.chevron.backward")
+                    }
+                    .foregroundStyle(ColorPalette.warning)
+                }
+
+                if case .customVoiceSpeaker = persona.backend {
+                    Label("settings.voice.qwen.customvoice.warning", systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption)
+                        .foregroundStyle(ColorPalette.error)
+                }
+
+                Button {
+                    previewQwenPersona(persona)
+                } label: {
+                    Label(
+                        isPreviewingQwenPersona
+                            ? "settings.voice.qwen.previewPlaying"
+                            : "settings.voice.qwen.preview",
+                        systemImage: "play.circle.fill"
+                    )
+                    .font(.caption)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(ColorPalette.accent)
+                .disabled(isPreviewingQwenPersona)
+            }
+        }
+    }
+
+    private func qwenPersonaRow(_ persona: Qwen3VoicePersona) -> some View {
+        Text(persona.displayName)
+    }
+
+    private func previewQwenPersona(_ persona: Qwen3VoicePersona) {
+        guard !isPreviewingQwenPersona else { return }
+        isPreviewingQwenPersona = true
+        let sampleText = Self.qwenPreviewSample(for: persona.language)
+        Task {
+            // Temporarily apply the persona, speak, then restore the
+            // stored selection so previewing doesn't clobber what
+            // the user had saved.
+            let previous = viewModel.qwenVoicePersonaId
+            deps.textToSpeechService?.setQwenVoicePersona(persona.id)
+            try? await deps.textToSpeechService?.speak(sampleText)
+            deps.textToSpeechService?.setQwenVoicePersona(previous)
+            await MainActor.run { isPreviewingQwenPersona = false }
+        }
+    }
+
+    /// Sample sentence used to preview a persona. Picked to be
+    /// "prosody-heavy" — questions, lists, mid-sentence shifts,
+    /// emotional cues — because Qwen3-TTS's voice quality is most
+    /// audible on prompts that exercise pitch contour, rhythm,
+    /// and conditional pauses. A flat declarative ("Olá, esta é
+    /// uma amostra") sounds plausible from almost any voice and
+    /// hides differences between personas; a question + a list +
+    /// a colloquial sign-off makes the persona's character (and
+    /// any conditioning bugs) immediately obvious.
+    private static func qwenPreviewSample(for language: String) -> String {
+        // Alternates between two prosody-heavy prompts on each call
+        // so consecutive previews of the same persona sound slightly
+        // different — the casual prompt reveals warmth/energy, the
+        // business prompt reveals professional clarity/cadence.
+        // Both exercise questions + list structures + shift points,
+        // which are where Qwen3-TTS's conditioning quality shows most.
+        let useBusinessSample = Int.random(in: 0...1) == 0
+        switch language {
+        case "pt":
+            return useBusinessSample
+                ? "Vamos revisar três pontos rapidamente: primeiro, o prazo foi ajustado; segundo, a equipe confirmou; terceiro, você precisa aprovar até sexta. Tudo certo?"
+                : "Olá, tudo bem? Vou te explicar como funciona: primeiro, abra o app; depois, clique em configurar. Fácil, né?"
+        case "en":
+            return useBusinessSample
+                ? "Let's review three things quickly: first, the deadline shifted; second, the team signed off; third, you need to approve by Friday. Sound good?"
+                : "Hi, how's it going? Let me walk you through this: first, open the app; then, tap configure. Simple, right?"
+        default:
+            return "Hello. This is a voice preview."
+        }
+    }
+
+    // MARK: - Apple Voice Picker
+
+    /// Groups installed Apple voices by quality tier (Premium / Enhanced /
+    /// Compact) across pt + en + es so users can pick Siri-branded Premium
+    /// voices like "American Voice 2" instead of the default robotic
+    /// compact voice. "Automatico" falls back to `AVSpeechSynthesisVoice(language:)`
+    /// — the previous behavior.
+    private var appleVoicePicker: some View {
+        Picker(selection: $viewModel.appleVoiceIdentifier) {
+            Text("settings.voice.apple.auto").tag("")
+
+            ForEach(AppleVoiceCatalog.installedVoicesGroupedByQuality(
+                languagePrefixes: ["pt", "en", "es"]
+            ), id: \.quality) { group in
+                Section(appleVoiceQualityLabel(group.quality)) {
+                    ForEach(group.voices) { voice in
+                        Text("\(voice.name) (\(voice.language))")
+                            .tag(voice.id)
+                    }
+                }
+            }
+        } label: {
+            Label("settings.voice.apple.label", systemImage: "speaker.wave.2.fill")
+        }
+        .pickerStyle(.menu)
+    }
+
+    private func appleVoiceQualityLabel(_ quality: AppleVoiceOption.Quality) -> String {
+        switch quality {
+        case .premium:  return String(localized: "settings.voice.quality.premium")
+        case .enhanced: return String(localized: "settings.voice.quality.enhanced")
+        case .compact:  return String(localized: "settings.voice.quality.compact")
+        }
+    }
+
+    // MARK: - Language
+
+    private var languageSection: some View {
+        Section {
+            Picker(selection: $viewModel.appLanguage) {
+                Text("settings.language.system").tag(AppLanguage.system)
+                Text("settings.language.portuguese").tag(AppLanguage.portuguese)
+                Text("settings.language.english").tag(AppLanguage.english)
+            } label: {
+                Label("settings.language", systemImage: "globe")
+            }
+            .pickerStyle(.menu)
+        } header: {
+            Text("settings.language")
+        } footer: {
+            Text("settings.language.footer")
         }
     }
 

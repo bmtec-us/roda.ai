@@ -1,12 +1,30 @@
 // Sources/RodaAi/App/RodaAiApp.swift
 import SwiftUI
+import RodaAiCore
 #if canImport(UIKit)
 import UIKit
 #endif
 
 @main
 struct RodaAiApp: App {
-    @State private var dependencies = AppDependencies()
+    /// Applies the stored `AppLanguage` preference to the process's
+    /// `AppleLanguages` user default BEFORE any SwiftUI views get
+    /// built, so the first paint reads the correct localizations.
+    /// Runs as the first side-effect at @main type resolution.
+    private static let _languageBootstrap: Void = {
+        let raw = UserDefaults.standard.string(forKey: AppLanguage.userDefaultsKey) ?? AppLanguage.system.rawValue
+        let language = AppLanguage(rawValue: raw) ?? .system
+        if let override = language.appleLanguagesValue {
+            UserDefaults.standard.set(override, forKey: "AppleLanguages")
+        } else {
+            UserDefaults.standard.removeObject(forKey: "AppleLanguages")
+        }
+    }()
+
+    @State private var dependencies: AppDependencies = {
+        _ = RodaAiApp._languageBootstrap
+        return AppDependencies()
+    }()
     @State private var quickActionHandler = QuickActionHandler()
 
     #if canImport(UIKit)

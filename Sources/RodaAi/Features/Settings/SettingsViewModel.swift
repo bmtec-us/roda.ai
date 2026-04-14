@@ -19,9 +19,12 @@ final class SettingsViewModel {
     // MARK: - App
     var voiceEnabled: Bool = true
     var neuralVoiceEngine: NeuralVoiceEngine = .appleSystem
+    var appleVoiceIdentifier: String = ""
+    var qwenVoicePersonaId: String = ""
     var appearanceMode: AppearanceMode = .system
     var chatFontSize: ChatFontSizePreference = .system
     var defaultModelIdentifier: String?
+    var appLanguage: AppLanguage = .system
 
     // MARK: - Computed
     var clampedTemperature: Float {
@@ -38,64 +41,36 @@ final class SettingsViewModel {
         let prompt: String
     }
 
-    static let promptPresets: [PromptPreset] = [
+    /// Built at access time so `String(localized:)` picks the current
+    /// system language. Never cache this — toggling system language
+    /// without relaunching would return stale values.
+    static var promptPresets: [PromptPreset] {
+        [
+            preset(id: "general",    icon: "sparkles"),
+            preset(id: "programmer", icon: "chevron.left.forwardslash.chevron.right"),
+            preset(id: "translator", icon: "globe"),
+            preset(id: "summarizer", icon: "doc.text.magnifyingglass"),
+            preset(id: "writer",     icon: "pencil.line"),
+            preset(id: "tutor",      icon: "graduationcap"),
+            preset(id: "analyst",    icon: "chart.bar"),
+            preset(id: "creative",   icon: "paintbrush"),
+        ]
+    }
+
+    private static func preset(id: String, icon: String) -> PromptPreset {
+        // NSLocalizedString accepts truly dynamic keys at runtime.
+        // String(localized: String.LocalizationValue("...\(id)...")) does
+        // NOT work: the interpolation collapses to a "%@" placeholder at
+        // compile time, so the lookup key becomes literally
+        // "settings.preset.%@.title" and no catalog entry matches.
         PromptPreset(
-            id: "general",
-            icon: "sparkles",
-            title: "Assistente Geral",
-            subtitle: "Responde de forma clara e util",
-            prompt: "Voce e um assistente prestativo chamado Roda. Responda em portugues brasileiro de forma clara, concisa e util. Seja amigavel e objetivo."
-        ),
-        PromptPreset(
-            id: "programmer",
-            icon: "chevron.left.forwardslash.chevron.right",
-            title: "Programador",
-            subtitle: "Codigo e explicacoes tecnicas",
-            prompt: "Voce e um programador especialista. Responda sempre com codigo bem formatado, comentado, e explicacoes tecnicas claras. Use markdown para code blocks. Quando possivel, mostre exemplos praticos."
-        ),
-        PromptPreset(
-            id: "translator",
-            icon: "globe",
-            title: "Tradutor",
-            subtitle: "Portugues ↔ Ingles e outros idiomas",
-            prompt: "Voce e um tradutor profissional. Traduza fielmente entre portugues e o idioma solicitado. Mantenha o tom e registro do texto original. Quando houver ambiguidade, explique as opcoes."
-        ),
-        PromptPreset(
-            id: "summarizer",
-            icon: "doc.text.magnifyingglass",
-            title: "Resumidor",
-            subtitle: "Resume textos de forma concisa",
-            prompt: "Voce resume textos de forma concisa e clara em portugues brasileiro. Extraia os pontos principais, organize em topicos quando apropriado, e mantenha a essencia do conteudo original."
-        ),
-        PromptPreset(
-            id: "writer",
-            icon: "pencil.line",
-            title: "Escritor",
-            subtitle: "Redacao criativa e profissional",
-            prompt: "Voce e um escritor profissional. Ajude com redacao criativa, emails, textos academicos, posts para redes sociais e outros conteudos escritos. Adapte o tom conforme o contexto."
-        ),
-        PromptPreset(
-            id: "tutor",
-            icon: "graduationcap",
-            title: "Tutor",
-            subtitle: "Explica conceitos com paciencia",
-            prompt: "Voce e um tutor paciente e didatico. Explique conceitos passo a passo, use analogias simples, faca perguntas para verificar entendimento, e adapte o nivel da explicacao ao aluno."
-        ),
-        PromptPreset(
-            id: "analyst",
-            icon: "chart.bar",
-            title: "Analista de Dados",
-            subtitle: "Analise e insights de dados",
-            prompt: "Voce e um analista de dados especialista. Ajude a interpretar dados, criar queries SQL, analisar tendencias, e gerar insights acionaveis. Use tabelas e visualizacoes quando relevante."
-        ),
-        PromptPreset(
-            id: "creative",
-            icon: "paintbrush",
-            title: "Criativo",
-            subtitle: "Brainstorming e ideias",
-            prompt: "Voce e um diretor criativo. Ajude com brainstorming, geracao de ideias, nomes de produtos, slogans, conceitos visuais e estrategias criativas. Pense fora da caixa."
-        ),
-    ]
+            id: id,
+            icon: icon,
+            title: NSLocalizedString("settings.preset.\(id).title", bundle: .main, comment: ""),
+            subtitle: NSLocalizedString("settings.preset.\(id).subtitle", bundle: .main, comment: ""),
+            prompt: NSLocalizedString("settings.preset.\(id).prompt", bundle: .main, comment: "")
+        )
+    }
 
     // MARK: - Max Tokens Options
     static let maxTokensOptions: [(label: String, value: Int)] = [
@@ -126,9 +101,12 @@ final class SettingsViewModel {
         systemPrompt = prefs.systemPrompt
         voiceEnabled = prefs.voiceEnabled
         neuralVoiceEngine = prefs.neuralVoiceEngine
+        appleVoiceIdentifier = prefs.appleVoiceIdentifier
+        qwenVoicePersonaId = prefs.qwenVoicePersonaId
         appearanceMode = prefs.appearanceMode
         chatFontSize = prefs.chatFontSize
         defaultModelIdentifier = prefs.defaultModelIdentifier
+        appLanguage = prefs.appLanguage
     }
 
     func savePreferences() throws {
@@ -144,9 +122,16 @@ final class SettingsViewModel {
         prefs.systemPrompt = systemPrompt
         prefs.voiceEnabled = voiceEnabled
         prefs.neuralVoiceEngine = neuralVoiceEngine
+        prefs.appleVoiceIdentifier = appleVoiceIdentifier
+        prefs.qwenVoicePersonaId = qwenVoicePersonaId
         prefs.appearanceMode = appearanceMode
         prefs.chatFontSize = chatFontSize
         prefs.defaultModelIdentifier = defaultModelIdentifier
+        prefs.appLanguage = appLanguage
+        // Mirror to UserDefaults so the launch bootstrap in RodaAiApp
+        // can read it before the SwiftData stack is up. Keep this in
+        // sync with AppLanguage.userDefaultsKey.
+        UserDefaults.standard.set(appLanguage.rawValue, forKey: AppLanguage.userDefaultsKey)
         if existing == nil { modelContext.insert(prefs) }
         try modelContext.save()
     }
