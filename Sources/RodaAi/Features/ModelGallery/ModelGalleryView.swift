@@ -34,31 +34,42 @@ struct ModelGalleryView: View {
         }
     }
 
+    /// Four-way category filter for the Em Destaque tab. Mixes a
+    /// category dimension (General-LLM / TTS) with cross-cutting
+    /// status filters (Downloaded). `.all` shows everything; the
+    /// others narrow by either type or status.
     enum ModelFilter: String, CaseIterable, Identifiable {
         case all
-        case downloaded
-        case compatible
+        case general     // LLM / chat models
+        case tts         // Qwen3-TTS variants
+        case downloaded  // cross-cutting — only what's on disk
         var id: String { rawValue }
         var localizationKey: LocalizedStringKey {
             switch self {
-            case .all: return "model.filter.all"
+            case .all:        return "model.filter.all"
+            case .general:    return "model.filter.general"
+            case .tts:        return "model.filter.tts"
             case .downloaded: return "model.filter.downloaded"
-            case .compatible: return "model.filter.compatible"
             }
         }
     }
 
+    /// Catalog entries (LLMs, VLMs) filtered for the Em Destaque tab.
+    /// TTS is handled separately via `shouldShowTTSCards` because
+    /// TTS "entries" are not in `ModelManager.catalog` — they're
+    /// hardcoded Qwen3-TTS repos rendered as NeuralVoiceCards.
     private var filtered: [CatalogEntry] {
         modelManager.catalog.filter { entry in
-            // Filtro por status
             switch filter {
             case .all: break
+            case .general: break  // all catalog entries are general/LLM
+            case .tts:
+                // Hide regular catalog entries when TTS filter is active
+                return false
             case .downloaded:
                 guard modelManager.isDownloaded(entry) else { return false }
-            case .compatible:
-                guard modelManager.isCompatible(entry) else { return false }
             }
-            // Filtro por busca
+            // Text search applies in every mode
             if !searchText.isEmpty {
                 let query = searchText.lowercased()
                 if !entry.displayName.lowercased().contains(query)
@@ -71,22 +82,43 @@ struct ModelGalleryView: View {
         }
     }
 
+    /// TTS cards render when the user is browsing "Todos" or the
+    /// dedicated "TTS" tab. In "Geral" they're hidden so that view
+    /// is uncluttered; in "Baixados" they're hidden here but
+    /// NeuralVoiceCard internally shows a "Disponivel" badge so
+    /// they can't go stale — the user can always reach them via
+    /// the "Todos" or "TTS" tab.
+    private var shouldShowTTSCards: Bool {
+        switch filter {
+        case .all, .tts: return true
+        case .general, .downloaded: return false
+        }
+    }
+
     var body: some View {
+        #if os(iOS)
         NavigationStack {
-            VStack(spacing: 0) {
-                sectionPicker
-                switch section {
-                case .curated:
-                    curatedSection
-                case .explorer:
-                    explorerSection
-                }
-            }
-            .background(ColorPalette.surface)
+            galleryContent
+                .navigationTitle("tab.models")
+                .navigationBarTitleDisplayMode(.inline)
+        }
+        #else
+        galleryContent
             .navigationTitle("tab.models")
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
+        #endif
+    }
+
+    private var galleryContent: some View {
+        VStack(spacing: 0) {
+            sectionPicker
+            switch section {
+            case .curated:
+                curatedSection
+            case .explorer:
+                explorerSection
+            }
+        }
+        .background(ColorPalette.surface)
             .task {
                 if modelManager.catalog.isEmpty {
                     modelManager.loadCatalog()
@@ -121,7 +153,6 @@ struct ModelGalleryView: View {
                     )
                 }
             }
-        }
     }
 
     // MARK: - Section picker
@@ -154,25 +185,33 @@ struct ModelGalleryView: View {
                 .padding(.horizontal)
                 .padding(.top, 8)
 
-                if filtered.isEmpty {
+                if filtered.isEmpty && !shouldShowTTSCards {
                     filterEmptyState
                 } else {
                     ScrollView {
                         GlassContainer(spacing: 20) {
-                            VStack(spacing: 12) {
-                                if let textToSpeechService {
-                                    NeuralVoiceCard(textToSpeechService: textToSpeechService)
+                            VStack(spacing: 20) {
+                                if shouldShowTTSCards, let textToSpeechService {
+                                    ttsFamilySection(service: textToSpeechService)
                                 }
 
-                                LazyVGrid(columns: [
-                                    GridItem(.adaptive(minimum: 320), spacing: 12)
-                                ], spacing: 12) {
-                                    ForEach(filtered) { entry in
-                                        ModelCard(
-                                            entry: entry,
-                                            modelManager: modelManager,
-                                            galleryNamespace: galleryGlass
+                                if !filtered.isEmpty {
+                                    if shouldShowTTSCards {
+                                        categorySectionHeader(
+                                            title: "Modelos de linguagem",
+                                            systemImage: "brain.head.profile"
                                         )
+                                    }
+                                    LazyVGrid(columns: [
+                                        GridItem(.adaptive(minimum: 320), spacing: 12)
+                                    ], spacing: 12) {
+                                        ForEach(filtered) { entry in
+                                            ModelCard(
+                                                entry: entry,
+                                                modelManager: modelManager,
+                                                galleryNamespace: galleryGlass
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -205,6 +244,124 @@ struct ModelGalleryView: View {
             ProgressView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+    }
+
+    // MARK: - TTS family grid
+
+    /// Renders the 15 Qwen3-TTS variants grouped by family, each
+    /// family on one line per quantization tier (4-bit / 8-bit / bf16).
+    /// Family headers are kept compact so the 15 cards stay scannable.
+    @ViewBuilder
+    private func ttsFamilySection(service: TextToSpeechService) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            categorySectionHeader(title: "Vozes neurais (TTS)", systemImage: "waveform")
+
+            ttsFamilyGroup(
+                service: service,
+                groupTitle: "Qwen3-TTS 0.6B Base (VoiceDesign)",
+                groupSubtitle: "Rápido, baixo consumo. Personas Clara, Maya, etc. (livre descrição por texto).",
+                variants: [
+                    (NeuralVoiceEngine.defaultMLXRepoId,       "4-bit", "~300MB"),
+                    (NeuralVoiceEngine.baseSmall8bitMLXRepoId, "8-bit", "~600MB"),
+                    (NeuralVoiceEngine.baseSmallBF16MLXRepoId, "bf16",  "~1.2GB"),
+                ]
+            )
+
+            ttsFamilyGroup(
+                service: service,
+                groupTitle: "Qwen3-TTS 0.6B CustomVoice",
+                groupSubtitle: "Vozes oficiais Qwen (Vivian, Aiden, Ryan, Serena, Uncle Fu, Ono Anna, Sohee, Dylan, Eric).",
+                variants: [
+                    (NeuralVoiceEngine.customVoiceMLXRepoId,    "4-bit", "~300MB"),
+                    (NeuralVoiceEngine.customVoice8bitMLXRepoId,"8-bit", "~600MB"),
+                    (NeuralVoiceEngine.customVoiceBF16MLXRepoId,"bf16",  "~1.2GB"),
+                ]
+            )
+
+            ttsFamilyGroup(
+                service: service,
+                groupTitle: "Qwen3-TTS 1.7B Base (VoiceDesign)",
+                groupSubtitle: "Recomendado para Mac. Melhor qualidade em pt-BR (~45% menos erros que o 0.6B).",
+                variants: [
+                    (NeuralVoiceEngine.baseLargeMLXRepoId,     "4-bit", "~850MB"),
+                    (NeuralVoiceEngine.baseLarge8bitMLXRepoId, "8-bit", "~1.7GB"),
+                    (NeuralVoiceEngine.baseLargeBF16MLXRepoId, "bf16",  "~3.4GB"),
+                ]
+            )
+
+            ttsFamilyGroup(
+                service: service,
+                groupTitle: "Qwen3-TTS 1.7B VoiceDesign",
+                groupSubtitle: "Especializado em personas descritas por texto — melhor aderência a gênero/tom/sotaque.",
+                variants: [
+                    (NeuralVoiceEngine.voiceDesignLargeMLXRepoId,     "4-bit", "~850MB"),
+                    (NeuralVoiceEngine.voiceDesignLarge8bitMLXRepoId, "8-bit", "~1.7GB"),
+                    (NeuralVoiceEngine.voiceDesignLargeBF16MLXRepoId, "bf16",  "~3.4GB"),
+                ]
+            )
+
+            ttsFamilyGroup(
+                service: service,
+                groupTitle: "Qwen3-TTS 1.7B CustomVoice",
+                groupSubtitle: "Vozes oficiais Qwen em alta fidelidade.",
+                variants: [
+                    (NeuralVoiceEngine.customVoiceLargeMLXRepoId,     "4-bit", "~850MB"),
+                    (NeuralVoiceEngine.customVoiceLarge8bitMLXRepoId, "8-bit", "~1.7GB"),
+                    (NeuralVoiceEngine.customVoiceLargeBF16MLXRepoId, "bf16",  "~3.4GB"),
+                ]
+            )
+        }
+    }
+
+    /// One family header + row of 3 quantization cards.
+    @ViewBuilder
+    private func ttsFamilyGroup(
+        service: TextToSpeechService,
+        groupTitle: String,
+        groupSubtitle: String,
+        variants: [(repoId: String, label: String, size: String)]
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(groupTitle)
+                    .font(.subheadline.weight(.semibold))
+                Text(groupSubtitle)
+                    .font(.caption)
+                    .foregroundStyle(ColorPalette.textSecondary)
+            }
+            .padding(.leading, 4)
+
+            VStack(spacing: 8) {
+                ForEach(variants, id: \.repoId) { v in
+                    NeuralVoiceCard(
+                        textToSpeechService: service,
+                        repoId: v.repoId,
+                        title: "\(groupTitle) — \(v.label)",
+                        subtitle: v.label == "bf16"
+                            ? "Máxima fidelidade, sem quantização agressiva."
+                            : (v.label == "8-bit"
+                               ? "Preserva melhor gênero/tom/sotaque que 4-bit."
+                               : "Menor consumo de memória e disco."),
+                        approxSize: v.size
+                    )
+                }
+            }
+        }
+    }
+
+    /// Shared section header used between TTS and LLM groups so
+    /// both sit under visually consistent labels.
+    @ViewBuilder
+    private func categorySectionHeader(title: String, systemImage: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: systemImage)
+                .font(.headline)
+                .foregroundStyle(ColorPalette.accent)
+            Text(title)
+                .font(.headline)
+            Spacer()
+        }
+        .padding(.horizontal, 4)
     }
 
     private var catalogEmptyState: some View {
@@ -420,17 +577,28 @@ private struct ExplorerContent: View {
 
 private struct NeuralVoiceCard: View {
     @ObservedObject var textToSpeechService: TextToSpeechService
-    @State private var isRunning = false
+    let repoId: String
+    let title: String
+    let subtitle: String
+    /// Free-form size label, e.g. `"~300MB"` or `"~850MB"`. Lets each
+    /// card surface its own download size so users can spot the
+    /// 1.7B variants vs the 0.6B variants at a glance.
+    let approxSize: String
 
-    private let approxSizeLabel = "~300MB"
+    @State private var isDownloading = false
+    @State private var isPerformingAction = false
+    @State private var lastError: String?
+    @State private var isCached: Bool = false
+    @State private var isActive: Bool = false
+    @State private var showDeleteConfirm: Bool = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Qwen3-TTS 0.6B (neural)")
+                    Text(title)
                         .font(.headline)
-                    Text("Voz neural multilingua opcional — use Ajustes para ativar")
+                    Text(subtitle)
                         .font(.caption)
                         .foregroundStyle(ColorPalette.textSecondary)
                 }
@@ -442,115 +610,171 @@ private struct NeuralVoiceCard: View {
                 Label("Neural Voice", systemImage: "waveform")
                     .font(.caption)
                     .foregroundStyle(ColorPalette.textSecondary)
-                Label(approxSizeLabel, systemImage: "internaldrive")
+                Label(approxSize, systemImage: "internaldrive")
                     .font(.caption)
                     .foregroundStyle(ColorPalette.textSecondary)
+                Label(repoId, systemImage: "link")
+                    .font(.caption2)
+                    .foregroundStyle(ColorPalette.textSecondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
             }
 
-            if case .failed(let message) = textToSpeechService.neuralVoiceModelState {
-                Text(message)
+            if let lastError {
+                Text(lastError)
                     .font(.caption2)
                     .foregroundStyle(ColorPalette.error)
                     .lineLimit(2)
             }
 
-            HStack(spacing: 8) {
-                if textToSpeechService.neuralVoiceModelState != .available {
-                    Button {
-                        isRunning = true
-                        Task {
-                            await textToSpeechService.downloadNeuralVoiceModel()
-                            isRunning = false
-                        }
-                    } label: {
-                        Label(buttonTitle, systemImage: buttonIcon)
-                    }
-                    .tint(ColorPalette.accent)
-                    .glassButtonStyle(.glassProminent)
-                    .disabled(isRunning || textToSpeechService.neuralVoiceModelState == .downloading)
-                }
-
-                if textToSpeechService.neuralVoiceModelState == .available {
-                    Label("Disponivel no modo voz", systemImage: "checkmark.seal.fill")
-                        .font(.caption)
-                        .foregroundStyle(ColorPalette.accent)
-                }
-            }
-            .font(.caption)
-            .controlSize(.small)
+            actionButtons
         }
         .padding(16)
-        // NOTE: Do NOT tint this glass when the voice is available — a
-        // tinted card surface floods children and destroys contrast. The
-        // stroke border signals the active/available state.
         .glassShape(RoundedRectangle(cornerRadius: 20))
         .overlay(
             RoundedRectangle(cornerRadius: 20)
                 .strokeBorder(
-                    textToSpeechService.neuralVoiceModelState == .available ? Color.accentColor : .clear,
+                    isActive ? Color.accentColor : .clear,
                     lineWidth: 2
                 )
         )
+        .onAppear { refreshState() }
+        .alert("model.action.delete", isPresented: $showDeleteConfirm) {
+            Button("common.cancel", role: .cancel) { }
+            Button("model.action.delete", role: .destructive) { runDelete() }
+        } message: {
+            Text("tts.delete.confirm")
+        }
     }
+
+    /// Matches the LLM ModelCard action layout: primary action
+    /// (Download → Activate → Deactivate) on the left, Delete on
+    /// the right when the model is on disk.
+    @ViewBuilder
+    private var actionButtons: some View {
+        HStack(spacing: 8) {
+            if !isCached {
+                Button {
+                    runDownload()
+                } label: {
+                    Label(isDownloading ? "common.downloading" : "common.download",
+                          systemImage: isDownloading ? "arrow.down.circle" : "arrow.down.circle.fill")
+                }
+                .tint(ColorPalette.accent)
+                .glassButtonStyle(.glassProminent)
+                .disabled(isDownloading || isPerformingAction)
+            } else if !isActive {
+                Button {
+                    runActivate()
+                } label: {
+                    Label("model.action.activate", systemImage: "power")
+                }
+                .tint(ColorPalette.accent)
+                .glassButtonStyle(.glassProminent)
+                .disabled(isPerformingAction)
+            } else {
+                Button {
+                    runDeactivate()
+                } label: {
+                    Label("model.action.deactivate", systemImage: "stop.circle")
+                }
+                .glassButtonStyle(.glass)
+                .disabled(isPerformingAction)
+            }
+
+            Spacer(minLength: 0)
+
+            if isCached {
+                Button(role: .destructive) {
+                    showDeleteConfirm = true
+                } label: {
+                    Label("model.action.delete", systemImage: "trash")
+                }
+                .tint(.red)
+                .glassButtonStyle(.glass)
+                .disabled(isPerformingAction || isDownloading)
+            }
+        }
+        .font(.caption)
+        .controlSize(.small)
+    }
+
+    // MARK: - Actions
+
+    private func runDownload() {
+        guard !isDownloading else { return }
+        isDownloading = true
+        lastError = nil
+        Task {
+            await textToSpeechService.downloadTTSRepo(repoId)
+            await MainActor.run {
+                refreshState()
+                if !isCached {
+                    lastError = String(localized: "tts.error.downloadFailed")
+                }
+                isDownloading = false
+            }
+        }
+    }
+
+    private func runActivate() {
+        isPerformingAction = true
+        lastError = nil
+        textToSpeechService.activateTTSRepo(repoId)
+        refreshState()
+        isPerformingAction = false
+    }
+
+    private func runDeactivate() {
+        isPerformingAction = true
+        // Deactivating an MLX repo means falling back to Apple System.
+        // There's only one "active" neural engine at a time, so we
+        // revert to appleSystem rather than picking some other repo.
+        textToSpeechService.setEngine(.appleSystem)
+        refreshState()
+        isPerformingAction = false
+    }
+
+    private func runDelete() {
+        isPerformingAction = true
+        lastError = nil
+        do {
+            try textToSpeechService.deleteTTSRepo(repoId)
+        } catch {
+            lastError = error.localizedDescription
+        }
+        refreshState()
+        isPerformingAction = false
+    }
+
+    private func refreshState() {
+        isCached = textToSpeechService.isTTSRepoCached(repoId)
+        isActive = textToSpeechService.isTTSRepoActive(repoId) && isCached
+    }
+
+    // MARK: - Status badge
 
     @ViewBuilder
     private var statusBadge: some View {
-        switch textToSpeechService.neuralVoiceModelState {
-        case .available:
-            Text("Disponivel")
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(ColorPalette.accent)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
-                .glassShape(Capsule())
-        case .downloading:
-            Text("Baixando")
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(.blue)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
-                .glassShape(Capsule())
-        case .failed:
-            Text("Falhou")
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(ColorPalette.error)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
-                .glassShape(Capsule())
-        case .notDownloaded:
-            Text("Nao baixado")
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(ColorPalette.textSecondary)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
-                .glassShape(Capsule())
-        case .unavailable:
-            Text("Indisponivel")
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(ColorPalette.warning)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
-                .glassShape(Capsule())
+        if isDownloading {
+            statusCapsule(label: String(localized: "tts.status.downloading"), color: .blue)
+        } else if isActive {
+            statusCapsule(label: String(localized: "tts.status.active"), color: ColorPalette.accent)
+        } else if isCached {
+            statusCapsule(label: String(localized: "tts.status.ready"), color: ColorPalette.accent)
+        } else if lastError != nil {
+            statusCapsule(label: String(localized: "tts.status.failed"), color: ColorPalette.error)
+        } else {
+            statusCapsule(label: String(localized: "tts.status.notDownloaded"), color: ColorPalette.textSecondary)
         }
     }
 
-    private var buttonTitle: String {
-        switch textToSpeechService.neuralVoiceModelState {
-        case .failed:
-            return "Tentar novamente"
-        case .downloading:
-            return "Baixando..."
-        default:
-            return "Baixar voz neural"
-        }
-    }
-
-    private var buttonIcon: String {
-        switch textToSpeechService.neuralVoiceModelState {
-        case .failed:
-            return "arrow.clockwise"
-        default:
-            return "arrow.down.circle"
-        }
+    private func statusCapsule(label: String, color: Color) -> some View {
+        Text(label)
+            .font(.caption2.weight(.medium))
+            .foregroundStyle(color)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .glassShape(Capsule())
     }
 }
