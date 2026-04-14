@@ -21,11 +21,13 @@ struct ChatView: View {
                                 .padding(.top, 80)
                         } else {
                             ForEach(Array(viewModel.messages.enumerated()), id: \.offset) { index, message in
+                                let isLastAssistant = index == viewModel.messages.count - 1 && message.role == .assistant
                                 MessageBubble(
                                     message: message,
                                     chatFontScale: chatFontSize.scaleFactor,
                                     responseLength: viewModel.responseLength,
-                                    loadingText: viewModel.loadingIndicatorText
+                                    loadingText: viewModel.loadingIndicatorText,
+                                    generationSpeed: isLastAssistant ? viewModel.lastGenerationSpeed : nil
                                 )
                                     .id(index)
                             }
@@ -71,7 +73,11 @@ struct ChatView: View {
                     Task {
                         let fullText: String
                         if let attached = attachedText, !attached.isEmpty {
-                            fullText = "Documento anexado:\n\(attached)\n\n\(text)"
+                            fullText = String(
+                                format: String(localized: "chat.attachment.document.prefix"),
+                                attached,
+                                text
+                            )
                         } else {
                             fullText = text
                         }
@@ -88,6 +94,9 @@ struct ChatView: View {
         .navigationTitle("chat.title")
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
+        #endif
+        #if os(macOS)
+        .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
         #endif
         .toolbar {
             ToolbarItem(placement: .principal) {
@@ -150,7 +159,7 @@ struct ChatView: View {
                 Image(systemName: "cpu")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Text("Modelo")
+                Text("chat.model.placeholder")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -183,14 +192,14 @@ struct ChatView: View {
             Label(responseLengthTitle(viewModel.responseLength), systemImage: "textformat.size")
                 .font(.caption)
         }
-        .accessibilityLabel("Comprimento da resposta")
+        .accessibilityLabel("chat.responseLength.label")
     }
 
     private func responseLengthTitle(_ option: ResponseLengthPreference) -> String {
         switch option {
-        case .compact: return "Curta"
-        case .normal: return "Normal"
-        case .detailed: return "Detalhada"
+        case .compact: return String(localized: "chat.responseLength.short")
+        case .normal: return String(localized: "chat.responseLength.normal")
+        case .detailed: return String(localized: "chat.responseLength.detailed")
         }
     }
 

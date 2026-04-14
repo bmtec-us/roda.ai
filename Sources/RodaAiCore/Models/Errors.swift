@@ -23,27 +23,31 @@ public enum InferenceError: Error, Equatable, Sendable, LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .insufficientMemory(let required, let available):
-            return "Memoria insuficiente. Necessario: \(required / 1_073_741_824)GB, disponivel: \(available / 1_073_741_824)GB"
+            return String(
+                format: String(localized: "error.inference.insufficientMemory", bundle: .main),
+                "\(required / 1_073_741_824)",
+                "\(available / 1_073_741_824)"
+            )
         case .modelNotFound(let id):
-            return "Modelo '\(id)' nao encontrado no dispositivo"
+            return String(format: String(localized: "error.inference.modelNotFound", bundle: .main), id)
         case .modelCorrupted(let id, let reason):
-            return "Modelo '\(id)' corrompido: \(reason)"
+            return String(format: String(localized: "error.inference.modelCorrupted", bundle: .main), id, reason)
         case .unsupportedArchitecture(let id):
-            return "Arquitetura do modelo '\(id)' nao suportada"
+            return String(format: String(localized: "error.inference.unsupportedArchitecture", bundle: .main), id)
         case .generationFailed(let reason):
-            return "Falha na geracao: \(reason)"
+            return String(format: String(localized: "error.inference.generationFailed", bundle: .main), reason)
         case .generationCancelled:
-            return "Geracao cancelada pelo usuario"
+            return String(localized: "error.inference.generationCancelled", bundle: .main)
         case .contextLengthExceeded(let maxTokens):
-            return "Contexto excedido. Maximo: \(maxTokens) tokens"
+            return String(format: String(localized: "error.inference.contextLengthExceeded", bundle: .main), "\(maxTokens)")
         case .tokenizerNotFound(let id):
-            return "Tokenizer para '\(id)' nao encontrado"
+            return String(format: String(localized: "error.inference.tokenizerNotFound", bundle: .main), id)
         case .tokenizationFailed(let reason):
-            return "Falha na tokenizacao: \(reason)"
+            return String(format: String(localized: "error.inference.tokenizationFailed", bundle: .main), reason)
         case .modelNotLoaded:
-            return "Nenhum modelo carregado. Selecione um modelo primeiro."
+            return String(localized: "error.inference.modelNotLoaded", bundle: .main)
         case .metalNotAvailable:
-            return "Metal nao disponivel neste dispositivo"
+            return String(localized: "error.inference.metalNotAvailable", bundle: .main)
         }
     }
 }
@@ -62,23 +66,31 @@ public enum DownloadError: Error, Equatable, Sendable, LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .networkUnavailable:
-            return "Sem conexao com a internet. Verifique sua rede."
+            return String(localized: "error.download.networkUnavailable", bundle: .main)
         case .serverError(let code):
-            return "Erro no servidor (HTTP \(code)). Tente novamente."
+            return String(format: String(localized: "error.download.serverError", bundle: .main), "\(code)")
         case .rateLimited(let seconds):
-            return "Muitas requisicoes. Tente novamente em \(seconds) segundos."
+            return String(format: String(localized: "error.download.rateLimited", bundle: .main), "\(seconds)")
         case .insufficientStorage(let required, let available):
-            return "Espaco insuficiente. Necessario: \(required / 1_048_576)MB, disponivel: \(available / 1_048_576)MB"
+            return String(
+                format: String(localized: "error.download.insufficientStorage", bundle: .main),
+                "\(required / 1_048_576)",
+                "\(available / 1_048_576)"
+            )
         case .checksumMismatch(let file, _, _):
-            return "Arquivo '\(file)' corrompido durante download. Tente novamente."
+            return String(format: String(localized: "error.download.checksumMismatch", bundle: .main), file)
         case .downloadInterrupted(let downloaded, let total):
-            return "Download interrompido. \(downloaded / 1_048_576)MB de \(total / 1_048_576)MB baixados."
+            return String(
+                format: String(localized: "error.download.downloadInterrupted", bundle: .main),
+                "\(downloaded / 1_048_576)",
+                "\(total / 1_048_576)"
+            )
         case .fileWriteFailed(let path, let reason):
-            return "Erro ao gravar '\(path)': \(reason)"
+            return String(format: String(localized: "error.download.fileWriteFailed", bundle: .main), path, reason)
         case .invalidRepository(let repoId):
-            return "Repositorio '\(repoId)' invalido ou nao encontrado."
+            return String(format: String(localized: "error.download.invalidRepository", bundle: .main), repoId)
         case .downloadCancelled:
-            return "Download cancelado pelo usuario."
+            return String(localized: "error.download.downloadCancelled", bundle: .main)
         }
     }
 }
@@ -93,15 +105,19 @@ public enum FileProcessorError: Error, Equatable, Sendable, LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .unsupportedFormat(let ext):
-            return "Formato '.\(ext)' nao suportado. Use PDF, CSV, TXT ou arquivos de codigo."
+            return String(format: String(localized: "error.file.unsupportedFormat", bundle: .main), ext)
         case .fileTooLarge(let size, let max):
-            return "Arquivo muito grande (\(size / 1_048_576)MB). Maximo: \(max / 1_048_576)MB."
+            return String(
+                format: String(localized: "error.file.tooLarge", bundle: .main),
+                "\(size / 1_048_576)",
+                "\(max / 1_048_576)"
+            )
         case .fileNotReadable(let path):
-            return "Arquivo '\(path)' nao pode ser lido."
+            return String(format: String(localized: "error.file.notReadable", bundle: .main), path)
         case .pdfExtractionFailed(let reason):
-            return "Falha ao extrair texto do PDF: \(reason)"
+            return String(format: String(localized: "error.file.pdfExtractionFailed", bundle: .main), reason)
         case .encodingError(let path):
-            return "Erro de encoding no arquivo '\(path)'."
+            return String(format: String(localized: "error.file.encodingError", bundle: .main), path)
         }
     }
 }
@@ -127,23 +143,23 @@ public enum VoiceError: Error, Equatable, Sendable, LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .microphonePermissionDenied:
-            return "Acesso ao microfone negado. Ative em Ajustes > Privacidade > Microfone."
+            return String(localized: "error.voice.microphoneDenied", bundle: .main)
         case .speechRecognitionPermissionDenied:
-            return "Reconhecimento de fala negado. Ative em Ajustes > Privacidade."
+            return String(localized: "error.voice.speechDenied", bundle: .main)
         case .speechRecognizerUnavailable(let locale):
-            return "Reconhecimento de fala indisponivel para '\(locale)'."
+            return String(format: String(localized: "error.voice.recognizerUnavailable", bundle: .main), locale)
         case .audioEngineStartFailed(let reason):
-            return "Falha ao iniciar audio: \(reason)"
+            return String(format: String(localized: "error.voice.audioEngineFailed", bundle: .main), reason)
         case .recognitionTimeout:
-            return "Tempo de reconhecimento esgotado."
+            return String(localized: "error.voice.timeout", bundle: .main)
         case .noSpeechDetected:
-            return "Nenhuma fala detectada. Tente novamente."
+            return String(localized: "error.voice.noSpeech", bundle: .main)
         case .synthesisUnavailable(let locale):
-            return "Sintese de voz indisponivel para '\(locale)'."
+            return String(format: String(localized: "error.voice.synthesisUnavailable", bundle: .main), locale)
         case .audioPlaybackFailed(let reason):
-            return "Falha na reproducao de audio: \(reason)"
+            return String(format: String(localized: "error.voice.playbackFailed", bundle: .main), reason)
         case .pipelineCancelled:
-            return "Pipeline de voz cancelado."
+            return String(localized: "error.voice.pipelineCancelled", bundle: .main)
         }
     }
 }
@@ -158,15 +174,15 @@ public enum PersistenceError: Error, Equatable, Sendable, LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .saveFailed:
-            return "Erro ao salvar conversa. Tente novamente."
+            return String(localized: "error.persistence.saveFailed", bundle: .main)
         case .fetchFailed(let reason):
-            return "Erro ao buscar conversas: \(reason)"
+            return String(format: String(localized: "error.persistence.fetchFailed", bundle: .main), reason)
         case .deleteFailed(let reason):
-            return "Erro ao deletar conversa: \(reason)"
+            return String(format: String(localized: "error.persistence.deleteFailed", bundle: .main), reason)
         case .conversationNotFound:
-            return "Conversa nao encontrada."
+            return String(localized: "error.persistence.notFound", bundle: .main)
         case .migrationFailed(let from, let to):
-            return "Falha na migracao de v\(from) para v\(to)."
+            return String(format: String(localized: "error.persistence.migrationFailed", bundle: .main), "\(from)", "\(to)")
         }
     }
 }

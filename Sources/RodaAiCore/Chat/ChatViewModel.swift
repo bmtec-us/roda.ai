@@ -403,6 +403,13 @@ public final class ChatViewModel {
         errorMessage = nil
     }
 
+    public var lastGenerationSpeed: Double? {
+        if case .completed(let tokens, let durationMs) = chatState, durationMs > 0, tokens > 0 {
+            return Double(tokens) / (Double(durationMs) / 1000.0)
+        }
+        return nil
+    }
+
     public var loadingIndicatorText: String {
         if isOptimizingContext {
             return "Otimizando contexto..."
@@ -424,20 +431,15 @@ public final class ChatViewModel {
         case .normal:
             return nil
         case .warning:
-            return "Contexto alto: resposta pode vir mais compacta."
+            return String(localized: "chat.context.warning.high", bundle: .main)
         case .critical:
-            return "Contexto no limite: compactacao agressiva ativada."
+            return String(localized: "chat.context.warning.critical", bundle: .main)
         }
     }
 
-    private static let defaultSystemStylePrompt = """
-    Voce e o Roda, um assistente em portugues brasileiro.
-    Responda de forma direta e util, sem metadiscursos (ex.: "como um modelo de linguagem").
-    Evite repeticoes, listas redundantes e reformulacoes da mesma ideia.
-    Quando a pergunta for objetiva, entregue a resposta objetiva primeiro.
-    Nao encerre com varias perguntas de acompanhamento; faca no maximo uma, e so se for realmente necessaria.
-    Nao invente detalhes; quando houver incerteza visual, diga isso brevemente.
-    """
+    private static var defaultSystemStylePrompt: String {
+        String(localized: "chat.system.default", bundle: .main)
+    }
 
     // Compactacao de contexto por turno: reserva espaco para resposta
     // e injeta resumo cumulativo para manter continuidade em janelas pequenas.
@@ -450,20 +452,14 @@ public final class ChatViewModel {
     nonisolated private static let compactSummaryItemLimit = 20
     nonisolated private static let maxUserInputCharacters = 12_000
 
-    private static let naturalStylePrompt = "Responda de forma natural, clara e objetiva. Evite introducoes longas."
-    private static let technicalStylePrompt = "Responda de forma tecnica, estruturada e precisa, com termos corretos, sem redundancia."
-    private static let detailedStylePrompt = "Responda de forma detalhada, com contexto e exemplos quando fizer sentido, sem repetir pontos ja ditos."
-    private static let compactLengthPrompt = "Priorize respostas curtas: 1 a 3 frases na maioria dos casos, sem listas longas, sem repetir a pergunta."
-    private static let normalLengthPrompt = "Use tamanho medio: resposta direta primeiro e, se necessario, no maximo um bloco curto complementar."
-    private static let detailedLengthPrompt = "Quando pertinente, aprofunde com estrutura clara em paragrafos curtos, sem redundancias."
-    private static let instructionPriorityPrompt = "Sempre priorize instrucoes explicitas de formato, tamanho e idioma dadas pelo usuario na mensagem atual, mesmo que conflitem com estilo de resposta."
-    private static let visionStylePrompt = """
-    Para perguntas sobre imagem:
-    1) descreva primeiro o que e claramente visivel,
-    2) depois cite detalhes de rotulo/texto se legiveis,
-    3) finalize com uma frase curta de contexto.
-    Use frases curtas e portugues natural.
-    """
+    private static var naturalStylePrompt: String { String(localized: "chat.system.style.natural", bundle: .main) }
+    private static var technicalStylePrompt: String { String(localized: "chat.system.style.technical", bundle: .main) }
+    private static var detailedStylePrompt: String { String(localized: "chat.system.style.detailed", bundle: .main) }
+    private static var compactLengthPrompt: String { String(localized: "chat.system.length.compact", bundle: .main) }
+    private static var normalLengthPrompt: String { String(localized: "chat.system.length.normal", bundle: .main) }
+    private static var detailedLengthPrompt: String { String(localized: "chat.system.length.detailed", bundle: .main) }
+    private static var instructionPriorityPrompt: String { String(localized: "chat.system.instructionPriority", bundle: .main) }
+    private static var visionStylePrompt: String { String(localized: "chat.system.vision", bundle: .main) }
 
     private func buildInferenceMessagesAsync(base: [ChatMessage]) async -> [ChatMessage] {
         // Remove placeholder vazio do assistente antes de montar prompt de inferencia.

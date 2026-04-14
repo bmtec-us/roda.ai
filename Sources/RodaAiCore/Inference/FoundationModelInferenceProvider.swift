@@ -355,16 +355,7 @@ public enum FoundationModelHelper {
         let trimmed = firstUserMessage.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
 
-        let instructions = """
-            Voce gera titulos curtos para conversas de chat. O titulo deve:
-            - ter entre 3 e 6 palavras
-            - capturar o tema principal da mensagem
-            - estar no mesmo idioma da mensagem
-            - nao conter pontuacao final
-            - nao comecar com frases genericas como "Conversa sobre"
-            Responda apenas com o titulo, sem aspas e sem explicacoes.
-            """
-
+        let instructions = String(localized: "foundation.title.system", bundle: .main)
         let session = LanguageModelSession { instructions }
         let options = GenerationOptions(
             temperature: 0.3,
@@ -372,8 +363,12 @@ public enum FoundationModelHelper {
         )
 
         do {
+            let userPrompt = String(
+                format: String(localized: "foundation.title.user", bundle: .main),
+                trimmed
+            )
             let response = try await session.respond(
-                to: "Gere um titulo para esta primeira mensagem: \"\(trimmed)\"",
+                to: userPrompt,
                 options: options
             )
             let title = response.content
