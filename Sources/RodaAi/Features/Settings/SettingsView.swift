@@ -2,6 +2,10 @@
 import SwiftUI
 import SwiftData
 import RodaAiCore
+import UniformTypeIdentifiers
+#if canImport(AVFoundation)
+import AVFoundation
+#endif
 #if canImport(UIKit)
 import UIKit
 #endif
@@ -36,6 +40,7 @@ struct SettingsView: View {
     @State private var huggingFaceTokenSaved: Bool = false
     @State private var huggingFaceTokenRevealed: Bool = false
     @State private var isPreviewingQwenPersona: Bool = false
+    @State private var referenceVoiceProfiles: [ReferenceVoiceProfile] = []
 
     init(modelContext: ModelContext) {
         _viewModel = State(initialValue: SettingsViewModel(modelContext: modelContext))
@@ -78,6 +83,7 @@ struct SettingsView: View {
             foundationModelDiagnostics = FoundationModelDiagnostics.capture()
             huggingFaceTokenSaved = huggingFaceTokenStore.hasToken
             huggingFaceTokenInput = ""
+            reloadReferenceVoiceProfiles()
         }
         .onDisappear { try? viewModel.savePreferences() }
         .onChange(of: viewModel.appearanceMode) { _, _ in persistPreferencesNow() }
@@ -317,6 +323,16 @@ struct SettingsView: View {
                 qwenPersonaPicker
             }
 
+            if case .mlxRepo = viewModel.neuralVoiceEngine {
+                NavigationLink {
+                    ReferenceVoiceProfilesView {
+                        reloadReferenceVoiceProfiles()
+                    }
+                } label: {
+                    Label("Vozes de referência", systemImage: "person.crop.circle.badge.plus")
+                }
+            }
+
             if case .mlxRepo(let selectedRepo) = viewModel.neuralVoiceEngine {
                 if Self.isMemoryConstrainedDevice {
                     // Hard warning on iPhone — the combination of a
@@ -379,6 +395,14 @@ struct SettingsView: View {
     private var qwenPersonaPicker: some View {
         Picker(selection: $viewModel.qwenVoicePersonaId) {
             Text("settings.voice.qwen.auto").tag("")
+
+            if !referenceVoiceProfiles.isEmpty {
+                Section("Minhas vozes de referência") {
+                    ForEach(referenceVoiceProfiles) { profile in
+                        Text(profile.displayName).tag(profile.personaId)
+                    }
+                }
+            }
 
             Section("settings.voice.qwen.group.portuguese") {
                 ForEach(Qwen3VoiceCatalog.ptBR) { persona in
@@ -456,6 +480,32 @@ struct SettingsView: View {
                 .foregroundStyle(ColorPalette.accent)
                 .disabled(isPreviewingQwenPersona)
             }
+        } else if !viewModel.qwenVoicePersonaId.isEmpty,
+                  let profile = referenceVoiceProfiles.first(where: { $0.personaId == viewModel.qwenVoicePersonaId }) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Voz de referência: \(profile.displayName)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Text("Usa clone por áudio de referência salvo no aparelho.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+
+                Button {
+                    previewReferenceVoice(profile)
+                } label: {
+                    Label(
+                        isPreviewingQwenPersona
+                            ? "settings.voice.qwen.previewPlaying"
+                            : "settings.voice.qwen.preview",
+                        systemImage: "play.circle.fill"
+                    )
+                    .font(.caption)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(ColorPalette.accent)
+                .disabled(isPreviewingQwenPersona)
+            }
         }
     }
 
@@ -477,6 +527,23 @@ struct SettingsView: View {
             deps.textToSpeechService?.setQwenVoicePersona(previous)
             await MainActor.run { isPreviewingQwenPersona = false }
         }
+    }
+
+    private func previewReferenceVoice(_ profile: ReferenceVoiceProfile) {
+        guard !isPreviewingQwenPersona else { return }
+        isPreviewingQwenPersona = true
+        let sampleText = Self.qwenPreviewSample(for: profile.languageCode)
+        Task {
+            let previous = viewModel.qwenVoicePersonaId
+            deps.textToSpeechService?.setQwenVoicePersona(profile.personaId)
+            try? await deps.textToSpeechService?.speak(sampleText)
+            deps.textToSpeechService?.setQwenVoicePersona(previous)
+            await MainActor.run { isPreviewingQwenPersona = false }
+        }
+    }
+
+    private func reloadReferenceVoiceProfiles() {
+        referenceVoiceProfiles = (try? ReferenceVoiceProfileStore.listProfiles()) ?? []
     }
 
     /// Sample sentence used to preview a persona. Picked to be
@@ -863,6 +930,213 @@ struct SettingsView: View {
 
     private func persistPreferencesNow() {
         try? viewModel.savePreferences()
+    }
+}
+
+private struct ReferenceVoiceProfilesView: View {
+    let onProfilesChanged: () -> Void
+
+    @State private var profiles: [ReferenceVoiceProfile] = []
+    @State private var profileName: String = ""
+    @State private var referenceText: String = ReferenceVoiceProfileStore.defaultReferenceText()
+    @State private var isImportingAudio = false
+    @State private var isRecording = false
+    @State private var statusMessage: String?
+    @State private var profileToDelete: ReferenceVoiceProfile?
+    @State private var recordedAudioURL: URL?
+
+    #if canImport(AVFoundation)
+    @State private var recorder: AVAudioRecorder?
+    #endif
+
+    var body: some View {
+        Form {
+            Section("Texto para leitura") {
+                TextEditor(text: $referenceText)
+                    .frame(minHeight: 120)
+                Text("Leia esse texto de forma natural para criar sua voz de referência.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section("Nova persona") {
+                TextField("Nome da persona", text: $profileName)
+
+                Button {
+                    toggleRecording()
+                } label: {
+                    Label(
+                        isRecording ? "Parar gravação e salvar" : "Gravar minha voz",
+                        systemImage: isRecording ? "stop.circle.fill" : "mic.circle.fill"
+                    )
+                }
+                .tint(isRecording ? .red : ColorPalette.accent)
+
+                Button {
+                    isImportingAudio = true
+                } label: {
+                    Label("Importar arquivo .wav", systemImage: "square.and.arrow.down")
+                }
+            }
+
+            Section("Personas salvas") {
+                if profiles.isEmpty {
+                    Text("Nenhuma voz de referência salva ainda.")
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(profiles) { profile in
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(profile.displayName)
+                                .font(.body.weight(.semibold))
+                            Text(profile.createdAt.formatted(date: .abbreviated, time: .shortened))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .swipeActions {
+                            Button(role: .destructive) {
+                                profileToDelete = profile
+                            } label: {
+                                Label("Apagar", systemImage: "trash")
+                            }
+                        }
+                    }
+                }
+            }
+
+            if let statusMessage {
+                Section {
+                    Text(statusMessage)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .navigationTitle("Vozes de referência")
+        .onAppear(perform: reloadProfiles)
+        .fileImporter(
+            isPresented: $isImportingAudio,
+            allowedContentTypes: [.wav, .audio],
+            allowsMultipleSelection: false
+        ) { result in
+            handleImportedAudio(result)
+        }
+        .alert(
+            "Apagar persona?",
+            isPresented: Binding(
+                get: { profileToDelete != nil },
+                set: { if !$0 { profileToDelete = nil } }
+            ),
+            presenting: profileToDelete
+        ) { profile in
+            Button("Cancelar", role: .cancel) {}
+            Button("Apagar", role: .destructive) {
+                deleteProfile(profile)
+            }
+        } message: { profile in
+            Text("A persona \"\(profile.displayName)\" será removida.")
+        }
+    }
+
+    private func toggleRecording() {
+        #if canImport(AVFoundation)
+        if isRecording {
+            recorder?.stop()
+            isRecording = false
+            if let recordedAudioURL {
+                saveProfile(from: recordedAudioURL)
+            }
+            return
+        }
+
+        Task {
+            let granted = await AVCaptureDevice.requestAccess(for: .audio)
+            guard granted else {
+                await MainActor.run { statusMessage = "Permissão de microfone negada." }
+                return
+            }
+            await MainActor.run { startRecording() }
+        }
+        #else
+        statusMessage = "Gravação não disponível nesta plataforma."
+        #endif
+    }
+
+    #if canImport(AVFoundation)
+    private func startRecording() {
+        do {
+            let temp = FileManager.default.temporaryDirectory
+                .appendingPathComponent("reference-voice-\(UUID().uuidString).wav")
+            recordedAudioURL = temp
+
+            let settings: [String: Any] = [
+                AVFormatIDKey: kAudioFormatLinearPCM,
+                AVSampleRateKey: 24_000,
+                AVNumberOfChannelsKey: 1,
+                AVLinearPCMBitDepthKey: 16,
+                AVLinearPCMIsFloatKey: false,
+                AVLinearPCMIsBigEndianKey: false,
+            ]
+            let recorder = try AVAudioRecorder(url: temp, settings: settings)
+            recorder.prepareToRecord()
+            recorder.record()
+            self.recorder = recorder
+            isRecording = true
+            statusMessage = "Gravando... toque novamente para finalizar."
+        } catch {
+            statusMessage = "Falha ao iniciar gravação: \(error.localizedDescription)"
+        }
+    }
+    #endif
+
+    private func handleImportedAudio(_ result: Result<[URL], Error>) {
+        switch result {
+        case .failure(let error):
+            statusMessage = "Falha ao importar áudio: \(error.localizedDescription)"
+        case .success(let urls):
+            guard let url = urls.first else { return }
+            let scoped = url.startAccessingSecurityScopedResource()
+            defer {
+                if scoped { url.stopAccessingSecurityScopedResource() }
+            }
+            saveProfile(from: url)
+        }
+    }
+
+    private func saveProfile(from sourceURL: URL) {
+        do {
+            _ = try ReferenceVoiceProfileStore.saveProfile(
+                displayName: profileName,
+                referenceText: referenceText,
+                languageCode: "pt-BR",
+                sourceAudioURL: sourceURL
+            )
+            profileName = ""
+            statusMessage = "Persona salva com sucesso."
+            reloadProfiles()
+            onProfilesChanged()
+        } catch {
+            statusMessage = "Falha ao salvar persona: \(error.localizedDescription)"
+        }
+    }
+
+    private func deleteProfile(_ profile: ReferenceVoiceProfile) {
+        do {
+            try ReferenceVoiceProfileStore.deleteProfile(id: profile.id)
+            statusMessage = "Persona removida."
+            reloadProfiles()
+            onProfilesChanged()
+        } catch {
+            statusMessage = "Falha ao apagar persona: \(error.localizedDescription)"
+        }
+    }
+
+    private func reloadProfiles() {
+        do {
+            profiles = try ReferenceVoiceProfileStore.listProfiles()
+        } catch {
+            profiles = []
+            statusMessage = "Falha ao carregar personas: \(error.localizedDescription)"
+        }
     }
 }
 

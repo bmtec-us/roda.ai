@@ -5,9 +5,13 @@ import AVFoundation
 #endif
 #if canImport(MLXAudioTTS)
 import MLXAudioTTS
+import MLXAudioCore
 import MLX
 import MLXRandom
 import MLXLMCommon
+// Needed to downcast `SpeechGenerationModel` to the concrete
+// `Qwen3TTSModel` so we can set its `cfgScale` property. CFG is
+// Qwen3-TTS-specific and not part of the common protocol.
 #endif
 #if canImport(HuggingFace)
 import HuggingFace
@@ -71,6 +75,39 @@ public class TextToSpeechService: ObservableObject, TextToSpeaking {
     /// response into a single synth call (neural = avoids voice
     /// drift across calls).
     public var activeEngine: NeuralVoiceEngine { currentEngine }
+
+    /// Whether VoiceService should stream response chunks to this TTS
+    /// backend in voice mode. Apple always supports chunking; MLX is
+    /// kept disabled to avoid broken prosody and audible cuts between
+    /// multiple synth calls.
+    public var supportsLowLatencyChunkStreaming: Bool {
+        if isUsingFallback { return false }
+        switch currentEngine {
+        case .appleSystem:
+            return true
+        case .mlxRepo:
+            return false
+        }
+    }
+
+    /// Preloads the currently-selected TTS engine to reduce
+    /// time-to-first-audio in voice mode. Best-effort: failures are
+    /// logged and normal fallback behavior remains unchanged.
+    public func prewarmForVoiceMode() async {
+        guard !isUsingFallback else { return }
+        switch currentEngine {
+        case .appleSystem:
+            return
+        case .mlxRepo:
+            #if canImport(MLXAudioTTS)
+            do {
+                _ = try await loadModelIfNeeded()
+            } catch {
+                RodaLog.voice.error("TTS prewarm failed: \(error.localizedDescription, privacy: .public)")
+            }
+            #endif
+        }
+    }
 
     /// Selected `AVSpeechSynthesisVoice.identifier`. Empty = auto-pick
     /// a pt-BR voice. Set explicitly to use Premium / Enhanced / Siri
@@ -558,6 +595,22 @@ public class TextToSpeechService: ObservableObject, TextToSpeaking {
             modelLoaded = true
             neuralVoiceModelState = .available
             isUsingFallback = false
+
+            // Classifier-free guidance. Qwen3-TTS VoiceDesign was
+            // trained with conditioning dropout, so strong CFG at
+            // inference time amplifies prompt adherence (gender /
+            // pitch / accent) and prevents fallback to the neutral
+            // prior. In practice, slightly lower CFG reduced accent
+            // artifacts on multilingual speech while keeping persona
+            // adherence strong enough for production use.
+            // Applies only to Qwen3TTSModel — other TTS backends
+            // in this library don't implement CFG and we silently
+            // skip the cast for them.
+            if let qwen = loaded as? Qwen3TTSModel {
+                qwen.cfgScale = 3.2
+                RodaLog.voice.info("Qwen3-TTS cfgScale set to \(qwen.cfgScale, privacy: .public)")
+            }
+
             RodaLog.voice.info("TTS model loaded successfully")
             return loaded
         } catch {
@@ -595,18 +648,43 @@ public class TextToSpeechService: ObservableObject, TextToSpeaking {
         return pairs.joined(separator: ", ")
     }
 
-    /// Resolves the effective Qwen3-TTS persona for the next call:
-    /// the user's explicit selection if any, otherwise the default
-    /// persona for the current app language. Never returns nil — we
-    /// always have SOMETHING to pass so the model can't fall back to
-    /// random-voice sampling (which produces the "wrong gender"
-    /// behaviour users hit with `voice: nil`).
-    private func resolveActivePersona() -> Qwen3VoicePersona {
+    private enum ResolvedQwenConditioning {
+        case persona(Qwen3VoicePersona)
+        case reference(ReferenceVoiceProfile)
+    }
+
+    /// Resolves the effective Qwen3-TTS conditioning payload for the
+    /// next call: either a catalog persona (`VoiceDesign` /
+    /// `CustomVoice`) or a saved voice-clone reference profile.
+    private func resolveQwenConditioning() -> ResolvedQwenConditioning {
+        if ReferenceVoiceProfileStore.profileId(fromPersonaId: currentQwenVoicePersonaId) != nil,
+           let profile = try? ReferenceVoiceProfileStore.profile(forPersonaId: currentQwenVoicePersonaId) {
+            return .reference(profile)
+        }
+
         if !currentQwenVoicePersonaId.isEmpty,
            let selected = Qwen3VoiceCatalog.persona(withId: currentQwenVoicePersonaId) {
-            return selected
+            return .persona(selected)
         }
-        return Qwen3VoiceCatalog.defaultPersona(for: Self.qwen3LanguageCode())
+        return .persona(Qwen3VoiceCatalog.defaultPersona(for: Self.qwen3LanguageCode()))
+    }
+
+    /// Voice cloning (refAudio/refText) is supported on Qwen3 Base.
+    /// If the user selected a reference persona while running a
+    /// VoiceDesign/CustomVoice checkpoint, auto-remap to the matching
+    /// Base repo so cloning actually takes effect.
+    private func preferredRepoForCurrentConditioning() -> String {
+        guard ReferenceVoiceProfileStore.profileId(fromPersonaId: currentQwenVoicePersonaId) != nil else {
+            return currentTTSRepo
+        }
+
+        if currentTTSRepo.contains("VoiceDesign") {
+            return currentTTSRepo.replacingOccurrences(of: "VoiceDesign", with: "Base")
+        }
+        if currentTTSRepo.contains("CustomVoice") {
+            return currentTTSRepo.replacingOccurrences(of: "CustomVoice", with: "Base")
+        }
+        return currentTTSRepo
     }
 
     /// Converts a persona into the `voice:` string that Qwen3-TTS
@@ -621,10 +699,46 @@ public class TextToSpeechService: ObservableObject, TextToSpeaking {
     private func qwen3VoiceParameter(for persona: Qwen3VoicePersona) -> String {
         switch persona.backend {
         case .voiceDesign(let instruct):
-            return instruct
+            return normalizedVoiceDesignInstruct(instruct)
         case .customVoiceSpeaker(let name):
             return "<|spk_\(name)|>"
         }
+    }
+
+    /// Light text cleanup before synthesis. Keeps semantics intact while
+    /// removing punctuation patterns that often create abrupt pauses.
+    private func normalizedSpokenTextForTTS(_ raw: String) -> String {
+        let compact = raw
+            .replacingOccurrences(of: "\n", with: " ")
+            .replacingOccurrences(of: "\t", with: " ")
+            .replacingOccurrences(of: ";", with: " ")
+            .replacingOccurrences(of: ":", with: " ")
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return compact.isEmpty ? raw : compact
+    }
+
+    /// Reduces prosodic "spikes" caused by line-by-line prompt style.
+    /// Qwen3 receives a single compact descriptor string with softer
+    /// separators, which generally yields fewer unexpected pauses.
+    private func normalizedVoiceDesignInstruct(_ raw: String) -> String {
+        let normalizedLines = raw
+            .split(separator: "\n", omittingEmptySubsequences: false)
+            .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .map { line in
+                var output = line
+                while let last = output.last, [".", ";"].contains(last) {
+                    output.removeLast()
+                }
+                return output
+            }
+            .filter { !$0.isEmpty }
+
+        guard !normalizedLines.isEmpty else {
+            return raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return normalizedLines.joined(separator: ". ")
     }
 
     /// Qwen3-TTS language hint. Two entry points:
@@ -647,14 +761,44 @@ public class TextToSpeechService: ObservableObject, TextToSpeaking {
     }
 
     private static func qwen3LanguageCode(for languageHint: String) -> String {
-        let code = languageHint.lowercased().prefix(2)
+        // We pass ISO 639-1 / BCP-47 style codes straight through.
+        // The vendored mlx-audio-swift library's Qwen3TTS model
+        // normalizes them to its canonical English names
+        // (`portuguese`, `english`, `spanish`, …) via
+        // `Qwen3TTSModel.normalizeLanguageCode(_:)` before the
+        // `codec_language_id` dict lookup — accepting both ISO
+        // codes and full names keeps our call sites using the
+        // universal locale convention while the library owns the
+        // model-specific key shape.
+        //
+        // "auto" stays as the explicit no-language-conditioning
+        // sentinel — the library's prepareGenerationInputs short-
+        // circuits on it.
+        let normalizedHint = languageHint
+            .lowercased()
+            .replacingOccurrences(of: "_", with: "-")
+
+        if normalizedHint.hasPrefix("pt-br") {
+            return "pt-BR"
+        }
+        if normalizedHint.hasPrefix("pt-pt") {
+            return "pt-PT"
+        }
+
+        let code = normalizedHint.prefix(2)
         switch code {
-        case "pt": return "pt"
+        // Product target is Brazilian Portuguese. Use pt-BR by default
+        // for plain "pt" hints to reduce foreign-accent drift.
+        case "pt": return "pt-BR"
         case "en": return "en"
         case "es": return "es"
         case "ja": return "ja"
         case "ko": return "ko"
         case "zh": return "zh"
+        case "fr": return "fr"
+        case "de": return "de"
+        case "it": return "it"
+        case "ru": return "ru"
         default:   return "auto"
         }
     }
@@ -689,6 +833,17 @@ public class TextToSpeechService: ObservableObject, TextToSpeaking {
     private func speakWithMLXAudio(_ text: String) async throws(VoiceError) {
         #if canImport(MLXAudioTTS) && canImport(AVFoundation)
         do {
+            let preferredRepo = preferredRepoForCurrentConditioning()
+            if preferredRepo != currentTTSRepo {
+                RodaLog.voice.info(
+                    """
+                    Reference voice persona detected. Active repo '\(self.currentTTSRepo, privacy: .public)' does not support voice cloning.
+                    Auto-switching to compatible Base repo '\(preferredRepo, privacy: .public)'.
+                    """
+                )
+                setTTSRepo(preferredRepo)
+            }
+
             let model = try await loadModelIfNeeded()
 
             // SpeechRecognizer already configures the audio session
@@ -739,7 +894,6 @@ public class TextToSpeechService: ObservableObject, TextToSpeaking {
 
             engine.connect(player, to: engine.mainMixerNode, format: format)
             try engine.start()
-            player.play()
 
             audioEngine = engine
             playerNode = player
@@ -764,9 +918,41 @@ public class TextToSpeechService: ObservableObject, TextToSpeaking {
             // Coupling language to persona.language guarantees the
             // two stay in sync and the model gets a coherent
             // conditioning signal.
-            let persona = resolveActivePersona()
-            let voiceParam = qwen3VoiceParameter(for: persona)
-            let languageParam = Self.qwen3LanguageCode(for: persona.language)
+            let resolvedConditioning = resolveQwenConditioning()
+            let languageParam: String
+            let voiceParam: String
+            let refAudioParam: MLXArray?
+            let refTextParam: String?
+            let seedSource: String
+            let conditioningLogId: String
+
+            switch resolvedConditioning {
+            case .persona(let persona):
+                languageParam = Self.qwen3LanguageCode(for: persona.language)
+                voiceParam = qwen3VoiceParameter(for: persona)
+                refAudioParam = nil
+                refTextParam = nil
+                seedSource = persona.instructHash
+                conditioningLogId = persona.id
+            case .reference(let profile):
+                languageParam = Self.qwen3LanguageCode(for: profile.languageCode)
+                voiceParam = ""
+                if let refAudioURL = try? ReferenceVoiceProfileStore.audioURL(for: profile) {
+                    if let tuple = try? loadAudioArray(from: refAudioURL) {
+                        refAudioParam = tuple.1
+                    } else {
+                        refAudioParam = nil
+                        RodaLog.voice.error("Reference voice audio decode failed for profile id=\(profile.id, privacy: .public)")
+                    }
+                } else {
+                    refAudioParam = nil
+                    RodaLog.voice.error("Reference voice audio path not found for profile id=\(profile.id, privacy: .public)")
+                }
+                refTextParam = profile.referenceText
+                seedSource = profile.id
+                conditioningLogId = profile.personaId
+            }
+            let synthesisText = normalizedSpokenTextForTTS(text)
 
             // Pin the MLX random number generator per-persona-hash so
             // a given persona synthesizes stably across calls. Without
@@ -778,45 +964,77 @@ public class TextToSpeechService: ObservableObject, TextToSpeaking {
             // derives from the persona hash so different personas
             // still sound different but each persona sounds the
             // same-ish across turns.
-            let seedBytes = persona.instructHash.unicodeScalars.reduce(0 as UInt64) { acc, scalar in
+            let seedBytes = seedSource.unicodeScalars.reduce(0 as UInt64) { acc, scalar in
                 (acc &* 31) &+ UInt64(scalar.value)
             }
             MLXRandom.seed(seedBytes)
 
             // Voice-design tuned inference parameters:
-            //   - temperature 0.75 (default 0.9) — reduces prosody
-            //     jitter that can mask gender / timbre cues
-            //   - topP 0.9 (default 1.0) — tighter nucleus keeps
-            //     samples closer to the conditioning signal
+            //   - temperature 0.55 (default 0.9) — stronger stability
+            //     for phonetic realization, reducing accent drift and
+            //     random prosodic jumps.
+            //   - topP 0.85 (default 1.0) — tighter nucleus keeps
+            //     samples closer to the conditioning signal and helps
+            //     suppress unexpected pauses.
             //   - repetitionPenalty stays at default 1.05 (helpful
             //     for long utterances; too low → loops, too high →
-            //     breaks rhythm)
+            //     breaks rhythm).
             let tunedParameters = GenerateParameters(
                 maxTokens: 4096,
-                temperature: 0.75,
-                topP: 0.9,
+                temperature: 0.58,
+                topP: 0.88,
                 repetitionPenalty: 1.05
             )
 
-            // Log the raw voice param string as a byte array. If MLX
-            // tokenizer preprocessing collapses newlines or strips
-            // punctuation we'll see it here. (Only logged in Debug
-            // builds to avoid leaking the instruct contents into
-            // production logs — personas are shipping code, not
-            // secrets, but noise reduction matters.)
+            // Debug logging — only in Debug builds to keep
+            // production logs quiet. Two tiers:
+            //
+            //   1. Summary stats (byte count, line count, terminal
+            //      period) give a one-line structural sanity check
+            //      at glance.
+            //   2. Raw prompt dump line-by-line so you can see
+            //      *exactly* what the model receives, including
+            //      any Unicode weirdness, invisible characters, or
+            //      newline collapsing introduced somewhere in the
+            //      pipeline. Per the Qwen3-TTS production guide:
+            //      "if it works in Python HF transformers but
+            //      fails in Swift MLX, the issue is in your Swift
+            //      preprocessing". This log makes that diagnosable
+            //      without rebuilding with extra instrumentation.
             #if DEBUG
             let byteCount = voiceParam.utf8.count
             let lineCount = voiceParam.split(separator: "\n", omittingEmptySubsequences: false).count
             let endsWithPeriod = voiceParam.hasSuffix(".\n") || voiceParam.hasSuffix(".")
             RodaLog.voice.debug("Qwen3-TTS voice-param bytes=\(byteCount) lines=\(lineCount) endsWithPeriod=\(endsWithPeriod)")
+            RodaLog.voice.debug("Qwen3-TTS voice-param raw ↓↓↓")
+            for (index, line) in voiceParam.split(separator: "\n", omittingEmptySubsequences: false).enumerated() {
+                // Line-by-line so a 700-byte instruct doesn't get
+                // truncated by the unified-log single-entry limit.
+                // Indexed + hex-byte-count per line so you can
+                // spot whitespace drift immediately.
+                let lineString = String(line)
+                let lineBytes = lineString.utf8.count
+                RodaLog.voice.debug("  [\(index, privacy: .public)] (\(lineBytes, privacy: .public)B) \(lineString, privacy: .public)")
+            }
+            RodaLog.voice.debug("Qwen3-TTS voice-param raw ↑↑↑ (language=\(languageParam, privacy: .public))")
             #endif
 
-            RodaLog.voice.info("Qwen3-TTS using persona id=\(persona.id, privacy: .public) hash=\(persona.instructHash, privacy: .public) language=\(languageParam, privacy: .public) temp=0.75 seed=\(seedBytes, privacy: .public)")
+            // Pull the active cfgScale off the loaded Qwen3 model
+            // so the log line proves the value is actually reaching
+            // generation (not just hard-coded in the log string).
+            // Non-Qwen TTS backends report cfgScale=N/A.
+            let cfgLogValue: String
+            if let qwen = model as? Qwen3TTSModel {
+                cfgLogValue = String(format: "%.2f", qwen.cfgScale)
+            } else {
+                cfgLogValue = "N/A"
+            }
+            RodaLog.voice.info("Qwen3-TTS using persona id=\(conditioningLogId, privacy: .public) hash=\(seedSource, privacy: .public) language=\(languageParam, privacy: .public) temp=\(tunedParameters.temperature, privacy: .public) topP=\(tunedParameters.topP, privacy: .public) guidanceScale=\(cfgLogValue, privacy: .public) seed=\(seedBytes, privacy: .public)")
             let stream = model.generatePCMBufferStream(
-                text: text,
+                text: synthesisText,
                 voice: voiceParam,
-                refAudio: nil,
-                refText: nil,
+                refAudio: refAudioParam,
+                refText: refTextParam,
                 language: languageParam,
                 generationParameters: tunedParameters
             )
@@ -831,19 +1049,39 @@ public class TextToSpeechService: ObservableObject, TextToSpeaking {
             // keep the queue full and only wait once all buffers have
             // finished playing.
             let tracker = MLXAudioPlaybackTracker()
+            // Hold a small queue before starting playback to reduce
+            // mid-sentence underruns ("pauses"/"stutters") while the
+            // model is still generating subsequent PCM chunks.
+            let prebufferChunkCount = 4
+            var scheduledCount = 0
+            var playbackStarted = false
+
             for try await buffer in stream {
                 if Task.isCancelled { break }
                 guard buffer.frameLength > 0 else { continue }
                 tracker.scheduled()
+                scheduledCount += 1
                 player.scheduleBuffer(buffer) {
                     tracker.completed()
                 }
+
+                if !playbackStarted, scheduledCount >= prebufferChunkCount {
+                    player.play()
+                    playbackStarted = true
+                }
+            }
+
+            // If the utterance is short, start playback with whatever
+            // was buffered instead of waiting for the prebuffer target.
+            if !playbackStarted, scheduledCount > 0 {
+                player.play()
+                playbackStarted = true
             }
 
             // Wait until every scheduled buffer has fired its
             // completion handler. Poll in 50ms increments so
             // cancellation stays responsive.
-            while !tracker.isDrained {
+            while scheduledCount > 0 && !tracker.isDrained {
                 try? await Task.sleep(for: .milliseconds(50))
                 if Task.isCancelled { break }
             }

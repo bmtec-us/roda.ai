@@ -102,18 +102,14 @@ public enum Qwen3VoiceCatalog {
             //     concrete keywords rather than the abstract
             //     "broadcaster-style"
             backend: .voiceDesign(instruct: """
-                gender: Female.
-                pitch: Mid-range with a bright, resonant quality and natural warmth.
-                speed: Steady conversational rhythm, fluid and well-paced without rushing.
-                volume: Clear and evenly projected, balanced for comfortable listening.
-                age: Young adult, approximately 24 years old.
-                clarity: Precise articulation, clean consonant transitions, fully resonant vowels.
-                fluency: Continuous and polished speech flow with natural pause placement.
-                accent: Neutral Brazilian Portuguese, São Paulo metropolitan register, accurate phonetic realization and modern diction.
-                texture: Bright and lightly warm, youthful but controlled and professional.
-                emotion: Attentive and engaged, conveying genuine interest and warmth.
-                tone: Friendly, intelligent, and approachable, with a relaxed confidence.
-                personality: Curious and modern, confident without being assertive, naturally conversational.
+                português brasileiro nativo de São Paulo
+                voz feminina jovem adulta
+                velocidade moderada, sem pressa e sem ofegar
+                pausas curtas e naturais somente em vírgula e ponto
+                entonação brasileira espontânea e conversacional
+                dicção clara com vogais brasileiras abertas e fechadas corretas
+                r simples brasileiro e nasalização natural em ão e ãe
+                pronúncia brasileira em você, trabalho, gente, cidade, coração e Brasil
                 """)
         ),
         // MARK: - Clara debug variants (A/B/C test harness)
@@ -191,6 +187,30 @@ public enum Qwen3VoiceCatalog {
                 pitch: Mid-range female pitch with clear resonance and warmth.
                 age: Young adult, approximately 24 years old.
                 accent: Neutral Brazilian Portuguese, São Paulo metropolitan register.
+                """)
+        ),
+
+        // Phonetic-detail variant of Clara. Same character spec
+        // (female, ~24, bright/conversational) but the accent line
+        // names specific Brazilian phonemes (full open vowels,
+        // tapped R, clear sibilants, natural intonation contour)
+        // instead of relying on register names. Hypothesis: explicit
+        // phoneme keywords give Qwen3-TTS's accent conditioner
+        // sharper signal than naming a register ("São Paulo
+        // metropolitan").
+        .init(
+            id: "carlinha",
+            displayName: "Carlinha",
+            shortDescription: "Feminina, 24 — sotaque pt-BR com pistas fonéticas explícitas",
+            language: "pt",
+            backend: .voiceDesign(instruct: """
+                português brasileiro nativo contemporâneo
+                voz feminina jovem brasileira
+                velocidade moderada e ritmo fluido
+                fala natural com respiração suave, sem pausas bruscas
+                tom acolhedor e conversacional
+                dicção clara com nasalização brasileira natural
+                pronúncia brasileira em amanhã, família, trabalho, cidade, coração e Brasil
                 """)
         ),
 

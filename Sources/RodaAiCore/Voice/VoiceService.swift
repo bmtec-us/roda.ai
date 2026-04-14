@@ -38,6 +38,14 @@ public class VoiceService: ObservableObject {
 
         RodaLog.voice.info("Voice pipeline start")
 
+        // Best-effort prewarm to hide first-turn MLX model load latency
+        // behind the listening phase.
+        let ttsPrewarmTask = Task { [weak self] in
+            guard let self, let tts = self.textToSpeech as? TextToSpeechService else { return }
+            await tts.prewarmForVoiceMode()
+        }
+        defer { ttsPrewarmTask.cancel() }
+
         // Phase 1: Listening
         do {
             try state.transition(.startVoice)
@@ -217,12 +225,13 @@ public class VoiceService: ObservableObject {
     /// sentence-boundary chunk is flushed to TTS. Lower = snappier first
     /// audio, higher = smoother phrasing.
     ///
-    /// 12 catches short opening sentences like "Oi, tudo bem?" (13 chars)
-    /// which at 28 got buffered until the full response arrived, making
+    /// 8 catches short openings like "Oi, tudo bem?" quickly enough
+    /// while still avoiding excessive micro-chunking.
+    /// At 28 the first chunk was often delayed until near the end,
     /// the whole feature feel like "wait for text, then speak the whole
     /// thing" instead of ChatGPT-style streaming speech. Anything
-    /// smaller than 12 tends to chop interjections mid-clause.
-    private static let minSpeakableChunkCharacters = 12
+    /// much smaller than 8 tends to chop interjections mid-clause.
+    private static let minSpeakableChunkCharacters = 8
 
     private static func extractSpeakableChunk(from buffer: inout String) -> String? {
         let separators: Set<Character> = [".", "!", "?", "\n", ":", ";"]
@@ -263,20 +272,12 @@ public class VoiceService: ObservableObject {
     }
 
     private static func shouldStreamSpeechChunks(using tts: any TextToSpeaking) -> Bool {
-        // Stream by sentence only when the TTS backend produces a
-        // stable voice across consecutive calls. Apple AVSpeech uses
-        // the exact same voice ID per call — streaming is fine.
-        // Qwen3-TTS (VoiceDesign) is stochastic even with a consistent
-        // instruct, so per-sentence chunking produces the notorious
-        // "multiple narrators mid-response" effect. For neural engines
-        // we batch the full response into a single synth call so the
-        // listener hears one coherent voice.
+        // Stream only when backend + conditioning are stable enough
+        // across consecutive speak() calls. Apple is always stable.
+        // MLX is enabled for reference-clone personas and kept disabled
+        // for VoiceDesign/CustomVoice personas (can drift narrators).
         if let service = tts as? TextToSpeechService {
-            if service.isUsingFallback { return false }
-            switch service.activeEngine {
-            case .appleSystem: return true
-            case .mlxRepo:     return false
-            }
+            return service.supportsLowLatencyChunkStreaming
         }
         return true
     }
