@@ -6,6 +6,8 @@ import AVFoundation
 #if canImport(MLXAudioTTS)
 import MLXAudioTTS
 import MLX
+import MLXRandom
+import MLXLMCommon
 #endif
 #if canImport(HuggingFace)
 import HuggingFace
@@ -63,6 +65,25 @@ public class TextToSpeechService: ObservableObject, TextToSpeaking {
     /// out of the box on every device with no download required.
     private var currentEngine: NeuralVoiceEngine = .appleSystem
 
+    /// Public read-only snapshot of the current engine. Used by
+    /// VoiceService to decide whether to stream sentence chunks
+    /// (Apple = yes, consistent system voice) or batch the whole
+    /// response into a single synth call (neural = avoids voice
+    /// drift across calls).
+    public var activeEngine: NeuralVoiceEngine { currentEngine }
+
+    /// Selected `AVSpeechSynthesisVoice.identifier`. Empty = auto-pick
+    /// a pt-BR voice. Set explicitly to use Premium / Enhanced / Siri
+    /// voices like "American Voice 2" etc.
+    private var currentAppleVoiceIdentifier: String = ""
+
+    /// Selected Qwen3-TTS persona id (`"clara"`, `"maya"`,
+    /// `"customvoice:vivian"`, …). Empty = auto-pick by current app
+    /// language. Drives the `voice:` parameter passed to Qwen3-TTS:
+    /// a VoiceDesign instruct for built-in personas, or a
+    /// `<|spk_NAME|>` prefix for CustomVoice factory speakers.
+    private var currentQwenVoicePersonaId: String = ""
+
     /// Our own HuggingFace downloader — injected post-init so we can
     /// pre-populate swift-huggingface's `HubCache` from the robust
     /// download pipeline (auth, retry, redirect-preservation, token).
@@ -113,6 +134,9 @@ public class TextToSpeechService: ObservableObject, TextToSpeaking {
         ttsModel = nil
         modelLoaded = false
         #endif
+        // Any prior MLX failure was scoped to the previous repo;
+        // the new repo deserves a fresh attempt.
+        isUsingFallback = false
         neuralVoiceModelState = .notDownloaded
         refreshNeuralVoiceAvailability()
     }
@@ -130,21 +154,54 @@ public class TextToSpeechService: ObservableObject, TextToSpeaking {
     /// Qwen3-TTS default; adds one entry per downloaded TTS-category
     /// `UserModel` that mlx-audio can actually load.
     public func availableNeuralVoices() -> [NeuralVoiceOption] {
-        var options: [NeuralVoiceOption] = [
-            NeuralVoiceOption(
-                displayName: "Qwen3-TTS (padrão)",
-                repoId: NeuralVoiceEngine.defaultMLXRepoId,
-                isBuiltInDefault: true,
-                isCached: isRepoCached(NeuralVoiceEngine.defaultMLXRepoId)
-            )
+        // Five known Qwen3-TTS variants the app supports out of the
+        // box. The user picks one as their active engine in Settings;
+        // each can be downloaded independently from the Model Gallery.
+        // Display order is "smaller / faster" → "larger / better
+        // quality" so memory-constrained users see the lightest
+        // option first.
+        // Full 15-variant matrix: 5 families × 3 quantizations.
+        // Order: smallest → largest, family-grouped, so scrolling
+        // down in the picker means "more quality, more memory".
+        let builtIns: [(repoId: String, displayName: String, isBuiltInDefault: Bool)] = [
+            // 0.6B Base
+            (NeuralVoiceEngine.defaultMLXRepoId,             "Qwen3-TTS 0.6B Base 4-bit (rápido, ~300MB)", true),
+            (NeuralVoiceEngine.baseSmall8bitMLXRepoId,       "Qwen3-TTS 0.6B Base 8-bit (~600MB)", false),
+            (NeuralVoiceEngine.baseSmallBF16MLXRepoId,       "Qwen3-TTS 0.6B Base bf16 (~1.2GB)", false),
+            // 0.6B CustomVoice
+            (NeuralVoiceEngine.customVoiceMLXRepoId,         "Qwen3-TTS 0.6B CustomVoice 4-bit (~300MB)", false),
+            (NeuralVoiceEngine.customVoice8bitMLXRepoId,     "Qwen3-TTS 0.6B CustomVoice 8-bit (~600MB)", false),
+            (NeuralVoiceEngine.customVoiceBF16MLXRepoId,     "Qwen3-TTS 0.6B CustomVoice bf16 (~1.2GB)", false),
+            // 1.7B Base
+            (NeuralVoiceEngine.baseLargeMLXRepoId,           "Qwen3-TTS 1.7B Base 4-bit (melhor pt-BR, ~850MB)", false),
+            (NeuralVoiceEngine.baseLarge8bitMLXRepoId,       "Qwen3-TTS 1.7B Base 8-bit (premium pt-BR, ~1.7GB)", false),
+            (NeuralVoiceEngine.baseLargeBF16MLXRepoId,       "Qwen3-TTS 1.7B Base bf16 (~3.4GB)", false),
+            // 1.7B VoiceDesign
+            (NeuralVoiceEngine.voiceDesignLargeMLXRepoId,    "Qwen3-TTS 1.7B VoiceDesign 4-bit (~850MB)", false),
+            (NeuralVoiceEngine.voiceDesignLarge8bitMLXRepoId,"Qwen3-TTS 1.7B VoiceDesign 8-bit (~1.7GB)", false),
+            (NeuralVoiceEngine.voiceDesignLargeBF16MLXRepoId,"Qwen3-TTS 1.7B VoiceDesign bf16 (~3.4GB)", false),
+            // 1.7B CustomVoice
+            (NeuralVoiceEngine.customVoiceLargeMLXRepoId,    "Qwen3-TTS 1.7B CustomVoice 4-bit (~850MB)", false),
+            (NeuralVoiceEngine.customVoiceLarge8bitMLXRepoId,"Qwen3-TTS 1.7B CustomVoice 8-bit (~1.7GB)", false),
+            (NeuralVoiceEngine.customVoiceLargeBF16MLXRepoId,"Qwen3-TTS 1.7B CustomVoice bf16 (~3.4GB)", false),
         ]
+
+        var options: [NeuralVoiceOption] = builtIns.map { entry in
+            NeuralVoiceOption(
+                displayName: entry.displayName,
+                repoId: entry.repoId,
+                isBuiltInDefault: entry.isBuiltInDefault,
+                isCached: isRepoCached(entry.repoId)
+            )
+        }
 
         guard let manager = modelManager else { return options }
 
+        let knownRepoIds = Set(builtIns.map(\.repoId))
         let downloadedTTS = manager.userModels.filter { entry in
             entry.familyName == MLXModelCategory.tts.displayName
                 && MLXAudioCompatibility.isTTSLoadable(repoId: entry.huggingFaceRepoId)
-                && entry.huggingFaceRepoId != NeuralVoiceEngine.defaultMLXRepoId
+                && !knownRepoIds.contains(entry.huggingFaceRepoId)
         }
 
         for entry in downloadedTTS {
@@ -205,8 +262,44 @@ public class TextToSpeechService: ObservableObject, TextToSpeaking {
         currentEngine = engine
         RodaLog.voice.info("Neural voice engine switched to: \(engine.rawPersistenceValue, privacy: .public)")
 
+        // Clear the "stuck on Apple" state. Without this, any prior
+        // MLX failure (missing model, bad config, runtime error)
+        // permanently pinned the app to AVSpeech until the next
+        // launch — even after the user switched engines. Resetting
+        // here lets the next speak() attempt try neural again.
+        isUsingFallback = false
+
         if case .mlxRepo(let repoId) = engine {
             setTTSRepo(repoId)
+        }
+    }
+
+    /// Selects a specific Apple system voice by its
+    /// `AVSpeechSynthesisVoice.identifier`. Pass `""` to revert to
+    /// the automatic pt-BR selection. Takes effect on the next
+    /// `speak(...)` call when the engine is `.appleSystem`.
+    public func setAppleVoiceIdentifier(_ identifier: String) {
+        let trimmed = identifier.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed != currentAppleVoiceIdentifier else { return }
+        currentAppleVoiceIdentifier = trimmed
+        if trimmed.isEmpty {
+            RodaLog.voice.info("Apple voice reset to automatic pt-BR")
+        } else {
+            RodaLog.voice.info("Apple voice switched to: \(trimmed, privacy: .public)")
+        }
+    }
+
+    /// Selects a Qwen3-TTS persona by its catalog id. Pass `""` to
+    /// revert to automatic language-based selection. Takes effect on
+    /// the next `speak(...)` call when the engine is `.mlxRepo`.
+    public func setQwenVoicePersona(_ personaId: String) {
+        let trimmed = personaId.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed != currentQwenVoicePersonaId else { return }
+        currentQwenVoicePersonaId = trimmed
+        if trimmed.isEmpty {
+            RodaLog.voice.info("Qwen voice persona reset to auto")
+        } else {
+            RodaLog.voice.info("Qwen voice persona switched to: \(trimmed, privacy: .public)")
         }
     }
 
@@ -235,6 +328,102 @@ public class TextToSpeechService: ObservableObject, TextToSpeaking {
         audioEngine?.stop()
         #endif
         isSpeaking = false
+    }
+
+    /// Downloads the given MLX TTS repo into the mlx-audio cache
+    /// without changing the user's currently-selected engine. Used
+    /// by the Model Gallery so users can keep the Base model active
+    /// while they fetch CustomVoice in the background (or vice-versa).
+    public func downloadTTSRepo(_ repoId: String) async {
+        #if canImport(MLXAudioTTS) && canImport(HuggingFace)
+        let trimmed = repoId.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        RodaLog.voice.info("Explicit TTS download requested repo=\(trimmed, privacy: .public)")
+
+        // Remember the current selection so we can restore it
+        // regardless of the download outcome. We temporarily point
+        // `currentTTSRepo` at the requested repo because
+        // `prefetchNeuralTTSModelIntoHubCache()` and `loadModelIfNeeded()`
+        // both read from it.
+        let savedRepo = currentTTSRepo
+        let savedLoaded = modelLoaded
+        let savedModel = ttsModel
+        defer {
+            currentTTSRepo = savedRepo
+            modelLoaded = savedLoaded
+            ttsModel = savedModel
+            refreshNeuralVoiceAvailability()
+        }
+
+        currentTTSRepo = trimmed
+        ttsModel = nil
+        modelLoaded = false
+        do {
+            try await prefetchNeuralTTSModelIntoHubCache()
+            RodaLog.voice.info("Explicit TTS download completed repo=\(trimmed, privacy: .public)")
+        } catch {
+            RodaLog.voice.error("Explicit TTS download failed repo=\(trimmed, privacy: .public): \(error.localizedDescription, privacy: .public)")
+        }
+        #endif
+    }
+
+    /// Public cache-probe for arbitrary repo IDs, so Gallery cards
+    /// can show ready/not-ready badges for the built-in TTS models
+    /// without having to know about `HubCache` internals.
+    public func isTTSRepoCached(_ repoId: String) -> Bool {
+        isRepoCached(repoId)
+    }
+
+    /// True when this repo is the currently-selected neural engine.
+    /// Gallery cards use this to show the accent stroke + "active"
+    /// badge, matching the LLM ModelCard UX.
+    public func isTTSRepoActive(_ repoId: String) -> Bool {
+        if case .mlxRepo(let active) = currentEngine {
+            return active == repoId
+        }
+        return false
+    }
+
+    /// Makes this repo the active neural TTS engine AND switches the
+    /// engine away from Apple. Equivalent to picking the repo in
+    /// Settings, surfaced on the Gallery card so the user doesn't
+    /// have to hop screens after downloading.
+    public func activateTTSRepo(_ repoId: String) {
+        let trimmed = repoId.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        setEngine(.mlxRepo(repoId: trimmed))
+    }
+
+    /// Deletes the mlx-audio flat cache directory for the given repo
+    /// and, if that repo was the active engine, reverts to Apple
+    /// system voices so the next speak() doesn't try to load a
+    /// model we just erased.
+    public func deleteTTSRepo(_ repoId: String) throws {
+        #if canImport(MLXAudioTTS) && canImport(HuggingFace)
+        let trimmed = repoId.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let modelSubdir = trimmed.replacingOccurrences(of: "/", with: "_")
+        let mlxAudioDir = HubCache.default.cacheDirectory
+            .appendingPathComponent("mlx-audio")
+            .appendingPathComponent(modelSubdir)
+
+        if FileManager.default.fileExists(atPath: mlxAudioDir.path) {
+            try FileManager.default.removeItem(at: mlxAudioDir)
+            RodaLog.voice.info("Deleted TTS cache at \(mlxAudioDir.path, privacy: .public)")
+        }
+
+        // If this was the active repo, drop the in-memory model and
+        // move the engine back to Apple so the next turn works.
+        if isTTSRepoActive(trimmed) {
+            ttsModel = nil
+            modelLoaded = false
+            setEngine(.appleSystem)
+        } else if currentTTSRepo == trimmed {
+            ttsModel = nil
+            modelLoaded = false
+        }
+        refreshNeuralVoiceAvailability()
+        #endif
     }
 
     public func downloadNeuralVoiceModel() async {
@@ -273,7 +462,8 @@ public class TextToSpeechService: ObservableObject, TextToSpeaking {
 
     private func speakWithAVSpeech(_ text: String) async throws(VoiceError) {
         #if canImport(AVFoundation)
-        guard AVSpeechSynthesisVoice(language: "pt-BR") != nil else {
+        let selectedVoice = resolveAppleVoice()
+        guard selectedVoice != nil else {
             throw VoiceError.synthesisUnavailable(locale: "pt-BR")
         }
 
@@ -303,7 +493,7 @@ public class TextToSpeechService: ObservableObject, TextToSpeaking {
         #endif
 
         let utterance = AVSpeechUtterance(string: text)
-        utterance.voice = AVSpeechSynthesisVoice(language: "pt-BR")
+        utterance.voice = selectedVoice
         utterance.rate = AVSpeechUtteranceDefaultSpeechRate
         isSpeaking = true
         synthesizer.speak(utterance)
@@ -316,6 +506,20 @@ public class TextToSpeechService: ObservableObject, TextToSpeaking {
         throw VoiceError.synthesisUnavailable(locale: "pt-BR")
         #endif
     }
+
+    /// Resolve which `AVSpeechSynthesisVoice` to use for the next
+    /// utterance. Honors `currentAppleVoiceIdentifier` when set and
+    /// still installed; falls back to the default pt-BR voice so the
+    /// app never goes silent just because a saved voice got uninstalled.
+    #if canImport(AVFoundation)
+    private func resolveAppleVoice() -> AVSpeechSynthesisVoice? {
+        if !currentAppleVoiceIdentifier.isEmpty,
+           let chosen = AVSpeechSynthesisVoice(identifier: currentAppleVoiceIdentifier) {
+            return chosen
+        }
+        return AVSpeechSynthesisVoice(language: "pt-BR")
+    }
+    #endif
 
     // MARK: - MLX-Audio TTS (Kokoro)
 
@@ -391,6 +595,97 @@ public class TextToSpeechService: ObservableObject, TextToSpeaking {
         return pairs.joined(separator: ", ")
     }
 
+    /// Resolves the effective Qwen3-TTS persona for the next call:
+    /// the user's explicit selection if any, otherwise the default
+    /// persona for the current app language. Never returns nil — we
+    /// always have SOMETHING to pass so the model can't fall back to
+    /// random-voice sampling (which produces the "wrong gender"
+    /// behaviour users hit with `voice: nil`).
+    private func resolveActivePersona() -> Qwen3VoicePersona {
+        if !currentQwenVoicePersonaId.isEmpty,
+           let selected = Qwen3VoiceCatalog.persona(withId: currentQwenVoicePersonaId) {
+            return selected
+        }
+        return Qwen3VoiceCatalog.defaultPersona(for: Self.qwen3LanguageCode())
+    }
+
+    /// Converts a persona into the `voice:` string that Qwen3-TTS
+    /// actually consumes. For `.voiceDesign` this is the full natural-
+    /// language instruct; for `.customVoiceSpeaker` it's a single
+    /// special token string like `<|spk_vivian|>` that the CustomVoice
+    /// tokenizer resolves to a speaker-conditioning token ID. Base
+    /// 0.6B models ignore the CustomVoice token (it won't be in their
+    /// vocab), so factory personas effectively fall through to a
+    /// random voice — the UI warns the user to download CustomVoice
+    /// before selecting those.
+    private func qwen3VoiceParameter(for persona: Qwen3VoicePersona) -> String {
+        switch persona.backend {
+        case .voiceDesign(let instruct):
+            return instruct
+        case .customVoiceSpeaker(let name):
+            return "<|spk_\(name)|>"
+        }
+    }
+
+    /// Qwen3-TTS language hint. Two entry points:
+    ///
+    /// - `qwen3LanguageCode()` reads the app's display language
+    ///   (`Bundle.main.preferredLocalizations.first`). Used when
+    ///   no persona is in scope (e.g. the catalog default lookup).
+    ///
+    /// - `qwen3LanguageCode(for: personaLanguage)` takes the
+    ///   persona's declared language and normalises it to one of
+    ///   Qwen3's supported codes. Preferred at synthesis time so
+    ///   the language signal stays paired with the persona's
+    ///   accent description (otherwise the model sees mismatched
+    ///   conditioning and emits foreign-accented output).
+    private static func qwen3LanguageCode() -> String {
+        let preferred = Bundle.main.preferredLocalizations.first
+            ?? Locale.current.language.languageCode?.identifier
+            ?? "pt"
+        return qwen3LanguageCode(for: preferred)
+    }
+
+    private static func qwen3LanguageCode(for languageHint: String) -> String {
+        let code = languageHint.lowercased().prefix(2)
+        switch code {
+        case "pt": return "pt"
+        case "en": return "en"
+        case "es": return "es"
+        case "ja": return "ja"
+        case "ko": return "ko"
+        case "zh": return "zh"
+        default:   return "auto"
+        }
+    }
+
+    /// Thread-safe counter pair for tracking how many PCM buffers have
+    /// been scheduled on the player node vs. how many have finished
+    /// playing. `scheduled()` is called on the MainActor as each
+    /// buffer is queued; `completed()` is called from the audio
+    /// render thread via the completion handler — so the counters
+    /// need locked access.
+    fileprivate final class MLXAudioPlaybackTracker: @unchecked Sendable {
+        private let lock = NSLock()
+        private var scheduledCount = 0
+        private var completedCount = 0
+
+        func scheduled() {
+            lock.lock(); defer { lock.unlock() }
+            scheduledCount += 1
+        }
+
+        func completed() {
+            lock.lock(); defer { lock.unlock() }
+            completedCount += 1
+        }
+
+        var isDrained: Bool {
+            lock.lock(); defer { lock.unlock() }
+            return scheduledCount > 0 && completedCount >= scheduledCount
+        }
+    }
+
     private func speakWithMLXAudio(_ text: String) async throws(VoiceError) {
         #if canImport(MLXAudioTTS) && canImport(AVFoundation)
         do {
@@ -449,29 +744,108 @@ public class TextToSpeechService: ObservableObject, TextToSpeaking {
             audioEngine = engine
             playerNode = player
 
-            // Stream audio chunks as they're generated
-            let stream = model.generatePCMBufferStream(
-                text: text,
-                voice: nil,
-                refAudio: nil,
-                refText: nil,
-                language: "pt"
+            // Resolve which voice character to use. Explicit user
+            // selection wins; otherwise we fall back to the default
+            // persona for the current language so Qwen3 never sees
+            // `voice: nil` (which would trigger random-voice
+            // sampling mid-response).
+            //
+            // CRITICAL: pass the PERSONA's language (not the app's
+            // current display language) to `generatePCMBufferStream`.
+            // Qwen3-TTS uses the `language:` field to load the
+            // matching phoneme/grapheme table. The persona's
+            // accent line conditions prosody. If they desync —
+            // e.g. user picks Maya (en accent) while the app is
+            // displaying Portuguese, so we'd otherwise pass
+            // language="pt" — Qwen3 tries to map English-described
+            // phonemes onto a Portuguese phoneme table and
+            // produces the "foreign-accent" artifact (the
+            // "Mexican-accented Portuguese" we saw with Vivian).
+            // Coupling language to persona.language guarantees the
+            // two stay in sync and the model gets a coherent
+            // conditioning signal.
+            let persona = resolveActivePersona()
+            let voiceParam = qwen3VoiceParameter(for: persona)
+            let languageParam = Self.qwen3LanguageCode(for: persona.language)
+
+            // Pin the MLX random number generator per-persona-hash so
+            // a given persona synthesizes stably across calls. Without
+            // a fixed seed, sampling variance can overpower the voice
+            // conditioning (Qwen3-TTS has classifier-free guidance
+            // baked in but mlx-audio-swift doesn't expose the cfg
+            // scale — fixing the seed is the closest mitigation we
+            // have without patching the vendored library). The seed
+            // derives from the persona hash so different personas
+            // still sound different but each persona sounds the
+            // same-ish across turns.
+            let seedBytes = persona.instructHash.unicodeScalars.reduce(0 as UInt64) { acc, scalar in
+                (acc &* 31) &+ UInt64(scalar.value)
+            }
+            MLXRandom.seed(seedBytes)
+
+            // Voice-design tuned inference parameters:
+            //   - temperature 0.75 (default 0.9) — reduces prosody
+            //     jitter that can mask gender / timbre cues
+            //   - topP 0.9 (default 1.0) — tighter nucleus keeps
+            //     samples closer to the conditioning signal
+            //   - repetitionPenalty stays at default 1.05 (helpful
+            //     for long utterances; too low → loops, too high →
+            //     breaks rhythm)
+            let tunedParameters = GenerateParameters(
+                maxTokens: 4096,
+                temperature: 0.75,
+                topP: 0.9,
+                repetitionPenalty: 1.05
             )
 
-            var didScheduleAudio = false
+            // Log the raw voice param string as a byte array. If MLX
+            // tokenizer preprocessing collapses newlines or strips
+            // punctuation we'll see it here. (Only logged in Debug
+            // builds to avoid leaking the instruct contents into
+            // production logs — personas are shipping code, not
+            // secrets, but noise reduction matters.)
+            #if DEBUG
+            let byteCount = voiceParam.utf8.count
+            let lineCount = voiceParam.split(separator: "\n", omittingEmptySubsequences: false).count
+            let endsWithPeriod = voiceParam.hasSuffix(".\n") || voiceParam.hasSuffix(".")
+            RodaLog.voice.debug("Qwen3-TTS voice-param bytes=\(byteCount) lines=\(lineCount) endsWithPeriod=\(endsWithPeriod)")
+            #endif
+
+            RodaLog.voice.info("Qwen3-TTS using persona id=\(persona.id, privacy: .public) hash=\(persona.instructHash, privacy: .public) language=\(languageParam, privacy: .public) temp=0.75 seed=\(seedBytes, privacy: .public)")
+            let stream = model.generatePCMBufferStream(
+                text: text,
+                voice: voiceParam,
+                refAudio: nil,
+                refText: nil,
+                language: languageParam,
+                generationParameters: tunedParameters
+            )
+
+            // Schedule buffers fire-and-forget so the player's queue
+            // stays populated while the model keeps generating. The
+            // async `scheduleBuffer(_:)` variant awaits playback
+            // completion of EACH buffer before returning, which drains
+            // the queue between buffers and causes audible truncation
+            // on macOS (phrases cut off after 3-5 words). Using the
+            // completion-handler variant with atomic counters lets us
+            // keep the queue full and only wait once all buffers have
+            // finished playing.
+            let tracker = MLXAudioPlaybackTracker()
             for try await buffer in stream {
                 if Task.isCancelled { break }
                 guard buffer.frameLength > 0 else { continue }
-                await player.scheduleBuffer(buffer)
-                didScheduleAudio = true
+                tracker.scheduled()
+                player.scheduleBuffer(buffer) {
+                    tracker.completed()
+                }
             }
 
-            // Wait for playback to drain without scheduling invalid empty buffers.
-            if didScheduleAudio {
-                while player.isPlaying {
-                    try? await Task.sleep(for: .milliseconds(50))
-                    if Task.isCancelled { break }
-                }
+            // Wait until every scheduled buffer has fired its
+            // completion handler. Poll in 50ms increments so
+            // cancellation stays responsive.
+            while !tracker.isDrained {
+                try? await Task.sleep(for: .milliseconds(50))
+                if Task.isCancelled { break }
             }
 
             player.stop()

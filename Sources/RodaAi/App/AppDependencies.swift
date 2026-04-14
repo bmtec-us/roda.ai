@@ -156,6 +156,8 @@ final class AppDependencies {
                 // probed on the next refreshNeuralVoiceAvailability
                 // call right below.
                 concreteTTS.setEngine(prefs.neuralVoiceEngine)
+                concreteTTS.setAppleVoiceIdentifier(prefs.appleVoiceIdentifier)
+                concreteTTS.setQwenVoicePersona(prefs.qwenVoicePersonaId)
             }
             // Probe the on-disk cache so the Settings picker and
             // ModelGallery card reflect reality on first launch
