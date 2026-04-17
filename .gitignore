@@ -51,6 +51,7 @@ Pods/
 # Claude Code
 .claude/
 CLAUDE.md
+AGENTS.md
 
 # Documentation (local only)
 /docs
